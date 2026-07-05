@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+
+# Dataset (DO NOT UPLOAD)
+dataset/
+
+# Uploaded Images
+backend/uploads/
+
+# Processed Images
+backend/processed/
+
+# Logs
+backend/logs/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
