@@ -10,7 +10,7 @@ def preprocess_image(image_path):
 
     if image is None:
         raise FileNotFoundError(f"Unable to read image: {image_path}")
-    # OpenCV loads images in BGR format
+    # OpenCV reads images in BGR format
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # Resize to the model's expected input size
     image = cv2.resize(image, IMAGE_SIZE)

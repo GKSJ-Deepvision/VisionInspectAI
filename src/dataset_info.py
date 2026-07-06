@@ -1,18 +1,5 @@
 from pathlib import Path
-
-# Supported image file extensions
-IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp")
-
-def count_images(folder):
-    """
-    Count all image files in a folder and its subfolders.
-    """
-    count = 0
-    for file in folder.rglob("*"):
-        if file.suffix.lower() in IMAGE_EXTENSIONS:
-            count += 1
-
-    return count
+from src.utils import count_images
 
 def display_dataset_info(dataset_path):
     """
