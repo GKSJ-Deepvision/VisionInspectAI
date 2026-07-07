@@ -50,3 +50,44 @@ def display_dataset_summary(dataset_path):
         )
 
     print("-" * 55)
+
+# gets defect statistics for a single category
+def get_defect_statistics(dataset_path, category):
+    """Return the number of test images for each category"""
+
+    category_path = Path(dataset_path) / category / "test"
+    statistics = {}
+
+    for defect in sorted(category_path.iterdir()):
+        if not defect.is_dir():
+            continue
+        statistics[defect.name] = count_images(defect)
+
+    return statistics
+
+# displays defect statistics for a single category
+def display_defect_statistics(dataset_path, category):
+    """Display image count for each defect type"""
+    statistics = get_defect_statistics(dataset_path, category)
+
+    print("\nDefect Statistics")
+    print("-" * 30)
+
+    for defect, count in statistics.items():
+        print(f"{defect:<25}{count:>5}")
+
+#  display defect percentage
+def display_defect_percentages(dataset_path, category):
+    """Display percentage of images for each defect type"""
+    statistics = get_defect_statistics(dataset_path, category)
+    total = sum(statistics.values()) 
+    if total == 0:
+        return
+
+    print("\nDefect Percentage")
+    print("-" * 30)
+
+    for defect, count in statistics.items():
+        percentage = (count / total) * 100
+        print(f"{defect:<25}{percentage:>7.2f}%")
+        
