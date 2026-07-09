@@ -1,9 +1,6 @@
 # VisionInspect AI – AI Module
 
-## Overview
-
-
-
+## Objective
 The objective of this module is to build an anomaly detection pipeline capable of identifying manufacturing defects using the **PatchCore** model and the **MVTec AD** dataset.
 
 ## Work Completed
@@ -59,21 +56,124 @@ The objective of this module is to build an anomaly detection pipeline capable o
 ## Project Structure
 
 ```
-AI/
+VisionInspect-AI/
 │
-├── src/
-│   ├── data/
-│   │   ├── config.py
-│   │   ├── datamodule.py
-│   │   ├── explore_dataset.py
-│   │   └── preprocessing.py
+├── ai/
 │   │
-│   └── models/
-│       ├── patchcore.py
-│       ├── train.py
-│       ├── predict.py
-│       └── evaluate.py
+│   ├── dataset/                           # Original MVTec AD Dataset
+│   │   ├── bottle/
+│   │   ├── cable/
+│   │   ├── capsule/
+│   │   ├── carpet/
+│   │   ├── grid/
+│   │   ├── hazelnut/
+│   │   ├── leather/
+│   │   ├── metal_nut/
+│   │   ├── pill/
+│   │   ├── screw/
+│   │   ├── tile/
+│   │   ├── toothbrush/
+│   │   ├── transistor/
+│   │   ├── wood/
+│   │   └── zipper/
+│   │
+│   ├── processed_dataset/                 # Preprocessed Dataset
+│   │
+│   ├── outputs/
+│   │   ├── models/                        # Trained PatchCore model
+│   │   ├── predictions/                   # Prediction results
+│   │   ├── reports/                       # Evaluation reports
+│   │   └── visualizations/                # Heatmaps, plots
+│   │
+│   └── src/
+│       │
+│       ├── data/
+│       │   ├── config.py
+│       │   ├── utils.py
+│       │   ├── explore_dataset.py
+│       │   ├── visualize.py
+│       │   └── preprocessing.py
+│       │
+│       ├── models/
+│       │   ├── patchcore.py
+│       │   ├── train.py
+│       │   ├── evaluate.py
+│       │   └── predict.py
+│       │
+│       └── metrics/
+│           └── metrics.py
 │
+├── backend/
+│   │
+│   ├── app.py
+│   │
+│   ├── routes/
+│   │   ├── auth.py
+│   │   ├── upload.py
+│   │   ├── inspection.py
+│   │   ├── analytics.py
+│   │   └── history.py
+│   │
+│   ├── services/
+│   │   ├── image_processing.py
+│   │   ├── inference.py
+│   │   ├── quality_control.py
+│   │   └── severity_scoring.py
+│   │
+│   ├── database/
+│   │   ├── connection.py
+│   │   ├── models.py
+│   │   └── schema.sql
+│   │
+│   ├── uploads/
+│   │   ├── original/
+│   │   ├── processed/
+│   │   └── temporary/
+│   │
+│   ├── utils/
+│   │   └── helpers.py
+│   │
+│   ├── .env
+│   └── requirements.txt
+│
+├── frontend/
+│   │
+│   ├── public/
+│   │
+│   ├── src/
+│   │   ├── assets/
+│   │   │
+│   │   ├── components/
+│   │   │   ├── Navbar/
+│   │   │   ├── Sidebar/
+│   │   │   ├── Upload/
+│   │   │   ├── Dashboard/
+│   │   │   ├── Charts/
+│   │   │   └── Reports/
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Inspection.jsx
+│   │   │   ├── Analytics.jsx
+│   │   │   └── History.jsx
+│   │   │
+│   │   ├── services/
+│   │   │   └── api.js
+│   │   │
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   │
+│   └── package.json
+│
+├── docs/
+│   ├── PREPROCESSING_SPEC.md
+│   ├── DATABASE_SCHEMA.md
+│   ├── API_DOCUMENTATION.md
+│   └── PROJECT_PROGRESS.md
+│
+├── .gitignore
+├── README.md
 └── requirements.txt
 ```
 
