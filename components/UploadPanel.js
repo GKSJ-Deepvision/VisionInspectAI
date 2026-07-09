@@ -1,22 +1,39 @@
 import { useRef, useState } from 'react';
+import { runInspection } from '../lib/api';
 
-export default function UploadPanel({ onInspect }) {
+export default function UploadPanel({ onResult }) {
   const inputRef = useRef(null);
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState('');
+  const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleFiles(files) {
-    const file = files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    setPreview(URL.createObjectURL(file));
+    const selected = files?.[0];
+    if (!selected) return;
+    setFile(selected);
+    setFileName(selected.name);
+    setPreview(URL.createObjectURL(selected));
   }
 
   function handleDrop(e) {
     e.preventDefault();
     setIsDragging(false);
     handleFiles(e.dataTransfer.files);
+  }
+
+  async function handleRunInspection() {
+    if (!file) return;
+    setIsLoading(true);
+    try {
+      const result = await runInspection(file);
+      onResult(fileName, result);
+    } catch (err) {
+      console.error('Inspection failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -55,6 +72,14 @@ export default function UploadPanel({ onInspect }) {
               alt="Uploaded product for inspection"
               className="w-full h-full object-contain"
             />
+            {isLoading && (
+              <div className="absolute inset-0 bg-graphite/80 flex flex-col items-center justify-center gap-3">
+                <div className="w-8 h-8 border-2 border-gridline border-t-signal rounded-full animate-spin" />
+                <span className="text-xs font-mono text-muted uppercase">
+                  Running inspection…
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center px-6">
@@ -72,10 +97,14 @@ export default function UploadPanel({ onInspect }) {
         <div className="flex items-center justify-between mt-4">
           <span className="text-xs font-mono text-muted truncate">{fileName}</span>
           <button
-            onClick={() => onInspect(fileName)}
-            className="bg-signal text-graphite text-sm font-display font-semibold px-4 py-2 hover:bg-signal/90 transition-colors"
+            onClick={handleRunInspection}
+            disabled={isLoading}
+            className="bg-signal text-graphite text-sm font-display font-semibold px-4 py-2 hover:bg-signal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Run Inspection
+            {isLoading && (
+              <span className="w-3.5 h-3.5 border-2 border-graphite/40 border-t-graphite rounded-full animate-spin" />
+            )}
+            {isLoading ? 'Inspecting…' : 'Run Inspection'}
           </button>
         </div>
       )}

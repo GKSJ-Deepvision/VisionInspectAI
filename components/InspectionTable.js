@@ -19,6 +19,7 @@ export default function InspectionTable({ rows }) {
           <thead>
             <tr className="text-left text-xs font-mono uppercase text-muted border-b border-gridline">
               <th className="px-6 py-3 font-normal">Product Image</th>
+              <th className="px-6 py-3 font-normal">Category</th>
               <th className="px-6 py-3 font-normal">Defect Type</th>
               <th className="px-6 py-3 font-normal">Severity</th>
               <th className="px-6 py-3 font-normal">Decision</th>
@@ -30,6 +31,7 @@ export default function InspectionTable({ rows }) {
                 <td className="px-6 py-3 font-mono text-ink truncate max-w-[180px]">
                   {row.fileName}
                 </td>
+                <td className="px-6 py-3 text-muted">{row.productCategory}</td>
                 <td className="px-6 py-3 text-ink">{row.defectType}</td>
                 <td className="px-6 py-3">
                   <SeverityBadge level={row.severityLevel} score={row.severityScore} />
