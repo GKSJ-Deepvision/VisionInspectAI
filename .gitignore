@@ -11,7 +11,7 @@ env/
 # Environment Variables
 .env
 
-# Dataset (DO NOT UPLOAD)
+# Dataset 
 dataset/
 
 # Uploaded Images
@@ -19,6 +19,9 @@ backend/uploads/
 
 # Processed Images
 backend/processed/
+
+# Preprocessed Dataset
+backend/processed_dataset/
 
 # Logs
 backend/logs/
