@@ -1,3 +1,31 @@
+const BASE_URL = 'http://localhost:5000'
+
+export async function loginRequest(username, password) {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+
+  if (!res.ok) {
+    throw new Error('Invalid username or password')
+  }
+
+  return res.json() // { message, access_token, token_type, user: { id, username, email } }
+}
+export async function registerRequest(username, password, email) {
+  const res = await fetch(`${BASE_URL}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, email }),
+  })
+
+  if (!res.ok) {
+    throw new Error('Registration failed — username may already exist')
+  }
+
+  return res.json()
+}
 const DEFECT_TYPES = [
   { type: 'Surface Scratch', typeScore: 35 },
   { type: 'Surface Crack', typeScore: 95 },

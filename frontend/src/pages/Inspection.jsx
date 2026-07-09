@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
+import Layout from '../components/Layout.jsx'
 import { inspectImage, saveInspection } from '../services/api.js'
+import { Link } from 'react-router-dom'
 const severityColor = {
   Critical: 'text-red-400 border-red-400/40 bg-red-400/10',
   High: 'text-amber-400 border-amber-400/40 bg-amber-400/10',
@@ -37,9 +39,11 @@ async function runInspection() {
 }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <h1 className="text-2xl font-bold mb-1">Image Upload</h1>
+        <Layout>
+        <div className="p-8 text-white">      
+        <h1 className="text-2xl font-bold mb-1">Image Upload</h1>
       <p className="text-gray-400 text-sm mb-6">Upload product images for defect inspection.</p>
+     
 
       <div
         onClick={() => inputRef.current?.click()}
@@ -99,5 +103,6 @@ async function runInspection() {
         </div>
       )}
     </div>
+    </Layout>
   )
 }

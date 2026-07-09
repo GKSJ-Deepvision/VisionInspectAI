@@ -1,24 +1,29 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Login() {
   const [name, setName] = useState('')
+  const [password, setPassword] = useState('')
   const [role, setRole] = useState('Quality Engineer')
   const [error, setError] = useState('')
   const { loginUser } = useAuth()
   const navigate = useNavigate()
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    if (!name.trim()) {
-      setError('Enter your name to continue.')
-      return
-    }
-    loginUser({ name: name.trim(), role })
-    navigate('/dashboard')
+async function handleSubmit(e) {
+  e.preventDefault()
+  if (!name.trim() || !password.trim()) {
+    setError('Enter your username and password to continue.')
+    return
   }
-
+  try {
+    setError('')
+    await loginUser({ username: name.trim(), password: password.trim() })
+    navigate('/dashboard')
+  } catch (err) {
+    setError('Login failed — check your username and password.')
+  }
+}
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -36,6 +41,16 @@ export default function Login() {
             placeholder="e.g. Himabindhu Ravuri"
             className="w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white mb-5 outline-none focus:border-blue-400"
           />
+          <label className="block text-xs uppercase tracking-wider text-gray-400 mb-2">
+  Password
+</label>
+<input
+  type="password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  placeholder="••••••••"
+  className="w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white mb-5 outline-none focus:border-blue-400"
+/>
 
           <label className="block text-xs uppercase tracking-wider text-gray-400 mb-2">
             Role
@@ -66,6 +81,10 @@ export default function Login() {
             Enter Inspection Console
           </button>
         </form>
+        <p className="text-center text-gray-500 text-xs mt-4">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-400 hover:underline">Register</Link>
+          </p>
       </div>
     </div>
   )

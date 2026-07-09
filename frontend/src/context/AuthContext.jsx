@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { loginRequest } from '../services/api.js'
 
 const AuthContext = createContext(null)
 
@@ -16,10 +17,14 @@ export function AuthProvider({ children }) {
     }
   }, [user])
 
-  function loginUser({ name, role }) {
-    const fakeToken = btoa(`${name}:${role}:${Date.now()}`)
-    setUser({ name, role, token: fakeToken })
-  }
+ async function loginUser({ username, password }) {
+  const data = await loginRequest(username, password)
+  setUser({
+    name: data.user.username,
+    email: data.user.email,
+    token: data.access_token,
+  })
+}
 
   function logoutUser() {
     setUser(null)
