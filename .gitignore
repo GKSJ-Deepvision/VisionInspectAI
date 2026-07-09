@@ -8,3 +8,5 @@ __pycache__/
 AI/outputs/Patchcore/
 AI/outputs/predictions/
 AI/outputs/reports/
+instance/
+*.db
