@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.vscode/
+.idea/
+
+AI/outputs/Patchcore/
+AI/outputs/predictions/
+AI/outputs/reports/
