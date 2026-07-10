@@ -15,7 +15,7 @@ VisionInspectAI/
 │   ├── Capsule.png
 │   ├── ...
 │   └── Zipper.png
-│
+│── docs/Milestone1_LeelaSowmya.pdf
 ├── src/
 │   ├── utils.py
 │   ├── dataset_info.py
