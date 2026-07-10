@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from auth import router as auth_router
 from fastapi.middleware.cors import CORSMiddleware
 from inspection import router as inspection_router
+from history import router as history_router
 
 import os
 import shutil
@@ -12,10 +13,14 @@ app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(inspection_router)
+app.include_router(history_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
