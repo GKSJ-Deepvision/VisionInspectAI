@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionInspect AI - Defect Detection Dashboard</title>
+    <!-- Outfit Font & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #080b16;
+            --panel-bg: rgba(17, 22, 43, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #0078d4;
+            --primary-glow: rgba(0, 120, 212, 0.35);
+            --success: #107c10;
+            --success-glow: rgba(16, 124, 16, 0.3);
+            --danger: #d83b01;
+            --danger-glow: rgba(216, 59, 1, 0.3);
+            --warning: #ff8c00;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 120, 212, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 124, 16, 0.04) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(8, 11, 22, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 8px rgba(16, 124, 16, 0.5); }
+            50% { transform: scale(1.1); box-shadow: 0 0 16px rgba(16, 124, 16, 0.8); }
+            100% { transform: scale(0.9); box-shadow: 0 0 8px rgba(16, 124, 16, 0.5); }
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #0078d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .status-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            padding: 30px 40px;
+            gap: 30px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            padding: 12px;
+            font-family: var(--font-main);
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(0, 120, 212, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            color: var(--primary);
+        }
+
+        .upload-text {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .preview-img {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+            max-height: 200px;
+        }
+
+        .remove-preview {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #005a9e 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: var(--font-main);
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 120, 212, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .dashboard-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .welcome-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 500px;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            color: var(--primary);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .welcome-desc {
+            color: var(--text-muted);
+            max-width: 480px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Result Panel Grid */
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            display: none;
+        }
+
+        .result-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .result-badge {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 10px 30px;
+            border-radius: 50px;
+            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .result-badge.pass {
+            background: rgba(16, 124, 16, 0.15);
+            border: 2px solid var(--success);
+            color: #5cf25c;
+            box-shadow: 0 0 24px var(--success-glow);
+        }
+
+        .result-badge.fail {
+            background: rgba(216, 59, 1, 0.15);
+            border: 2px solid var(--danger);
+            color: #ff6c6c;
+            box-shadow: 0 0 24px var(--danger-glow);
+        }
+
+        .score-bar-container {
+            width: 100%;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.1);
+            height: 10px;
+            border-radius: 5px;
+            margin: 16px 0 8px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .score-bar-fill.pass { background-color: var(--success); }
+        .score-bar-fill.fail { background-color: var(--danger); }
+
+        .threshold-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--warning);
+            z-index: 2;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            width: 100%;
+        }
+
+        .metric-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-val {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        /* Image Display Grid */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            display: none;
+        }
+
+        .image-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            cursor: zoom-in;
+            transition: all 0.2s;
+        }
+
+        .image-card:hover {
+            transform: scale(1.02);
+            border-color: var(--primary);
+        }
+
+        .image-card-title {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(8, 11, 22, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 10;
+        }
+
+        .image-card img {
+            width: 100%;
+            display: block;
+            object-fit: contain;
+            aspect-ratio: 1 / 1;
+            background-color: #0b0f19;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(8, 11, 22, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 120, 212, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .step-item {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+        }
+
+        .step-item.active {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .step-item.done {
+            color: var(--success);
+        }
+
+        .step-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+        }
+
+        .step-item.active .step-dot {
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        .step-item.done .step-dot {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* Lightbox modal */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-dot"></div>
+            <h1>VisionInspect AI</h1>
+        </div>
+        <div class="system-status">
+            <div class="status-pill">
+                <span style="color: var(--success)">●</span> Category: <span id="current-cat-pill" style="font-weight: 600;">bottle</span>
+            </div>
+            <div class="status-pill">
+                Device: <span id="current-device-pill" style="font-weight: 600; text-transform: uppercase;">cpu</span>
+            </div>
+            <div class="status-pill" style="border-color: rgba(16, 124, 16, 0.3)">
+                System: <span style="font-weight: 600; color: #5cf25c;">ONLINE</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar controls -->
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-title">🛠️ Configuration</div>
+                
+                <div class="input-group">
+                    <label for="category-select">Product Category</label>
+                    <select id="category-select">
+                        <option value="bottle" selected>bottle (Bottle Surface)</option>
+                        <option value="cable">cable (Wired Cable)</option>
+                        <option value="capsule">capsule (Pill Capsule)</option>
+                        <option value="carpet">carpet (Textile Carpet)</option>
+                        <option value="grid">grid (Metal Grid)</option>
+                        <option value="hazelnut">hazelnut (Hazelnut Nut)</option>
+                        <option value="leather">leather (Leather Texture)</option>
+                        <option value="metal_nut">metal_nut (Hex Metal Nut)</option>
+                        <option value="pill">pill (Medical Pill)</option>
+                        <option value="screw">screw (Metal Screw)</option>
+                        <option value="tile">tile (Ceramic Tile)</option>
+                        <option value="toothbrush">toothbrush (Toothbrush Bristles)</option>
+                        <option value="transistor">transistor (Component Transistor)</option>
+                        <option value="wood">wood (Wood Grain Texture)</option>
+                        <option value="zipper">zipper (Metal Zipper)</option>
+                    </select>
+                </div>
+
+                <div class="toggle-container">
+                    <label for="yolo-toggle" style="display:flex; flex-direction:column; gap:4px;">
+                        <span style="font-weight:600; color:#fff;">YOLOv8 Preprocessing</span>
+                        <span style="font-size:11px; color:var(--text-muted);">Stage 1: Crop and isolate product</span>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="yolo-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="input-group">
+                    <label>Product Image Upload</label>
+                    <div class="upload-area" id="drop-zone">
+                        <div class="upload-icon">📤</div>
+                        <div style="font-weight: 500;">Select or drag image</div>
+                        <div class="upload-text">Supports PNG, JPG, JPEG, BMP</div>
+                        <input type="file" id="file-input" accept="image/*">
+                    </div>
+                    
+                    <div class="preview-container" id="preview-box">
+                        <img src="" alt="Preview" class="preview-img" id="preview-img">
+                        <button class="remove-preview" id="remove-btn">×</button>
+                    </div>
+                </div>
+
+                <button class="btn" id="inspect-btn" disabled>🔍 Inspect Product</button>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title" style="margin-bottom:12px;">ℹ️ Architecture Info</div>
+                <div style="font-size:12.5px; color: var(--text-muted); line-height: 1.5; display:flex; flex-direction:column; gap:8px;">
+                    <div><strong>Stage 1 (YOLO):</strong> Detects, crops and normalizes the target product in the frame to remove background noise.</div>
+                    <div><strong>Stage 2 (Autoencoder):</strong> Evaluates the cropped object against a category-specific reconstruction model.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard View -->
+        <div class="dashboard-content">
+            <!-- Welcome Panel (Show initially) -->
+            <div class="panel welcome-panel" id="welcome-panel">
+                <div class="welcome-icon">🔍</div>
+                <div class="welcome-title">Quality Inspection System Ready</div>
+                <div class="welcome-desc">Configure the options in the sidebar, upload a product image from the MVTec AD dataset, and click inspect to check for manufacturing defects.</div>
+            </div>
+
+            <!-- Result Cards (Show after analysis) -->
+            <div class="result-grid" id="result-grid">
+                <div class="panel result-card" id="decision-panel">
+                    <div class="result-badge" id="result-badge">PASS</div>
+                    <div style="font-size: 14px; color: var(--text-muted);" id="yolo-status-text">YOLO: Active Crop</div>
+                    
+                    <!-- Progress bar -->
+                    <div class="score-bar-container">
+                        <div class="score-bar-fill" id="score-bar-fill"></div>
+                        <div class="threshold-marker" id="threshold-marker"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; width:100%; max-width:320px; font-size:12px; color:var(--text-muted);">
+                        <span>Score: <strong id="score-text">0.00</strong></span>
+                        <span style="color:var(--warning)">Thresh: <strong id="thresh-text">0.05</strong></span>
+                    </div>
+                </div>
+
+                <div class="panel" style="display:flex; flex-direction:column; justify-content:center;">
+                    <div class="panel-title" style="margin-bottom:16px;">📊 Analytics & Metrics</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <label>Product Category</label>
+                            <div class="metric-val" id="metric-category">-</div>
+                        </div>
+                        <div class="metric-item">
+                            <label>Inference Device</label>
+                            <div class="metric-val" id="metric-device" style="color: var(--primary);">-</div>
+                        </div>
+                        <div class="metric-item">
+                            <label>Anomaly Score</label>
+                            <div class="metric-val" id="metric-score">-</div>
+                        </div>
+                        <div class="metric-item">
+                            <label>Inspection Decision</label>
+                            <div class="metric-val" id="metric-decision">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image View Grid (Show after analysis) -->
+            <div class="images-grid" id="images-grid">
+                <div class="image-card" onclick="openLightbox(this)">
+                    <div class="image-card-title">1. Original Image</div>
+                    <img id="img-original" src="" alt="Original">
+                </div>
+                <div class="image-card" onclick="openLightbox(this)">
+                    <div class="image-card-title">2. YOLO Crop (Stage 1 ROI)</div>
+                    <img id="img-cropped" src="" alt="Cropped ROI">
+                </div>
+                <div class="image-card" onclick="openLightbox(this)">
+                    <div class="image-card-title">3. Model Reconstruction</div>
+                    <img id="img-reconstructed" src="" alt="Reconstructed">
+                </div>
+                <div class="image-card" onclick="openLightbox(this)">
+                    <div class="image-card-title">4. Defect Heatmap Overlay</div>
+                    <img id="img-overlay" src="" alt="Heatmap Overlay">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-overlay" id="loading-screen">
+        <div class="spinner"></div>
+        <div style="font-weight:600; font-size:18px;">Running Inspection Pipeline...</div>
+        <div class="loading-steps">
+            <div class="step-item" id="step-1"><div class="step-dot"></div>Uploading image file...</div>
+            <div class="step-item" id="step-2"><div class="step-dot"></div>Running YOLOv8 Stage 1 detection...</div>
+            <div class="step-item" id="step-3"><div class="step-dot"></div>Loading category model weights...</div>
+            <div class="step-item" id="step-4"><div class="step-dot"></div>Reconstructing & computing MSE...</div>
+            <div class="step-item" id="step-5"><div class="step-dot"></div>Generating visual heatmap...</div>
+        </div>
+    </div>
+
+    <!-- Lightbox Zoom Modal -->
+    <div class="lightbox" id="lightbox-modal" onclick="closeLightbox()">
+        <div class="lightbox-close">&times;</div>
+        <img id="lightbox-img" src="" alt="Zoomed">
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewBox = document.getElementById('preview-box');
+        const previewImg = document.getElementById('preview-img');
+        const removeBtn = document.getElementById('remove-btn');
+        const inspectBtn = document.getElementById('inspect-btn');
+        const welcomePanel = document.getElementById('welcome-panel');
+        const resultGrid = document.getElementById('result-grid');
+        const imagesGrid = document.getElementById('images-grid');
+        const loadingScreen = document.getElementById('loading-screen');
+
+        let selectedFile = null;
+
+        // Fetch Initial Server Status
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                document.getElementById('current-device-pill').textContent = data.device;
+                document.getElementById('current-cat-pill').textContent = data.category;
+                document.getElementById('category-select').value = data.category;
+            } catch (err) {
+                console.error("Error fetching system status:", err);
+            }
+        }
+        window.addEventListener('DOMContentLoaded', fetchStatus);
+
+        // File Selection Handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--primary)';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file (PNG, JPG, JPEG, BMP).');
+                return;
+            }
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                dropZone.style.display = 'none';
+                previewBox.style.display = 'block';
+                inspectBtn.removeAttribute('disabled');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedFile = null;
+            fileInput.value = '';
+            previewImg.src = '';
+            previewBox.style.display = 'none';
+            dropZone.style.display = 'flex';
+            inspectBtn.setAttribute('disabled', 'true');
+        });
+
+        // Pipeline Loading Mock Animations
+        function runLoadingSteps(callback) {
+            loadingScreen.style.display = 'flex';
+            const steps = [
+                document.getElementById('step-1'),
+                document.getElementById('step-2'),
+                document.getElementById('step-3'),
+                document.getElementById('step-4'),
+                document.getElementById('step-5')
+            ];
+            
+            // Reset steps
+            steps.forEach(s => { s.className = 'step-item'; });
+            
+            let current = 0;
+            steps[0].classList.add('active');
+            
+            const interval = setInterval(() => {
+                steps[current].classList.remove('active');
+                steps[current].classList.add('done');
+                current++;
+                
+                if (current < steps.length) {
+                    steps[current].classList.add('active');
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        callback();
+                    }, 400);
+                }
+            }, 300);
+        }
+
+        // Run Inspection API Call
+        inspectBtn.addEventListener('click', () => {
+            if (!selectedFile) return;
+            
+            const category = document.getElementById('category-select').value;
+            const enableYolo = document.getElementById('yolo-toggle').checked;
+            
+            runLoadingSteps(async () => {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                try {
+                    const response = await fetch(`/predict?category=${category}&enable_yolo=${enableYolo}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    renderResults(data);
+                } catch (err) {
+                    alert(`Inspection failed: ${err.message}`);
+                }
+            });
+        });
+
+        function renderResults(data) {
+            // Hide welcome panel, show result panels
+            welcomePanel.style.display = 'none';
+            resultGrid.style.display = 'grid';
+            imagesGrid.style.display = 'grid';
+            
+            // Set values
+            const badge = document.getElementById('result-badge');
+            const fill = document.getElementById('score-bar-fill');
+            const marker = document.getElementById('threshold-marker');
+            
+            // Decision PASS/FAIL
+            if (data.is_anomaly) {
+                badge.textContent = "FAIL";
+                badge.className = "result-badge fail";
+                fill.className = "score-bar-fill fail";
+                document.getElementById('metric-decision').textContent = "🔴 REJECT (Defected)";
+                document.getElementById('metric-decision').style.color = 'var(--danger)';
+            } else {
+                badge.textContent = "PASS";
+                badge.className = "result-badge pass";
+                fill.className = "score-bar-fill pass";
+                document.getElementById('metric-decision').textContent = "🟢 ACCEPT (Normal)";
+                document.getElementById('metric-decision').style.color = '#5cf25c';
+            }
+            
+            // Anomaly score & threshold
+            document.getElementById('score-text').textContent = data.anomaly_score.toFixed(6);
+            document.getElementById('thresh-text').textContent = data.threshold.toFixed(4);
+            document.getElementById('metric-score').textContent = data.anomaly_score.toFixed(6);
+            document.getElementById('metric-category').textContent = data.category;
+            document.getElementById('metric-device').textContent = document.getElementById('current-device-pill').textContent;
+            
+            document.getElementById('yolo-status-text').textContent = data.yolo_status;
+            
+            // Scale and set progress bar
+            // Threshold marker position: 50% width
+            const threshold = data.threshold;
+            const score = data.anomaly_score;
+            marker.style.left = '50%';
+            
+            let fillPct = 0;
+            if (score <= threshold) {
+                // Scale from 0 to threshold -> maps to 0% to 50%
+                fillPct = (score / threshold) * 50;
+            } else {
+                // Scale from threshold to 3x threshold -> maps to 50% to 100%
+                const overFactor = (score - threshold) / (threshold * 2);
+                fillPct = 50 + Math.min(50, overFactor * 50);
+            }
+            fill.style.width = `${fillPct}%`;
+            
+            // Update image sources
+            document.getElementById('img-original').src = data.original_image;
+            document.getElementById('img-cropped').src = data.cropped_image;
+            document.getElementById('img-reconstructed').src = data.reconstructed_image;
+            document.getElementById('img-overlay').src = data.overlay_image;
+            
+            // Scroll to results
+            resultGrid.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Lightbox Zoom Handler
+        const lightbox = document.getElementById('lightbox-modal');
+        const lightboxImg = document.getElementById('lightbox-img');
+
+        function openLightbox(card) {
+            const img = card.querySelector('img');
+            lightboxImg.src = img.src;
+            lightbox.style.display = 'flex';
+        }
+
+        function closeLightbox() {
+            lightbox.style.display = 'none';
+            lightboxImg.src = '';
+        }
+    </script>
+</body>
+</html>

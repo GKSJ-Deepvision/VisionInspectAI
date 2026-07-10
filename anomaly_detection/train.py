@@ -24,13 +24,15 @@ def train_model(category=None, num_epochs=None):
     # Initialize Model, Loss, Optimizer
     model = AnomalyAutoencoder().to(device)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+    # Optimized lr = 2e-3 with weight decay for faster convergence and regularization
+    optimizer = optim.Adam(model.parameters(), lr=2e-3, weight_decay=1e-5)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-5)
     
     best_loss = float('inf')
     
     # Training Loop (Unsupervised: trains only on GOOD/NORMAL samples)
-    model.train()
     for epoch in range(1, num_epochs + 1):
+        model.train()
         running_loss = 0.0
         for batch_idx, (imgs, _, _, _) in enumerate(train_loader):
             imgs = imgs.to(device)
@@ -47,7 +49,8 @@ def train_model(category=None, num_epochs=None):
             running_loss += loss.item() * imgs.size(0)
             
         epoch_loss = running_loss / len(train_loader.dataset)
-        print(f"Epoch [{epoch}/{num_epochs}] - Reconstruction Loss: {epoch_loss:.6f}")
+        scheduler.step()
+        print(f"Epoch [{epoch}/{num_epochs}] - Reconstruction Loss: {epoch_loss:.6f} | LR: {scheduler.get_last_lr()[0]:.6f}")
         
         # Save best model
         if epoch_loss < best_loss:

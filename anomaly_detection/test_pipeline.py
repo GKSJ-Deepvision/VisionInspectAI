@@ -82,10 +82,23 @@ def run_tests():
     # 5. Run Fast Train test (1 Epoch, few samples)
     print("\n[STEP 5] Running 1-Epoch Mock Training to verify gradients & saving...")
     try:
+        # Override model path temporarily to prevent overwriting production weights
+        original_model_path = config.MODEL_PATH
+        config.MODEL_PATH = config.MODEL_DIR / "autoencoder_mock_test.pth"
+        
         # Override epochs to 1 for quick validation
         train_model(num_epochs=1)
+        
+        # Clean up mock test file if it was created
+        if config.MODEL_PATH.exists():
+            config.MODEL_PATH.unlink()
+            
+        # Restore original path
+        config.MODEL_PATH = original_model_path
         print("Model training loop test PASSED.")
     except Exception as e:
+        # Restore original path in case of failure
+        config.MODEL_PATH = original_model_path
         print(f"ERROR testing training loop: {e}")
         sys.exit(1)
         

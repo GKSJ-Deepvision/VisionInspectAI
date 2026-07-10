@@ -56,7 +56,7 @@ class AnomalyAutoencoder(nn.Module):
     def compute_anomaly_map(self, x):
         """
         Computes the pixel-wise reconstruction error (L2 distance) between input and reconstruction.
-        Returns a heatmap-style anomaly map and a scalar anomaly score.
+        Returns a heatmap-style anomaly map and a scalar anomaly score (using top 5% worst pixels).
         """
         self.eval()
         with torch.no_grad():
@@ -66,8 +66,17 @@ class AnomalyAutoencoder(nn.Module):
             # Shape: [batch, H, W]
             anomaly_map = torch.mean((x - reconstructed) ** 2, dim=1)
             
-            # Mean error per image in batch
+            # Localized anomaly score: average of the top 5% highest pixel reconstruction errors.
+            # This makes the detection highly sensitive to local cracks/defects and robust to background.
+            flat_map = anomaly_map.view(anomaly_map.size(0), -1)
+            num_pixels = flat_map.size(1)
+            k = max(1, int(num_pixels * 0.05)) # top 5% of pixels
+            
+            # Get the top-k values along the pixel dimension
+            top_k_values, _ = torch.topk(flat_map, k, dim=1)
+            
+            # Mean error of these top-k pixels
             # Shape: [batch]
-            anomaly_score = torch.mean(anomaly_map.view(anomaly_map.size(0), -1), dim=1)
+            anomaly_score = torch.mean(top_k_values, dim=1)
             
             return reconstructed, anomaly_map, anomaly_score
