@@ -1,0 +1,251 @@
+Product_ID,Defect_Type,Size_Score,Location_Score,Type_Score,Confidence_Score,Severity_Score,Severity_Level,Recommended_Action,Image_Path
+PROD_1000,Surface Scratch,29,81,26,78,51.1,Medium,Inspection Review Required,PROD_1000.png
+PROD_1001,Surface Crack,89,97,78,99,90.2,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1001.png
+PROD_1002,Missing Component,36,62,86,83,64.4,High,Repair / Rework Recommended,PROD_1002.png
+PROD_1003,Blister,52,11,45,71,43.8,Medium,Inspection Review Required,PROD_1003.png
+PROD_1004,Missing Component,63,68,94,87,76.8,High,Repair / Rework Recommended,PROD_1004.png
+PROD_1005,Contamination,29,71,69,62,56.1,Medium,Inspection Review Required,PROD_1005.png
+PROD_1006,Contamination,21,30,63,98,49.2,Medium,Inspection Review Required,PROD_1006.png
+PROD_1007,Surface Crack,74,23,92,68,64.6,High,Repair / Rework Recommended,PROD_1007.png
+PROD_1008,Surface Crack,16,93,89,66,63.5,High,Repair / Rework Recommended,PROD_1008.png
+PROD_1009,Missing Component,22,56,87,73,57.0,Medium,Inspection Review Required,PROD_1009.png
+PROD_1010,Surface Scratch,64,13,21,65,40.7,Medium,Inspection Review Required,PROD_1010.png
+PROD_1011,Surface Crack,18,63,92,85,61.2,High,Repair / Rework Recommended,PROD_1011.png
+PROD_1012,Surface Scratch,88,71,23,73,64.5,High,Repair / Rework Recommended,PROD_1012.png
+PROD_1013,Missing Component,29,81,98,82,69.9,High,Repair / Rework Recommended,PROD_1013.png
+PROD_1014,Surface Scratch,76,49,35,77,59.2,Medium,Inspection Review Required,PROD_1014.png
+PROD_1015,Surface Scratch,38,35,32,88,45.8,Medium,Inspection Review Required,PROD_1015.png
+PROD_1016,Blister,79,98,51,68,74.6,High,Repair / Rework Recommended,PROD_1016.png
+PROD_1017,Blister,22,97,55,76,59.8,Medium,Inspection Review Required,PROD_1017.png
+PROD_1018,Missing Component,49,42,89,98,67.1,High,Repair / Rework Recommended,PROD_1018.png
+PROD_1019,Missing Component,42,16,93,67,53.2,Medium,Inspection Review Required,PROD_1019.png
+PROD_1020,Surface Scratch,47,57,24,94,53.2,Medium,Inspection Review Required,PROD_1020.png
+PROD_1021,Surface Scratch,49,74,22,96,57.9,Medium,Inspection Review Required,PROD_1021.png
+PROD_1022,Contamination,17,10,59,85,39.4,Low,Product Acceptable,PROD_1022.png
+PROD_1023,Surface Crack,28,36,83,74,53.0,Medium,Inspection Review Required,PROD_1023.png
+PROD_1024,Surface Scratch,56,86,38,91,66.0,High,Repair / Rework Recommended,PROD_1024.png
+PROD_1025,Missing Component,66,13,89,82,61.7,High,Repair / Rework Recommended,PROD_1025.png
+PROD_1026,Missing Component,29,52,88,72,58.1,Medium,Inspection Review Required,PROD_1026.png
+PROD_1027,Surface Crack,73,95,76,65,77.6,High,Repair / Rework Recommended,PROD_1027.png
+PROD_1028,Surface Scratch,58,93,30,87,65.6,High,Repair / Rework Recommended,PROD_1028.png
+PROD_1029,Surface Scratch,76,10,39,72,49.4,Medium,Inspection Review Required,PROD_1029.png
+PROD_1030,Contamination,84,81,63,96,80.4,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1030.png
+PROD_1031,Missing Component,58,33,99,91,68.6,High,Repair / Rework Recommended,PROD_1031.png
+PROD_1032,Surface Scratch,66,71,36,71,60.8,High,Repair / Rework Recommended,PROD_1032.png
+PROD_1033,Surface Scratch,16,12,36,96,36.0,Low,Product Acceptable,PROD_1033.png
+PROD_1034,Surface Scratch,95,68,36,61,66.7,High,Repair / Rework Recommended,PROD_1034.png
+PROD_1035,Surface Scratch,68,96,24,91,68.6,High,Repair / Rework Recommended,PROD_1035.png
+PROD_1036,Contamination,33,11,66,85,46.2,Medium,Inspection Review Required,PROD_1036.png
+PROD_1037,Contamination,46,77,65,76,64.5,High,Repair / Rework Recommended,PROD_1037.png
+PROD_1038,Missing Component,38,78,100,93,74.5,High,Repair / Rework Recommended,PROD_1038.png
+PROD_1039,Missing Component,25,25,85,68,48.6,Medium,Inspection Review Required,PROD_1039.png
+PROD_1040,Surface Scratch,84,89,22,79,68.8,High,Repair / Rework Recommended,PROD_1040.png
+PROD_1041,Surface Scratch,50,28,22,78,43.1,Medium,Inspection Review Required,PROD_1041.png
+PROD_1042,Surface Scratch,85,61,28,92,66.2,High,Repair / Rework Recommended,PROD_1042.png
+PROD_1043,Surface Scratch,53,91,27,60,57.4,Medium,Inspection Review Required,PROD_1043.png
+PROD_1044,Missing Component,71,98,100,82,87.2,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1044.png
+PROD_1045,Surface Scratch,56,16,35,85,46.6,Medium,Inspection Review Required,PROD_1045.png
+PROD_1046,Contamination,74,11,55,71,52.9,Medium,Inspection Review Required,PROD_1046.png
+PROD_1047,Surface Scratch,46,18,28,94,44.1,Medium,Inspection Review Required,PROD_1047.png
+PROD_1048,Missing Component,94,12,100,83,72.8,High,Repair / Rework Recommended,PROD_1048.png
+PROD_1049,Surface Scratch,47,33,39,70,46.1,Medium,Inspection Review Required,PROD_1049.png
+PROD_1050,Contamination,50,47,62,79,58.0,Medium,Inspection Review Required,PROD_1050.png
+PROD_1051,Surface Scratch,39,27,33,77,42.1,Medium,Inspection Review Required,PROD_1051.png
+PROD_1052,Surface Scratch,49,89,28,95,63.0,High,Repair / Rework Recommended,PROD_1052.png
+PROD_1053,Missing Component,47,23,100,79,60.6,High,Repair / Rework Recommended,PROD_1053.png
+PROD_1054,Surface Scratch,22,16,22,76,31.3,Low,Product Acceptable,PROD_1054.png
+PROD_1055,Surface Scratch,62,85,38,81,65.6,High,Repair / Rework Recommended,PROD_1055.png
+PROD_1056,Surface Scratch,44,47,25,67,44.6,Medium,Inspection Review Required,PROD_1056.png
+PROD_1057,Missing Component,35,39,85,87,58.9,Medium,Inspection Review Required,PROD_1057.png
+PROD_1058,Missing Component,83,70,100,78,83.0,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1058.png
+PROD_1059,Surface Scratch,78,58,36,87,64.3,High,Repair / Rework Recommended,PROD_1059.png
+PROD_1060,Surface Scratch,60,15,22,96,46.4,Medium,Inspection Review Required,PROD_1060.png
+PROD_1061,Contamination,60,62,57,92,66.2,High,Repair / Rework Recommended,PROD_1061.png
+PROD_1062,Surface Crack,99,41,75,62,71.1,High,Repair / Rework Recommended,PROD_1062.png
+PROD_1063,Surface Crack,39,63,77,99,66.5,High,Repair / Rework Recommended,PROD_1063.png
+PROD_1064,Surface Crack,46,56,76,86,64.0,High,Repair / Rework Recommended,PROD_1064.png
+PROD_1065,Surface Scratch,31,42,28,98,46.4,Medium,Inspection Review Required,PROD_1065.png
+PROD_1066,Surface Scratch,40,59,32,66,48.0,Medium,Inspection Review Required,PROD_1066.png
+PROD_1067,Surface Scratch,59,29,20,67,43.4,Medium,Inspection Review Required,PROD_1067.png
+PROD_1068,Missing Component,30,23,96,82,55.2,Medium,Inspection Review Required,PROD_1068.png
+PROD_1069,Surface Crack,80,41,93,84,74.3,High,Repair / Rework Recommended,PROD_1069.png
+PROD_1070,Surface Crack,76,31,91,65,66.3,High,Repair / Rework Recommended,PROD_1070.png
+PROD_1071,Surface Scratch,74,17,31,64,47.0,Medium,Inspection Review Required,PROD_1071.png
+PROD_1072,Surface Scratch,20,56,22,99,45.3,Medium,Inspection Review Required,PROD_1072.png
+PROD_1073,Missing Component,27,39,100,76,58.0,Medium,Inspection Review Required,PROD_1073.png
+PROD_1074,Surface Scratch,33,67,24,85,49.6,Medium,Inspection Review Required,PROD_1074.png
+PROD_1075,Contamination,37,18,66,60,44.1,Medium,Inspection Review Required,PROD_1075.png
+PROD_1076,Surface Crack,15,43,90,84,54.6,Medium,Inspection Review Required,PROD_1076.png
+PROD_1077,Missing Component,15,25,91,64,46.3,Medium,Inspection Review Required,PROD_1077.png
+PROD_1078,Missing Component,81,85,100,96,89.8,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1078.png
+PROD_1079,Surface Crack,43,87,79,89,72.2,High,Repair / Rework Recommended,PROD_1079.png
+PROD_1080,Contamination,83,85,70,85,80.6,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1080.png
+PROD_1081,Blister,99,48,48,92,72.1,High,Repair / Rework Recommended,PROD_1081.png
+PROD_1082,Surface Scratch,37,19,24,95,40.8,Medium,Inspection Review Required,PROD_1082.png
+PROD_1083,Surface Crack,24,28,75,64,45.8,Medium,Inspection Review Required,PROD_1083.png
+PROD_1084,Missing Component,30,33,100,61,54.4,Medium,Inspection Review Required,PROD_1084.png
+PROD_1085,Surface Crack,46,93,86,94,77.4,High,Repair / Rework Recommended,PROD_1085.png
+PROD_1086,Missing Component,47,70,100,96,75.8,High,Repair / Rework Recommended,PROD_1086.png
+PROD_1087,Missing Component,79,42,92,69,71.0,High,Repair / Rework Recommended,PROD_1087.png
+PROD_1088,Surface Crack,43,22,86,90,57.9,Medium,Inspection Review Required,PROD_1088.png
+PROD_1089,Surface Scratch,49,96,36,85,64.7,High,Repair / Rework Recommended,PROD_1089.png
+PROD_1090,Surface Scratch,40,83,21,66,51.2,Medium,Inspection Review Required,PROD_1090.png
+PROD_1091,Surface Crack,89,38,78,84,72.5,High,Repair / Rework Recommended,PROD_1091.png
+PROD_1092,Blister,50,19,49,68,45.6,Medium,Inspection Review Required,PROD_1092.png
+PROD_1093,Surface Scratch,63,45,37,98,59.0,Medium,Inspection Review Required,PROD_1093.png
+PROD_1094,Surface Scratch,37,71,24,71,49.1,Medium,Inspection Review Required,PROD_1094.png
+PROD_1095,Surface Scratch,27,32,22,89,39.4,Low,Product Acceptable,PROD_1095.png
+PROD_1096,Contamination,76,93,70,84,80.4,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1096.png
+PROD_1097,Surface Scratch,73,28,36,95,56.9,Medium,Inspection Review Required,PROD_1097.png
+PROD_1098,Surface Crack,33,85,83,66,65.1,High,Repair / Rework Recommended,PROD_1098.png
+PROD_1099,Contamination,66,92,69,75,75.0,High,Repair / Rework Recommended,PROD_1099.png
+PROD_1100,Surface Scratch,26,34,39,80,42.0,Medium,Inspection Review Required,PROD_1100.png
+PROD_1101,Blister,37,25,51,98,49.7,Medium,Inspection Review Required,PROD_1101.png
+PROD_1102,Contamination,19,44,65,70,47.0,Medium,Inspection Review Required,PROD_1102.png
+PROD_1103,Surface Crack,90,18,84,76,67.7,High,Repair / Rework Recommended,PROD_1103.png
+PROD_1104,Surface Crack,21,55,87,99,61.6,High,Repair / Rework Recommended,PROD_1104.png
+PROD_1105,Surface Crack,64,36,76,64,60.0,High,Repair / Rework Recommended,PROD_1105.png
+PROD_1106,Surface Scratch,52,92,27,60,57.4,Medium,Inspection Review Required,PROD_1106.png
+PROD_1107,Contamination,31,80,67,63,58.6,Medium,Inspection Review Required,PROD_1107.png
+PROD_1108,Surface Scratch,45,28,31,98,47.8,Medium,Inspection Review Required,PROD_1108.png
+PROD_1109,Surface Scratch,33,48,22,72,41.8,Medium,Inspection Review Required,PROD_1109.png
+PROD_1110,Surface Scratch,72,29,27,98,55.2,Medium,Inspection Review Required,PROD_1110.png
+PROD_1111,Missing Component,91,71,100,84,86.8,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1111.png
+PROD_1112,Contamination,52,15,66,91,54.0,Medium,Inspection Review Required,PROD_1112.png
+PROD_1113,Surface Scratch,61,30,35,80,50.6,Medium,Inspection Review Required,PROD_1113.png
+PROD_1114,Contamination,50,28,74,77,55.9,Medium,Inspection Review Required,PROD_1114.png
+PROD_1115,Surface Crack,63,23,89,90,64.9,High,Repair / Rework Recommended,PROD_1115.png
+PROD_1116,Contamination,68,12,70,82,57.3,Medium,Inspection Review Required,PROD_1116.png
+PROD_1117,Surface Crack,26,83,90,67,64.4,High,Repair / Rework Recommended,PROD_1117.png
+PROD_1118,Surface Scratch,38,37,27,87,44.8,Medium,Inspection Review Required,PROD_1118.png
+PROD_1119,Missing Component,22,67,100,87,65.8,High,Repair / Rework Recommended,PROD_1119.png
+PROD_1120,Surface Crack,55,73,91,68,71.1,High,Repair / Rework Recommended,PROD_1120.png
+PROD_1121,Surface Scratch,98,86,35,88,77.2,High,Repair / Rework Recommended,PROD_1121.png
+PROD_1122,Surface Crack,49,15,92,64,54.2,Medium,Inspection Review Required,PROD_1122.png
+PROD_1123,Missing Component,80,19,100,64,66.6,High,Repair / Rework Recommended,PROD_1123.png
+PROD_1124,Surface Crack,47,74,92,91,73.8,High,Repair / Rework Recommended,PROD_1124.png
+PROD_1125,Contamination,25,94,71,72,63.2,High,Repair / Rework Recommended,PROD_1125.png
+PROD_1126,Surface Crack,15,30,90,65,47.5,Medium,Inspection Review Required,PROD_1126.png
+PROD_1127,Missing Component,83,14,90,62,63.3,High,Repair / Rework Recommended,PROD_1127.png
+PROD_1128,Surface Scratch,67,46,29,69,52.6,Medium,Inspection Review Required,PROD_1128.png
+PROD_1129,Surface Scratch,99,87,28,60,70.4,High,Repair / Rework Recommended,PROD_1129.png
+PROD_1130,Contamination,91,13,55,99,64.1,High,Repair / Rework Recommended,PROD_1130.png
+PROD_1131,Missing Component,86,48,86,62,71.7,High,Repair / Rework Recommended,PROD_1131.png
+PROD_1132,Surface Scratch,26,74,31,64,46.8,Medium,Inspection Review Required,PROD_1132.png
+PROD_1133,Surface Crack,71,26,90,82,66.7,High,Repair / Rework Recommended,PROD_1133.png
+PROD_1134,Blister,99,23,46,70,61.0,High,Repair / Rework Recommended,PROD_1134.png
+PROD_1135,Surface Crack,52,73,76,97,72.2,High,Repair / Rework Recommended,PROD_1135.png
+PROD_1136,Missing Component,96,39,99,86,80.5,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1136.png
+PROD_1137,Surface Crack,66,47,75,83,66.9,High,Repair / Rework Recommended,PROD_1137.png
+PROD_1138,Contamination,44,60,71,64,58.8,Medium,Inspection Review Required,PROD_1138.png
+PROD_1139,Blister,24,65,61,69,52.5,Medium,Inspection Review Required,PROD_1139.png
+PROD_1140,Blister,98,97,49,93,84.5,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1140.png
+PROD_1141,Missing Component,80,86,95,70,83.2,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1141.png
+PROD_1142,Surface Crack,37,64,90,90,67.6,High,Repair / Rework Recommended,PROD_1142.png
+PROD_1143,Surface Scratch,30,17,23,99,38.8,Low,Product Acceptable,PROD_1143.png
+PROD_1144,Missing Component,39,76,87,86,69.6,High,Repair / Rework Recommended,PROD_1144.png
+PROD_1145,Missing Component,64,70,100,78,77.3,High,Repair / Rework Recommended,PROD_1145.png
+PROD_1146,Blister,96,51,50,60,66.0,High,Repair / Rework Recommended,PROD_1146.png
+PROD_1147,Surface Scratch,26,99,33,93,59.4,Medium,Inspection Review Required,PROD_1147.png
+PROD_1148,Surface Crack,59,36,83,85,64.4,High,Repair / Rework Recommended,PROD_1148.png
+PROD_1149,Blister,70,72,60,76,69.2,High,Repair / Rework Recommended,PROD_1149.png
+PROD_1150,Surface Scratch,15,17,36,94,36.6,Low,Product Acceptable,PROD_1150.png
+PROD_1151,Surface Crack,93,56,88,85,80.9,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1151.png
+PROD_1152,Blister,92,97,46,85,80.4,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1152.png
+PROD_1153,Surface Crack,70,16,77,82,60.6,High,Repair / Rework Recommended,PROD_1153.png
+PROD_1154,Surface Scratch,32,47,22,74,41.7,Medium,Inspection Review Required,PROD_1154.png
+PROD_1155,Surface Crack,42,83,81,76,68.8,High,Repair / Rework Recommended,PROD_1155.png
+PROD_1156,Surface Crack,58,34,91,72,63.0,High,Repair / Rework Recommended,PROD_1156.png
+PROD_1157,Surface Scratch,82,19,22,77,50.2,Medium,Inspection Review Required,PROD_1157.png
+PROD_1158,Surface Crack,48,17,82,78,54.8,Medium,Inspection Review Required,PROD_1158.png
+PROD_1159,Surface Scratch,20,61,21,65,39.5,Low,Product Acceptable,PROD_1159.png
+PROD_1160,Missing Component,47,62,90,65,65.1,High,Repair / Rework Recommended,PROD_1160.png
+PROD_1161,Surface Crack,18,84,83,62,59.6,Medium,Inspection Review Required,PROD_1161.png
+PROD_1162,Surface Scratch,54,45,25,61,45.9,Medium,Inspection Review Required,PROD_1162.png
+PROD_1163,Surface Scratch,89,13,34,65,51.4,Medium,Inspection Review Required,PROD_1163.png
+PROD_1164,Contamination,65,71,56,74,66.0,High,Repair / Rework Recommended,PROD_1164.png
+PROD_1165,Surface Scratch,40,60,32,64,47.8,Medium,Inspection Review Required,PROD_1165.png
+PROD_1166,Surface Crack,82,28,94,92,73.5,High,Repair / Rework Recommended,PROD_1166.png
+PROD_1167,Missing Component,26,56,85,85,60.0,High,Repair / Rework Recommended,PROD_1167.png
+PROD_1168,Blister,52,46,55,95,59.8,Medium,Inspection Review Required,PROD_1168.png
+PROD_1169,Surface Scratch,17,42,25,69,35.7,Low,Product Acceptable,PROD_1169.png
+PROD_1170,Surface Scratch,24,53,21,72,40.1,Medium,Inspection Review Required,PROD_1170.png
+PROD_1171,Missing Component,98,74,89,68,83.8,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1171.png
+PROD_1172,Blister,89,24,50,94,64.0,High,Repair / Rework Recommended,PROD_1172.png
+PROD_1173,Surface Scratch,63,78,31,73,60.8,High,Repair / Rework Recommended,PROD_1173.png
+PROD_1174,Contamination,89,18,56,71,59.4,Medium,Inspection Review Required,PROD_1174.png
+PROD_1175,Surface Scratch,15,49,27,70,37.5,Low,Product Acceptable,PROD_1175.png
+PROD_1176,Blister,28,69,47,80,53.4,Medium,Inspection Review Required,PROD_1176.png
+PROD_1177,Surface Crack,97,87,78,84,87.1,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1177.png
+PROD_1178,Contamination,32,49,62,98,57.0,Medium,Inspection Review Required,PROD_1178.png
+PROD_1179,Missing Component,46,60,90,92,69.7,High,Repair / Rework Recommended,PROD_1179.png
+PROD_1180,Missing Component,29,34,100,92,60.6,High,Repair / Rework Recommended,PROD_1180.png
+PROD_1181,Surface Scratch,80,87,27,99,72.3,High,Repair / Rework Recommended,PROD_1181.png
+PROD_1182,Missing Component,65,79,90,62,74.2,High,Repair / Rework Recommended,PROD_1182.png
+PROD_1183,Missing Component,86,51,100,74,78.4,High,Repair / Rework Recommended,PROD_1183.png
+PROD_1184,Contamination,47,36,58,88,55.2,Medium,Inspection Review Required,PROD_1184.png
+PROD_1185,Surface Crack,41,64,75,63,59.6,Medium,Inspection Review Required,PROD_1185.png
+PROD_1186,Surface Scratch,24,14,29,92,36.4,Low,Product Acceptable,PROD_1186.png
+PROD_1187,Surface Crack,27,40,89,95,59.4,Medium,Inspection Review Required,PROD_1187.png
+PROD_1188,Surface Scratch,66,65,34,88,62.2,High,Repair / Rework Recommended,PROD_1188.png
+PROD_1189,Surface Scratch,43,56,23,71,46.8,Medium,Inspection Review Required,PROD_1189.png
+PROD_1190,Blister,41,45,48,85,52.6,Medium,Inspection Review Required,PROD_1190.png
+PROD_1191,Surface Scratch,83,29,30,69,53.4,Medium,Inspection Review Required,PROD_1191.png
+PROD_1192,Surface Scratch,20,81,34,85,51.8,Medium,Inspection Review Required,PROD_1192.png
+PROD_1193,Contamination,26,99,67,99,69.1,High,Repair / Rework Recommended,PROD_1193.png
+PROD_1194,Surface Scratch,74,52,31,95,62.0,High,Repair / Rework Recommended,PROD_1194.png
+PROD_1195,Contamination,19,46,62,87,50.1,Medium,Inspection Review Required,PROD_1195.png
+PROD_1196,Surface Scratch,23,60,33,99,50.0,Medium,Inspection Review Required,PROD_1196.png
+PROD_1197,Blister,25,32,45,96,46.0,Medium,Inspection Review Required,PROD_1197.png
+PROD_1198,Contamination,50,63,55,99,64.3,High,Repair / Rework Recommended,PROD_1198.png
+PROD_1199,Missing Component,61,82,93,69,75.8,High,Repair / Rework Recommended,PROD_1199.png
+PROD_1200,Blister,40,50,47,84,53.0,Medium,Inspection Review Required,PROD_1200.png
+PROD_1201,Contamination,52,11,61,77,49.0,Medium,Inspection Review Required,PROD_1201.png
+PROD_1202,Surface Scratch,31,52,31,83,46.6,Medium,Inspection Review Required,PROD_1202.png
+PROD_1203,Surface Scratch,66,79,20,88,62.2,High,Repair / Rework Recommended,PROD_1203.png
+PROD_1204,Surface Scratch,36,35,37,80,44.8,Medium,Inspection Review Required,PROD_1204.png
+PROD_1205,Surface Scratch,95,93,28,79,74.6,High,Repair / Rework Recommended,PROD_1205.png
+PROD_1206,Surface Scratch,77,70,27,66,60.6,High,Repair / Rework Recommended,PROD_1206.png
+PROD_1207,Surface Scratch,27,96,38,78,57.2,Medium,Inspection Review Required,PROD_1207.png
+PROD_1208,Surface Scratch,44,38,36,88,49.3,Medium,Inspection Review Required,PROD_1208.png
+PROD_1209,Surface Scratch,54,28,37,60,44.4,Medium,Inspection Review Required,PROD_1209.png
+PROD_1210,Blister,61,75,61,89,70.1,High,Repair / Rework Recommended,PROD_1210.png
+PROD_1211,Surface Scratch,77,13,20,67,44.8,Medium,Inspection Review Required,PROD_1211.png
+PROD_1212,Contamination,17,41,64,69,45.2,Medium,Inspection Review Required,PROD_1212.png
+PROD_1213,Contamination,48,96,72,66,69.6,High,Repair / Rework Recommended,PROD_1213.png
+PROD_1214,Missing Component,79,66,87,83,78.6,High,Repair / Rework Recommended,PROD_1214.png
+PROD_1215,Surface Crack,86,63,89,96,83.0,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1215.png
+PROD_1216,Surface Crack,22,43,77,91,54.8,Medium,Inspection Review Required,PROD_1216.png
+PROD_1217,Contamination,46,55,65,75,58.8,Medium,Inspection Review Required,PROD_1217.png
+PROD_1218,Surface Scratch,51,63,33,90,57.3,Medium,Inspection Review Required,PROD_1218.png
+PROD_1219,Surface Scratch,96,16,29,66,53.2,Medium,Inspection Review Required,PROD_1219.png
+PROD_1220,Missing Component,99,28,100,78,77.3,High,Repair / Rework Recommended,PROD_1220.png
+PROD_1221,Surface Scratch,74,91,21,60,62.2,High,Repair / Rework Recommended,PROD_1221.png
+PROD_1222,Blister,34,20,54,61,40.9,Medium,Inspection Review Required,PROD_1222.png
+PROD_1223,Surface Scratch,26,29,24,96,40.2,Medium,Inspection Review Required,PROD_1223.png
+PROD_1224,Surface Scratch,23,62,31,94,49.0,Medium,Inspection Review Required,PROD_1224.png
+PROD_1225,Contamination,38,90,64,89,67.7,High,Repair / Rework Recommended,PROD_1225.png
+PROD_1226,Surface Scratch,95,90,33,68,72.8,High,Repair / Rework Recommended,PROD_1226.png
+PROD_1227,Surface Scratch,39,82,30,63,52.3,Medium,Inspection Review Required,PROD_1227.png
+PROD_1228,Surface Crack,43,96,79,70,70.6,High,Repair / Rework Recommended,PROD_1228.png
+PROD_1229,Blister,99,51,48,97,73.9,High,Repair / Rework Recommended,PROD_1229.png
+PROD_1230,Surface Crack,51,34,80,71,58.0,Medium,Inspection Review Required,PROD_1230.png
+PROD_1231,Surface Crack,99,36,80,86,75.9,High,Repair / Rework Recommended,PROD_1231.png
+PROD_1232,Surface Scratch,26,62,26,69,43.6,Medium,Inspection Review Required,PROD_1232.png
+PROD_1233,Contamination,40,94,68,61,64.7,High,Repair / Rework Recommended,PROD_1233.png
+PROD_1234,Surface Crack,79,60,78,85,75.2,High,Repair / Rework Recommended,PROD_1234.png
+PROD_1235,Surface Crack,25,49,85,95,60.0,High,Repair / Rework Recommended,PROD_1235.png
+PROD_1236,Missing Component,53,63,86,83,69.8,High,Repair / Rework Recommended,PROD_1236.png
+PROD_1237,Contamination,83,65,55,95,73.9,High,Repair / Rework Recommended,PROD_1237.png
+PROD_1238,Surface Scratch,97,90,32,93,78.2,High,Repair / Rework Recommended,PROD_1238.png
+PROD_1239,Missing Component,80,82,93,99,87.6,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1239.png
+PROD_1240,Missing Component,75,52,92,84,75.3,High,Repair / Rework Recommended,PROD_1240.png
+PROD_1241,Surface Crack,17,53,93,89,59.4,Medium,Inspection Review Required,PROD_1241.png
+PROD_1242,Surface Crack,26,28,79,76,49.8,Medium,Inspection Review Required,PROD_1242.png
+PROD_1243,Contamination,69,56,66,75,66.2,High,Repair / Rework Recommended,PROD_1243.png
+PROD_1244,Contamination,22,30,71,82,48.2,Medium,Inspection Review Required,PROD_1244.png
+PROD_1245,Missing Component,94,79,92,84,87.8,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1245.png
+PROD_1246,Contamination,26,24,63,85,46.6,Medium,Inspection Review Required,PROD_1246.png
+PROD_1247,Surface Crack,24,25,81,76,48.9,Medium,Inspection Review Required,PROD_1247.png
+PROD_1248,Surface Crack,99,95,81,73,88.3,Critical,Reject Product & Trigger Quality Inspection Workflow,PROD_1248.png
+PROD_1249,Surface Crack,21,18,93,67,47.4,Medium,Inspection Review Required,PROD_1249.png
