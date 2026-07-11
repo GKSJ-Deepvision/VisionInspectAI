@@ -1,0 +1,21 @@
+{
+  "project": "VisionInspect AI",
+  "model_name": "padim",
+  "model_version": "v1",
+  "dataset": "MVTec AD bottle",
+  "category": "bottle",
+  "image_size": [
+    256,
+    256
+  ],
+  "train_batch_size": 4,
+  "eval_batch_size": 4,
+  "accelerator": "gpu",
+  "checkpoint_path": "models/checkpoints/padim_mvtec_bottle_v1.ckpt",
+  "metrics": {
+    "image_AUROC": 0.9984127283096313,
+    "image_F1Score": 0.9838709831237793,
+    "pixel_AUROC": 0.9820581078529358,
+    "pixel_F1Score": 0.7135797142982483
+  }
+}
