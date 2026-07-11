@@ -11,5 +11,3 @@ __pycache__/
 # Dataset
 dataset/
 
-# Output Images (optional)
-output_charts/
