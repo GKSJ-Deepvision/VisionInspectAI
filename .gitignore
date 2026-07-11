@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# React
+frontend/node_modules/
+frontend/build/
+
+# IDE
+.idea/
+
+# Environment
+.env
+
+# Uploaded images
+backend/uploads/
+
+# Model checkpoints (optional)
+*.pth
