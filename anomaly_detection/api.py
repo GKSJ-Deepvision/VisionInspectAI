@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import config
 from .model import AnomalyAutoencoder
 from .yolo_helper import crop_product
+from .preprocessor import validate_and_preprocess_image
+from .severity import calculate_severity_score
 
 app = FastAPI(
     title="VisionInspect AI - Anomaly Detection API",
@@ -149,8 +151,12 @@ async def predict(
     active_model = load_model_for_category(category)
     active_threshold = THRESHOLDS.get(category, 0.05)
     
-    # 4. Preprocess full image for the Autoencoder input (aligning with model training data)
-    input_tensor = predict_transform(pil_img).unsqueeze(0).to(device)
+    # 4. Stage 1.5: Image Preprocessing and Quality validation
+    # Run preprocessor on the cropped image (which contains the target product)
+    preprocessed_img, q_report = validate_and_preprocess_image(cropped_img)
+    
+    # Preprocess full image for the Autoencoder input (aligning with model training data)
+    input_tensor = predict_transform(preprocessed_img).unsqueeze(0).to(device)
     
     # 5. Stage 2: Autoencoder reconstruction and anomaly calculation
     with torch.no_grad():
@@ -160,12 +166,22 @@ async def predict(
     # Classify based on calibrated threshold
     is_anomaly = anomaly_score > active_threshold
     
+    # Normalize anomaly map to numpy
+    anomaly_map_np = anomaly_map_tensor.squeeze(0).cpu().numpy()
+    
+    # Calculate defect severity using the specification formula
+    severity_report = calculate_severity_score(
+        anomaly_map=anomaly_map_np,
+        anomaly_score=anomaly_score,
+        threshold=active_threshold,
+        defect_type=None
+    )
+    
     # 6. Prepare visual assets for frontend dashboard rendering
     input_np = (input_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
     recon_np = (reconstructed_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
     
     # Normalize anomaly map to [0, 255] range for visualization
-    anomaly_map_np = anomaly_map_tensor.squeeze(0).cpu().numpy()
     max_val = anomaly_map_np.max()
     if max_val > 0:
         anomaly_map_norm = (anomaly_map_np / max_val * 255).astype(np.uint8)
@@ -176,7 +192,7 @@ async def predict(
     heatmap = cv2.applyColorMap(anomaly_map_norm, cv2.COLORMAP_JET)
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB) # convert to RGB
     
-    # Create overlay (original full image blended with heatmap)
+    # Create overlay (original preprocessed image blended with heatmap)
     overlay = cv2.addWeighted(input_np, 0.6, heatmap, 0.4, 0)
     
     # If YOLO cropped, let's draw a bounding box on the original image for frontend visualization
@@ -186,8 +202,8 @@ async def predict(
         # Draw red bounding box (thickness 4)
         cv2.rectangle(original_np, (x1, y1), (x2, y2), (216, 59, 1), 4)
         
-    # Convert cropped image to standard display numpy shape
-    cropped_np = np.array(cropped_img.resize(config.IMAGE_SIZE))
+    # Convert cropped (preprocessed) image to standard display numpy shape
+    cropped_np = np.array(preprocessed_img.resize(config.IMAGE_SIZE))
         
     # Convert outputs to base64 strings
     original_b64 = image_to_base64(original_np)
@@ -207,7 +223,45 @@ async def predict(
         "cropped_image": cropped_b64,
         "reconstructed_image": reconstructed_b64,
         "heatmap_image": heatmap_b64,
-        "overlay_image": overlay_b64
+        "overlay_image": overlay_b64,
+        "severity_score": severity_report["severity_score"],
+        "severity_level": severity_report["severity_level"],
+        "recommended_action": severity_report["recommended_action"],
+        "inferred_defect_type": severity_report["inferred_defect_type"],
+        "severity_breakdown": severity_report["breakdown"],
+        "quality_report": q_report
+    }
+
+@app.post("/quality-check")
+async def quality_check(file: UploadFile = File(...)):
+    """
+    Image quality analysis endpoint.
+    Accepts an uploaded image, runs quality validation metrics, and returns the results.
+    """
+    try:
+        contents = await file.read()
+        pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+
+    # Run preprocessing and quality validation
+    enhanced_pil, report = validate_and_preprocess_image(pil_img)
+    
+    # Convert images to base64 for visualization
+    orig_np = np.array(pil_img)
+    enhanced_np = np.array(enhanced_pil)
+    
+    orig_b64 = image_to_base64(orig_np)
+    enhanced_b64 = image_to_base64(enhanced_np)
+    
+    return {
+        "is_valid": report["is_valid"],
+        "blur_score": report["blur_score"],
+        "brightness": report["brightness"],
+        "contrast": report["contrast"],
+        "warnings": report["warnings"],
+        "original_image": orig_b64,
+        "enhanced_image": enhanced_b64
     }
 
 @app.post("/reload")
