@@ -7,13 +7,15 @@ import cv2
 import torch
 from torchvision import transforms
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from . import config
 from .model import AnomalyAutoencoder
 from .yolo_helper import crop_product
 from .preprocessor import validate_and_preprocess_image
 from .severity import calculate_severity_score
+from .inspection_log import inspection_log
+from .report import generate_markdown_report
 
 app = FastAPI(
     title="VisionInspect AI - Anomaly Detection API",
@@ -48,16 +50,16 @@ THRESHOLDS = {
     "capsule": 0.005667,
     "carpet": 0.014516,
     "grid": 0.011530,
-    "hazelnut": 0.008952,
-    "leather": 0.004567,
-    "metal_nut": 0.025286,
-    "pill": 0.008796,
-    "screw": 0.011649,
-    "tile": 0.034607,
-    "toothbrush": 0.069813,
-    "transistor": 0.019222,
-    "wood": 0.008313,
-    "zipper": 0.015190
+    "hazelnut": 0.004904,
+    "leather": 0.003908,
+    "metal_nut": 0.019792,
+    "pill": 0.005162,
+    "screw": 0.005689,
+    "tile": 0.016959,
+    "toothbrush": 0.066125,
+    "transistor": 0.016376,
+    "wood": 0.007200,
+    "zipper": 0.010053
 }
 
 HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
@@ -122,26 +124,13 @@ def image_to_base64(img_np):
     b64_str = base64.b64encode(buffer).decode('utf-8')
     return f"data:image/jpeg;base64,{b64_str}"
 
-@app.post("/predict")
-async def predict(
-    file: UploadFile = File(...), 
+def predict_image_internal(
+    pil_img: Image.Image,
+    filename: str,
     category: str = "bottle",
     enable_yolo: bool = True
 ):
-    """
-    Primary quality inspection endpoint. 
-    Accepts image file, runs Stage 1 (YOLO) crop, Stage 2 (Autoencoder) reconstruction, 
-    and returns Pass/Fail result and visual base64 image steps.
-    """
     category = category.lower()
-    
-    # 1. Read uploaded file
-    try:
-        contents = await file.read()
-        pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
-        
     orig_w, orig_h = pil_img.size
     
     # 2. Stage 1: Crop product with YOLO helper
@@ -152,11 +141,11 @@ async def predict(
     active_threshold = THRESHOLDS.get(category, 0.05)
     
     # 4. Stage 1.5: Image Preprocessing and Quality validation
-    # Run preprocessor on the cropped image (which contains the target product)
-    preprocessed_img, q_report = validate_and_preprocess_image(cropped_img)
+    # Run preprocessor on the original full image for validation
+    preprocessed_img, q_report = validate_and_preprocess_image(pil_img)
     
     # Preprocess full image for the Autoencoder input (aligning with model training data)
-    input_tensor = predict_transform(preprocessed_img).unsqueeze(0).to(device)
+    input_tensor = predict_transform(pil_img).unsqueeze(0).to(device)
     
     # 5. Stage 2: Autoencoder reconstruction and anomaly calculation
     with torch.no_grad():
@@ -202,8 +191,9 @@ async def predict(
         # Draw red bounding box (thickness 4)
         cv2.rectangle(original_np, (x1, y1), (x2, y2), (216, 59, 1), 4)
         
-    # Convert cropped (preprocessed) image to standard display numpy shape
-    cropped_np = np.array(preprocessed_img.resize(config.IMAGE_SIZE))
+    # Convert cropped image to standard display numpy shape with enhancement
+    enhanced_cropped, _ = validate_and_preprocess_image(cropped_img)
+    cropped_np = np.array(enhanced_cropped.resize(config.IMAGE_SIZE))
         
     # Convert outputs to base64 strings
     original_b64 = image_to_base64(original_np)
@@ -212,7 +202,23 @@ async def predict(
     heatmap_b64 = image_to_base64(heatmap)
     overlay_b64 = image_to_base64(overlay)
     
+    # Log the inspection record
+    inspection_id = inspection_log.add_entry(
+        category=category,
+        is_anomaly=is_anomaly,
+        anomaly_score=anomaly_score,
+        threshold=active_threshold,
+        severity_score=severity_report["severity_score"],
+        severity_level=severity_report["severity_level"],
+        recommended_action=severity_report["recommended_action"],
+        inferred_defect_type=severity_report["inferred_defect_type"],
+        severity_breakdown=severity_report["breakdown"],
+        quality_report=q_report,
+        filename=filename
+    )
+    
     return {
+        "inspection_id": inspection_id,
         "is_anomaly": is_anomaly,
         "anomaly_score": round(anomaly_score, 6),
         "threshold": active_threshold,
@@ -231,6 +237,30 @@ async def predict(
         "severity_breakdown": severity_report["breakdown"],
         "quality_report": q_report
     }
+
+@app.post("/predict")
+async def predict(
+    file: UploadFile = File(...), 
+    category: str = "bottle",
+    enable_yolo: bool = True
+):
+    """
+    Primary quality inspection endpoint. 
+    Accepts image file, runs Stage 1 (YOLO) crop, Stage 2 (Autoencoder) reconstruction, 
+    and returns Pass/Fail result and visual base64 image steps.
+    """
+    try:
+        contents = await file.read()
+        pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+        
+    return predict_image_internal(
+        pil_img=pil_img,
+        filename=file.filename,
+        category=category,
+        enable_yolo=enable_yolo
+    )
 
 @app.post("/quality-check")
 async def quality_check(file: UploadFile = File(...)):
@@ -263,6 +293,126 @@ async def quality_check(file: UploadFile = File(...)):
         "original_image": orig_b64,
         "enhanced_image": enhanced_b64
     }
+
+@app.post("/batch-predict")
+async def batch_predict(
+    files: list[UploadFile] = File(...),
+    category: str = "bottle",
+    enable_yolo: bool = True
+):
+    """
+    Batch quality inspection endpoint.
+    Accepts up to 20 image files, runs the full preprocessing and defect detection pipeline on each,
+    saves results to the history log, and returns an aggregated batch summary.
+    """
+    category = category.lower()
+    if len(files) > 20:
+        raise HTTPException(status_code=400, detail="Maximum batch size is 20 images.")
+        
+    results = []
+    anomalous_count = 0
+    
+    for file in files:
+        try:
+            # Read contents
+            contents = await file.read()
+            pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+            
+            res = predict_image_internal(
+                pil_img=pil_img,
+                filename=file.filename,
+                category=category,
+                enable_yolo=enable_yolo
+            )
+            results.append(res)
+            if res["is_anomaly"]:
+                anomalous_count += 1
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "error": f"Failed to process: {str(e)}",
+                "is_anomaly": False
+            })
+            
+    return {
+        "category": category,
+        "batch_size": len(files),
+        "anomalous_count": anomalous_count,
+        "pass_count": len(files) - anomalous_count,
+        "pass_rate": round(((len(files) - anomalous_count) / len(files)) * 100.0, 2) if files else 100.0,
+        "results": results
+    }
+
+@app.get("/history")
+def get_history(limit: int = Query(50, ge=1, le=500)):
+    """Retrieves the recent quality inspections log."""
+    return inspection_log.get_all(limit=limit)
+
+@app.get("/analytics")
+def get_analytics():
+    """Retrieves aggregated statistics and distribution trends."""
+    return inspection_log.get_analytics()
+
+@app.get("/report/{inspection_id}")
+def get_report(inspection_id: str, format: str = Query("json", pattern="^(json|markdown|html)$")):
+    """Generates and retrieves an inspection certificate by ID."""
+    entry = inspection_log.get_by_id(inspection_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Inspection report not found.")
+        
+    if format in ("markdown", "html"):
+        md_text = generate_markdown_report(entry)
+        if format == "markdown":
+            return HTMLResponse(content=md_text, media_type="text/plain")
+        
+        # Build HTML page
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Inspection Certificate - {inspection_id}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            max-width: 750px;
+            margin: 40px auto;
+            padding: 30px;
+            color: #24292e;
+            background-color: #fafbfc;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }}
+        h1, h2, h3 {{ color: #1b1f23; border-bottom: 1px solid #eaecef; padding-bottom: 8px; }}
+        hr {{ border: 0; border-top: 1px solid #eaecef; margin: 20px 0; }}
+        blockquote {{
+            border-left: 4px solid #007c10;
+            background: #f6f8fa;
+            padding: 12px 20px;
+            margin: 15px 0;
+            font-weight: 500;
+        }}
+        .badge {{
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }}
+        .badge-pass {{ background-color: #d4edda; color: #155724; }}
+        .badge-fail {{ background-color: #f8d7da; color: #721c24; }}
+    </style>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <span class="badge {'badge-fail' if entry['is_anomaly'] else 'badge-pass'}">
+            {"FAIL - DEFECTIVE" if entry['is_anomaly'] else "PASS - APPROVED"}
+        </span>
+    </div>
+    {md_text.replace('# QUALITY INSPECTION CERTIFICATE', '<h1>QUALITY INSPECTION CERTIFICATE</h1>').replace('**VisionInspect AI - Smart Quality Assurance System**', '<h3>VisionInspect AI - Smart Quality Assurance System</h3>').replace('## 📋 General Information', '<h2>📋 General Information</h2>').replace('## ⚖️ Inspection Verdict', '<h2>⚖️ Inspection Verdict</h2>').replace('## 🔍 Image Quality Control (Stage 1)', '<h2>🔍 Image Quality Control (Stage 1)</h2>').replace('## 🧠 Defect Classification & Severity (Stage 2)', '<h2>🧠 Defect Classification & Severity (Stage 2)</h2>').replace('## ⚙️ Recommended Action', '<h2>⚙️ Recommended Action</h2>').replace('### Quality Alerts:', '<h3>Quality Alerts:</h3>').replace('### Severity Component Breakdown:', '<h3>Severity Component Breakdown:</h3>').replace('\n', '<br>')}
+</body>
+</html>"""
+        return HTMLResponse(content=html_content)
+        
+    return JSONResponse(content=entry)
 
 @app.post("/reload")
 def reload_model_weights(category: str = "bottle"):
