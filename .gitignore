@@ -4,3 +4,15 @@ dist/
 dataset/
 venv/
 
+#Python cache
+__pycache__/
+*.pyc
+
+# Python / Backend
+env/
+__pycache__/
+*.py[cod]
+*.sqlite3
+visioninspect.db
+
+backend/inspection_plots/

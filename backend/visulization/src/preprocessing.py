@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
-
-IMAGE_SIZE = (256, 256)
+from src.config import IMAGE_SIZE
 
 def load_image(image_path):
     """
