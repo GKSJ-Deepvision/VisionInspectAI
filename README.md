@@ -1,55 +1,188 @@
 # VisionInspectAI
 
-## Milestone 1 - Team Branch
+VisionInspectAI is an AI-powered industrial visual inspection system that automates defect detection and product quality assessment using Computer Vision and Deep Learning.
 
-This branch contains the integrated codebase for Milestone 1 of the VisionInspectAI project.
+---
 
-### Project Structure
+# Project Structure
 
 ```
 VisionInspectAI/
+│
 ├── backend/
-│   ├── authentication/
-│   ├── database/
-│   ├── upload/
+│   ├── app/                     # FastAPI backend
+│   ├── inspection_plots/        # Generated reports & visualizations
 │   └── visualization/
-│       ├── src/
-│       ├── output_charts/
 │       ├── main.py
-│       └── requirements.txt
+│       └── src/
+│           ├── config.py
+│           ├── dataset_loader.py
+│           ├── preprocessing.py
+│           ├── image_quality.py
+│           ├── feature_extraction.py
+│           ├── visualization.py
+│           ├── pipeline.py
+│           └── ...
 │
-├── frontend/
+├── dataset/                     # MVTec AD Dataset
 │
-├── docs/
+├── frontend/                    # React Frontend
 │
-├── README.md
-└── .gitignore
+└── docs/
 ```
 
-## Technologies Used
+---
 
-- Python
-- FastAPI
-- React
-- SQLite
-- OpenCV
-- Matplotlib
-- Pandas
-- NumPy
-- JWT Authentication
+# Inspection Pipeline
 
-## Milestone 1 Features
+```
+MVTec AD Dataset
+        │
+        ▼
+Dataset Loader
+        │
+        ▼
+Image Quality Analysis
+        │
+        ▼
+Image Preprocessing
+        │
+        ▼
+Feature Extraction
+        │
+        ▼
+Model Inference
+(Classification + Defect Detection)
+        │
+        ▼
+Inspection Report
+        │
+        ▼
+FastAPI Backend
+        │
+        ▼
+React Frontend
+```
 
-- Backend API setup
-- User authentication
-- Database integration
-- Image upload module
-- Dataset preprocessing
-- Exploratory Data Analysis (EDA)
-- Statistical analysis
-- Data visualization
-- Frontend integration
+---
 
-## Note
+# Current Modules
 
-This branch contains the collaborative codebase for Milestone 1
+## Dataset Loader
+
+Loads images directly from the MVTec AD dataset.
+
+Features:
+
+- Automatic category discovery
+- Train/Test image loading
+- Defect type loading
+- Ground truth mask loading
+
+---
+
+## Image Preprocessing
+
+Prepares images before model inference.
+
+Current preprocessing steps:
+
+- Image Loading
+- RGB Conversion
+- Image Resizing
+- CLAHE Contrast Enhancement
+- Optional Noise Removal
+- Image Normalization
+
+---
+
+## Image Quality Analysis
+
+Evaluates image quality before inference.
+
+Metrics:
+
+- Brightness
+- Contrast
+- Blur Score (Variance of Laplacian)
+- Noise Estimation
+
+---
+
+## Feature Extraction
+
+Extracts handcrafted Computer Vision features.
+
+Features:
+
+- RGB Color Histogram
+- Local Binary Pattern (LBP)
+- Edge Density
+- Contour Statistics
+
+---
+
+## Visualization
+
+Automatically generates:
+
+- Original Image
+- Preprocessed Image
+- Comparison View
+- RGB Histogram
+- Grayscale Histogram
+- Edge Detection
+
+---
+
+## Pipeline
+
+The pipeline integrates all preprocessing modules into a single workflow.
+
+```
+Load Image
+      │
+      ▼
+Preprocess
+      │
+      ▼
+Quality Analysis
+      │
+      ▼
+Feature Extraction
+      │
+      ▼
+Visualization
+      │
+      ▼
+Generate Reports
+```
+
+---
+
+# Generated Outputs
+
+Running the inspection pipeline generates:
+
+- Quality Report (JSON)
+- Feature Summary (CSV)
+- Comparison Images
+- Histograms
+- Edge Detection Results
+
+These outputs are generated automatically and are excluded from version control.
+
+---
+
+# Future Work
+
+- Deep Learning Model Integration
+- Product Classification
+- Defect Detection
+- Defect Localization
+- Inspection Report Generation
+- FastAPI Integration
+- React Dashboard
+- Database Integration
+
+---
