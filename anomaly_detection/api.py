@@ -53,23 +53,23 @@ predict_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-# Calibrated default thresholds for all 15 MVTec AD categories (SSIM + MSE Hybrid)
+# Calibrated default thresholds for all 15 MVTec AD categories (SSIM + MSE Hybrid 3-Sigma)
 THRESHOLDS = {
-    "bottle": 0.125000,
-    "cable": 0.155000,
-    "capsule": 0.120000,
-    "carpet": 0.105000,
-    "grid": 0.140000,
-    "hazelnut": 0.115000,
-    "leather": 0.095000,
-    "metal_nut": 0.195000,
-    "pill": 0.135000,
-    "screw": 0.120000,
-    "tile": 0.100000,
-    "toothbrush": 0.105000,
-    "transistor": 0.125000,
-    "wood": 0.095000,
-    "zipper": 0.130000
+    "bottle": 0.195095,
+    "cable": 0.192328,
+    "capsule": 0.111777,
+    "carpet": 0.117227,
+    "grid": 0.072851,
+    "hazelnut": 0.129920,
+    "leather": 0.124406,
+    "metal_nut": 0.200536,
+    "pill": 0.125741,
+    "screw": 0.103276,
+    "tile": 0.169546,
+    "toothbrush": 0.245510,
+    "transistor": 0.137502,
+    "wood": 0.166859,
+    "zipper": 0.188865
 }
 
 HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
