@@ -100,7 +100,11 @@ def get_dashboard():
     """Serves the interactive Visual Defect Detection Dashboard."""
     if HTML_PATH.exists():
         with open(HTML_PATH, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
+            return HTMLResponse(
+                content=f.read(),
+                status_code=200,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
+            )
     return HTMLResponse(content="<h1>Dashboard file (dashboard.html) not found.</h1>", status_code=404)
 
 @app.get("/status")
