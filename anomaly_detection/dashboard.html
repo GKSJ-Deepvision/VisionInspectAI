@@ -1115,12 +1115,12 @@
                 <!-- Single File Input -->
                 <div class="input-group" id="single-upload-group">
                     <label>Product Image Upload</label>
-                    <label class="upload-area" id="drop-zone" for="file-input">
+                    <div class="upload-area" id="drop-zone" style="cursor:pointer;">
                         <div class="upload-icon">📤</div>
                         <div style="font-weight: 500;">Select or drag image</div>
                         <div class="upload-text">Supports PNG, JPG, JPEG, BMP</div>
-                    </label>
-                    <input type="file" id="file-input" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;">
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" style="display:none;">
                     
                     <div class="preview-container" id="preview-box">
                         <img src="" alt="Preview" class="preview-img" id="preview-img">
@@ -1131,12 +1131,12 @@
                 <!-- Batch File Input -->
                 <div class="input-group" id="batch-upload-group" style="display:none;">
                     <label>Batch Product Images Upload</label>
-                    <label class="batch-drop-zone" id="batch-drop-zone" for="batch-file-input">
+                    <div class="batch-drop-zone" id="batch-drop-zone" style="cursor:pointer;">
                         <div class="upload-icon">📦</div>
                         <div style="font-weight: 500;">Upload multiple files</div>
                         <div class="upload-text">Select up to 20 images at once</div>
-                    </label>
-                    <input type="file" id="batch-file-input" accept="image/*" multiple style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;">
+                    </div>
+                    <input type="file" id="batch-file-input" accept="image/*" multiple style="display:none;">
                     <div class="file-list-panel" id="file-list-panel" style="display:none;">
                         <div class="file-list-header">
                             <span>Selected Files (<strong id="batch-count">0</strong>)</span>
@@ -1495,6 +1495,7 @@
         window.addEventListener('DOMContentLoaded', fetchStatus);
 
         // Sidebar Upload handlers
+        dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
         dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)'; });
         dropZone.addEventListener('drop', (e) => {
@@ -1506,9 +1507,17 @@
             if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
         });
 
+        function isImageFile(file) {
+            if (!file) return false;
+            if (file.type && file.type.startsWith('image/')) return true;
+            const name = file.name || '';
+            const ext = name.split('.').pop().toLowerCase();
+            return ['png', 'jpg', 'jpeg', 'bmp', 'webp', 'tif', 'tiff', 'gif'].includes(ext);
+        }
+
         function handleFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('Please upload an image file.');
+            if (!isImageFile(file)) {
+                alert('Please upload a valid image file (PNG, JPG, JPEG, BMP, WEBP).');
                 return;
             }
             selectedFile = file;
@@ -1534,6 +1543,7 @@
         });
 
         // Batch upload handlers
+        batchDropZone.addEventListener('click', () => batchFileInput.click());
         batchDropZone.addEventListener('dragover', (e) => { e.preventDefault(); batchDropZone.style.borderColor = 'var(--primary)'; });
         batchDropZone.addEventListener('dragleave', () => { batchDropZone.style.borderColor = 'rgba(255, 255, 255, 0.12)'; });
         batchDropZone.addEventListener('drop', (e) => {
@@ -1546,7 +1556,7 @@
         });
 
         function handleBatchFiles(filesList) {
-            const validFiles = Array.from(filesList).filter(f => f.type.startsWith('image/'));
+            const validFiles = Array.from(filesList).filter(isImageFile);
             if (validFiles.length === 0) {
                 alert('Please upload image files.');
                 return;
