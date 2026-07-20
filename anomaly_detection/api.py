@@ -8,6 +8,7 @@ import torch
 from torchvision import transforms
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from . import config
 from .model import AnomalyAutoencoder
@@ -22,6 +23,14 @@ app = FastAPI(
     description="API for detecting manufacturing defects using Unsupervised Convolutional Autoencoders.",
     version="1.1.0"
 )
+
+# Mount Static Assets Directory
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "index.html"
+HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
 
 # Allow CORS for integration with frontend (React / Next.js)
 app.add_middleware(
@@ -98,14 +107,15 @@ async def startup_event():
 @app.get("/", response_class=HTMLResponse)
 def get_dashboard():
     """Serves the interactive Visual Defect Detection Dashboard."""
-    if HTML_PATH.exists():
-        with open(HTML_PATH, "r", encoding="utf-8") as f:
+    target_path = TEMPLATE_PATH if TEMPLATE_PATH.exists() else HTML_PATH
+    if target_path.exists():
+        with open(target_path, "r", encoding="utf-8") as f:
             return HTMLResponse(
                 content=f.read(),
                 status_code=200,
                 headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
             )
-    return HTMLResponse(content="<h1>Dashboard file (dashboard.html) not found.</h1>", status_code=404)
+    return HTMLResponse(content="<h1>Dashboard file (index.html) not found.</h1>", status_code=404)
 
 @app.get("/status")
 def get_status(category: str = "bottle"):
