@@ -1495,13 +1495,15 @@
         window.addEventListener('DOMContentLoaded', fetchStatus);
 
         // Sidebar Upload handlers
-        dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
         dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)'; });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
             if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
@@ -1543,7 +1545,9 @@
         });
 
         // Batch upload handlers
-        batchDropZone.addEventListener('click', () => batchFileInput.click());
+        batchFileInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
         batchDropZone.addEventListener('dragover', (e) => { e.preventDefault(); batchDropZone.style.borderColor = 'var(--primary)'; });
         batchDropZone.addEventListener('dragleave', () => { batchDropZone.style.borderColor = 'rgba(255, 255, 255, 0.12)'; });
         batchDropZone.addEventListener('drop', (e) => {
