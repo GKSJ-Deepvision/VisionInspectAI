@@ -1115,12 +1115,12 @@
                 <!-- Single File Input -->
                 <div class="input-group" id="single-upload-group">
                     <label>Product Image Upload</label>
-                    <div class="upload-area" id="drop-zone">
+                    <label class="upload-area" id="drop-zone" for="file-input">
                         <div class="upload-icon">📤</div>
                         <div style="font-weight: 500;">Select or drag image</div>
                         <div class="upload-text">Supports PNG, JPG, JPEG, BMP</div>
-                    </div>
-                    <input type="file" id="file-input" accept="image/*" style="display:none;">
+                        <input type="file" id="file-input" accept="image/*" style="display:none;">
+                    </label>
                     
                     <div class="preview-container" id="preview-box">
                         <img src="" alt="Preview" class="preview-img" id="preview-img">
@@ -1131,12 +1131,12 @@
                 <!-- Batch File Input -->
                 <div class="input-group" id="batch-upload-group" style="display:none;">
                     <label>Batch Product Images Upload</label>
-                    <div class="batch-drop-zone" id="batch-drop-zone">
+                    <label class="batch-drop-zone" id="batch-drop-zone" for="batch-file-input">
                         <div class="upload-icon">📦</div>
                         <div style="font-weight: 500;">Upload multiple files</div>
                         <div class="upload-text">Select up to 20 images at once</div>
-                    </div>
-                    <input type="file" id="batch-file-input" accept="image/*" multiple style="display:none;">
+                        <input type="file" id="batch-file-input" accept="image/*" multiple style="display:none;">
+                    </label>
                     <div class="file-list-panel" id="file-list-panel" style="display:none;">
                         <div class="file-list-header">
                             <span>Selected Files (<strong id="batch-count">0</strong>)</span>
@@ -1495,13 +1495,6 @@
         window.addEventListener('DOMContentLoaded', fetchStatus);
 
         // Sidebar Upload handlers
-        dropZone.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileInput.click();
-        });
-        fileInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
         dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)'; });
         dropZone.addEventListener('drop', (e) => {
@@ -1531,6 +1524,7 @@
 
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             selectedFile = null;
             fileInput.value = '';
             previewImg.src = '';
@@ -1540,13 +1534,6 @@
         });
 
         // Batch upload handlers
-        batchDropZone.addEventListener('click', (e) => {
-            e.stopPropagation();
-            batchFileInput.click();
-        });
-        batchFileInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
         batchDropZone.addEventListener('dragover', (e) => { e.preventDefault(); batchDropZone.style.borderColor = 'var(--primary)'; });
         batchDropZone.addEventListener('dragleave', () => { batchDropZone.style.borderColor = 'rgba(255, 255, 255, 0.12)'; });
         batchDropZone.addEventListener('drop', (e) => {
