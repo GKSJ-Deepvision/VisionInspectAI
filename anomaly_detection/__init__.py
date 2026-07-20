@@ -1,4 +1,17 @@
-# Anomaly Detection Module
-# For VisionInspect AI Quality Inspection System
+"""
+VisionInspect AI Anomaly Detection & Defect Inspection Package
+"""
 
-__version__ = "0.1.0"
+from anomaly_detection.inference import predict_defect, load_autoencoder_model, load_classifier_model
+from anomaly_detection.model import AnomalyAutoencoder
+from anomaly_detection.classifier import DefectClassifier
+from anomaly_detection.preprocessor import validate_and_preprocess_image
+
+__all__ = [
+    "predict_defect",
+    "load_autoencoder_model",
+    "load_classifier_model",
+    "AnomalyAutoencoder",
+    "DefectClassifier",
+    "validate_and_preprocess_image"
+]

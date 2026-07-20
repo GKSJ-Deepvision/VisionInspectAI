@@ -33,3 +33,23 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default threshold for anomaly score (to be calibrated during training validation)
 ANOMALY_THRESHOLD = 0.05
+
+# Calibrated 3-Sigma Thresholds across all 15 MVTec AD Categories
+CATEGORY_THRESHOLDS = {
+    "bottle": 0.017216,
+    "cable": 0.028136,
+    "capsule": 0.005667,
+    "carpet": 0.014516,
+    "grid": 0.011530,
+    "hazelnut": 0.004904,
+    "leather": 0.003908,
+    "metal_nut": 0.019792,
+    "pill": 0.005162,
+    "screw": 0.005689,
+    "tile": 0.016959,
+    "toothbrush": 0.066125,
+    "transistor": 0.016376,
+    "wood": 0.007200,
+    "zipper": 0.010053
+}
+

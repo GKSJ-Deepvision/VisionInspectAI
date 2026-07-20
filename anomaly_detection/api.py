@@ -353,6 +353,87 @@ def get_analytics():
     """Retrieves aggregated statistics and distribution trends."""
     return inspection_log.get_analytics()
 
+@app.get("/analytics/trends")
+def get_analytics_trends():
+    """Milestone 3: Returns time-series defect trend analysis and severity distributions."""
+    analytics = inspection_log.get_analytics()
+    recent_logs = inspection_log.get_all(limit=100)
+    
+    time_series = []
+    for entry in reversed(recent_logs):
+        time_series.append({
+            "timestamp": entry.get("timestamp"),
+            "category": entry.get("category"),
+            "is_anomaly": entry.get("is_anomaly"),
+            "anomaly_score": entry.get("anomaly_score"),
+            "severity_score": entry.get("severity_score"),
+            "severity_level": entry.get("severity_level"),
+            "inferred_defect_type": entry.get("inferred_defect_type")
+        })
+        
+    return {
+        "summary": analytics,
+        "time_series": time_series,
+        "defect_type_breakdown": analytics.get("severity_distribution", {})
+    }
+
+@app.get("/analytics/risk-assessment")
+def get_risk_assessment():
+    """Milestone 3: Evaluates manufacturing quality risk level by product category."""
+    analytics = inspection_log.get_analytics()
+    category_stats = analytics.get("category_stats", {})
+    
+    risk_report = {}
+    for cat, stats in category_stats.items():
+        total = stats.get("total", 0)
+        defective = stats.get("anomalous", 0)
+        defect_rate = (defective / total * 100.0) if total > 0 else 0.0
+        
+        if defect_rate > 30.0:
+            risk_level = "HIGH RISK"
+            action = "Escalate to Quality Assurance Supervisor immediately"
+        elif defect_rate > 10.0:
+            risk_level = "MEDIUM RISK"
+            action = "Monitor conveyor line calibration and tool wear"
+        else:
+            risk_level = "LOW RISK"
+            action = "Normal operating parameters"
+            
+        risk_report[cat] = {
+            "total_inspections": total,
+            "defective_units": defective,
+            "defect_rate_pct": round(defect_rate, 2),
+            "risk_level": risk_level,
+            "recommended_action": action
+        }
+        
+    return {
+        "overall_defect_rate": analytics.get("defect_rate", 0.0),
+        "total_units_inspected": analytics.get("total_inspections", 0),
+        "category_risk_levels": risk_report
+    }
+
+@app.get("/reports/production")
+def get_production_report():
+    """Milestone 3: Executive Manufacturing Quality & Production Summary Report."""
+    analytics = inspection_log.get_analytics()
+    total = analytics.get("total_inspections", 0)
+    anomalous = analytics.get("anomalous_count", 0)
+    pass_count = total - anomalous
+    pass_rate = analytics.get("pass_rate", 100.0)
+    
+    return {
+        "report_title": "Executive Production Quality Summary Report",
+        "system_status": "OPERATIONAL",
+        "total_units_inspected": total,
+        "units_passed": pass_count,
+        "units_rejected": anomalous,
+        "yield_pass_rate_pct": pass_rate,
+        "defect_rate_pct": analytics.get("defect_rate", 0.0),
+        "severity_distribution": analytics.get("severity_distribution", {}),
+        "category_performance": analytics.get("category_stats", {})
+    }
+
 @app.get("/report/{inspection_id}")
 def get_report(inspection_id: str, format: str = Query("json", pattern="^(json|markdown|html)$")):
     """Generates and retrieves an inspection certificate by ID."""
