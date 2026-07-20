@@ -117,21 +117,21 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
     
     reconstructed_tensor, anomaly_map_tensor, anomaly_score_tensor = autoencoder.compute_anomaly_map(input_tensor, use_ssim=True)
     
-    anomaly_score = float(anomaly_score_tensor.item())
-    threshold = float(config.CATEGORY_THRESHOLDS.get(category, config.ANOMALY_THRESHOLD))
-    is_anomaly = anomaly_score > threshold
-    
     # 5. Defect Classification & Confidence Calculation
     classifier_model, class_list = load_classifier_model(category)
     if classifier_model is not None:
         predicted_class, class_confidence, class_probs = classifier_model.predict_class(input_tensor, class_list)
-        if not is_anomaly and predicted_class != "good":
-            # Override if model score is below threshold
-            predicted_class = "good"
     else:
-        predicted_class = "good" if not is_anomaly else "defect_detected"
-        class_confidence = round(min(100.0, max(60.0, (anomaly_score / max(1e-6, threshold)) * 75.0)), 2)
-        class_probs = {predicted_class: class_confidence}
+        predicted_class = "good"
+        class_confidence = 99.0
+        class_probs = {"good": 99.0}
+
+    anomaly_score = float(anomaly_score_tensor.item())
+    threshold = float(config.CATEGORY_THRESHOLDS.get(category, 0.125))
+
+    is_anomaly = (anomaly_score > threshold) or (predicted_class.lower() != "good")
+    defect_result = "REJECT" if is_anomaly else "PASS"
+    defect_class = predicted_class if is_anomaly else "good"
         
     # 6. Morphological Severity Scoring Framework
     anomaly_map_np = anomaly_map_tensor.squeeze(0).cpu().numpy()
