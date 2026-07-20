@@ -144,8 +144,8 @@
                         </div>
                     </div>
 
-                    <!-- 3-Column Inspection Viewport -->
-                    <div class="inspection-grid">
+                    <!-- 4-Column Inspection Viewport -->
+                    <div class="inspection-grid" style="grid-template-columns: repeat(4, 1fr);">
                         <div class="image-card">
                             <div class="image-card-title">
                                 <span>📷 Original Input</span>
@@ -158,8 +158,8 @@
 
                         <div class="image-card">
                             <div class="image-card-title">
-                                <span>🎯 Stage 1: YOLO Detection</span>
-                                <span style="font-size: 11px; color: var(--primary);">Bounding Box</span>
+                                <span>📦 Product Crop</span>
+                                <span style="font-size: 11px; color: var(--primary);">YOLO Box</span>
                             </div>
                             <div class="image-viewport">
                                 <img id="img-yolo" src="" alt="YOLO Cropped">
@@ -168,11 +168,21 @@
 
                         <div class="image-card">
                             <div class="image-card-title">
-                                <span>🔥 Stage 2: SSIM Heatmap</span>
+                                <span>🔥 SSIM Heatmap</span>
                                 <span style="font-size: 11px; color: var(--accent-pink);">Anomaly Map</span>
                             </div>
                             <div class="image-viewport">
                                 <img id="img-heatmap" src="" alt="Heatmap Overlay">
+                            </div>
+                        </div>
+
+                        <div class="image-card">
+                            <div class="image-card-title">
+                                <span>🎯 Defect Area Box</span>
+                                <span style="font-size: 11px; color: var(--danger);">Crack/Stain Zoom</span>
+                            </div>
+                            <div class="image-viewport">
+                                <img id="img-defect-box" src="" alt="Defect Box & Zoom">
                             </div>
                         </div>
                     </div>

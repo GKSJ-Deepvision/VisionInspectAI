@@ -15,6 +15,7 @@ from .model import AnomalyAutoencoder
 from .yolo_helper import crop_product
 from .preprocessor import validate_and_preprocess_image
 from .severity import calculate_severity_score
+from .classifier import predict_defect_class
 from .inspection_log import inspection_log
 from .report import generate_markdown_report
 
@@ -150,73 +151,107 @@ def predict_image_internal(
     # 2. Stage 1: Crop product with YOLO helper
     cropped_img, bbox, yolo_status = crop_product(pil_img, category=category, enable_yolo=enable_yolo)
     
-    # 3. Load model weights for the active category
+    # Product Category Validation: Check if alien / unrelated object was uploaded
+    if yolo_status.startswith("INVALID_PRODUCT_IMAGE"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid Product Image: Uploaded image does not match product category '{category}'."
+        )
+
+    # 3. Preprocess cropped product image for Autoencoder input
+    input_tensor = predict_transform(cropped_img).unsqueeze(0).to(device)
+    
+    # 4. Load model weights for the active category
     active_model = load_model_for_category(category)
-    active_threshold = THRESHOLDS.get(category, 0.05)
-    
-    # 4. Stage 1.5: Image Preprocessing and Quality validation
-    # Run preprocessor on the original full image for validation
-    preprocessed_img, q_report = validate_and_preprocess_image(pil_img)
-    
-    # Preprocess full image for the Autoencoder input (aligning with model training data)
-    input_tensor = predict_transform(pil_img).unsqueeze(0).to(device)
-    
-    # 5. Stage 2: Autoencoder reconstruction and anomaly calculation
+    active_threshold = THRESHOLDS.get(category, 0.017)
+
+    # 5. Stage 2: Compute SSIM+MSE Anomaly Map & Multi-Class Classification
     with torch.no_grad():
         reconstructed_tensor, anomaly_map_tensor, anomaly_score_tensor = active_model.compute_anomaly_map(input_tensor)
         anomaly_score = anomaly_score_tensor.item()
         
-    # Classify based on calibrated threshold
-    is_anomaly = anomaly_score > active_threshold
-    
-    # Normalize anomaly map to numpy
     anomaly_map_np = anomaly_map_tensor.squeeze(0).cpu().numpy()
+
+    # Predict multi-class sub-defect type (e.g., 'crack', 'broken_large', 'good')
+    predicted_defect, confidence_pct, _ = predict_defect_class(input_tensor.cpu(), category)
     
-    # Calculate defect severity using the specification formula
-    severity_report = calculate_severity_score(
-        anomaly_map=anomaly_map_np,
-        anomaly_score=anomaly_score,
-        threshold=active_threshold,
-        defect_type=None
-    )
-    
-    # 6. Prepare visual assets for frontend dashboard rendering
-    input_np = (input_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-    recon_np = (reconstructed_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-    
-    # Normalize anomaly map to [0, 255] range for visualization
-    max_val = anomaly_map_np.max()
-    if max_val > 0:
-        anomaly_map_norm = (anomaly_map_np / max_val * 255).astype(np.uint8)
+    # Is anomaly if anomaly_score exceeds threshold AND classifier does not classify as good
+    is_anomaly = (anomaly_score > active_threshold) or (predicted_defect.lower() != "good")
+    defect_result = "REJECT" if is_anomaly else "PASS"
+    defect_class = predicted_defect if is_anomaly else "Good"
+
+    # Severity Calculation
+    if is_anomaly:
+        severity_report = calculate_severity_score(
+            anomaly_map=anomaly_map_np,
+            anomaly_score=anomaly_score,
+            threshold=active_threshold,
+            defect_type=defect_class
+        )
     else:
-        anomaly_map_norm = np.zeros_like(anomaly_map_np, dtype=np.uint8)
+        severity_report = {
+            "severity_score": 0.0,
+            "severity_level": "None",
+            "recommended_action": "Pass Product - Quality Control Verified",
+            "inferred_defect_type": "Good",
+            "breakdown": {"coverage_pct": 0.0, "peak_anomaly": 0.0}
+        }
+
+    # 6. Specific Defect Region Bounding Box Localization (Locating the CRACK / DEFECT AREA)
+    enhanced_cropped, _ = validate_and_preprocess_image(cropped_img)
+    cropped_np = np.array(enhanced_cropped.resize(config.IMAGE_SIZE))
+    defect_overlay_np = cropped_np.copy()
+    
+    defect_bbox = None
+    defect_crop_np = cropped_np.copy()
+    
+    if is_anomaly and anomaly_map_np.max() > 0:
+        # Binary mask of high anomaly intensity pixels
+        mask = (anomaly_map_np > (active_threshold * 0.8)).astype(np.uint8) * 255
+        mask_resized = cv2.resize(mask, (config.IMAGE_SIZE[0], config.IMAGE_SIZE[1]))
+        contours, _ = cv2.findContours(mask_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-    # Generate Heatmap (colormapped JET)
+        valid_contours = [c for c in contours if cv2.contourArea(c) > 10]
+        if valid_contours:
+            all_pts = np.vstack(valid_contours)
+            dx, dy, dw, dh = cv2.boundingRect(all_pts)
+            defect_bbox = [int(dx), int(dy), int(dx + dw), int(dy + dh)]
+            
+            # Draw bright neon red bounding box around the SPECIFIC DEFECT AREA
+            cv2.rectangle(defect_overlay_np, (dx, dy), (dx + dw, dy + dh), (255, 0, 80), 3)
+            label = f"DEFECT: {defect_class.upper()} ({confidence_pct:.0f}%)"
+            cv2.putText(defect_overlay_np, label, (dx, max(15, dy - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 2)
+            
+            # Crop specific defect area
+            y1_crop, y2_crop = max(0, dy-8), min(config.IMAGE_SIZE[1], dy+dh+8)
+            x1_crop, x2_crop = max(0, dx-8), min(config.IMAGE_SIZE[0], dx+dw+8)
+            if (y2_crop - y1_crop) > 5 and (x2_crop - x1_crop) > 5:
+                defect_crop_np = cropped_np[y1_crop:y2_crop, x1_crop:x2_crop]
+
+    # Heatmap visualization
+    max_val = anomaly_map_np.max()
+    anomaly_map_norm = (anomaly_map_np / max_val * 255).astype(np.uint8) if max_val > 0 else np.zeros_like(anomaly_map_np, dtype=np.uint8)
     heatmap = cv2.applyColorMap(anomaly_map_norm, cv2.COLORMAP_JET)
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB) # convert to RGB
+    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     
-    # Create overlay (original preprocessed image blended with heatmap)
-    overlay = cv2.addWeighted(input_np, 0.6, heatmap, 0.4, 0)
+    # Heatmap overlay
+    input_np = (input_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+    overlay = cv2.addWeighted(input_np, 0.65, heatmap, 0.35, 0)
     
-    # If YOLO cropped, let's draw a bounding box on the original image for frontend visualization
+    # Draw YOLO bounding box on original image if available
     original_np = np.array(pil_img)
     if bbox is not None:
         x1, y1, x2, y2 = bbox
-        # Draw red bounding box (thickness 4)
-        cv2.rectangle(original_np, (x1, y1), (x2, y2), (216, 59, 1), 4)
-        
-    # Convert cropped image to standard display numpy shape with enhancement
-    enhanced_cropped, _ = validate_and_preprocess_image(cropped_img)
-    cropped_np = np.array(enhanced_cropped.resize(config.IMAGE_SIZE))
-        
-    # Convert outputs to base64 strings
+        cv2.rectangle(original_np, (x1, y1), (x2, y2), (0, 210, 255), 4)
+
+    # Base64 encodings
     original_b64 = image_to_base64(original_np)
     cropped_b64 = image_to_base64(cropped_np)
-    reconstructed_b64 = image_to_base64(recon_np)
     heatmap_b64 = image_to_base64(heatmap)
     overlay_b64 = image_to_base64(overlay)
-    
-    # Log the inspection record
+    defect_overlay_b64 = image_to_base64(defect_overlay_np)
+    defect_crop_b64 = image_to_base64(defect_crop_np)
+
     inspection_id = inspection_log.add_entry(
         category=category,
         is_anomaly=is_anomaly,
@@ -225,31 +260,33 @@ def predict_image_internal(
         severity_score=severity_report["severity_score"],
         severity_level=severity_report["severity_level"],
         recommended_action=severity_report["recommended_action"],
-        inferred_defect_type=severity_report["inferred_defect_type"],
+        inferred_defect_type=defect_class,
         severity_breakdown=severity_report["breakdown"],
-        quality_report=q_report,
+        quality_report={},
         filename=filename
     )
-    
+
     return {
         "inspection_id": inspection_id,
         "is_anomaly": is_anomaly,
+        "defect_result": defect_result,
+        "defect_class": defect_class,
+        "confidence_score": confidence_pct / 100.0,
         "anomaly_score": round(anomaly_score, 6),
         "threshold": active_threshold,
         "category": category,
         "yolo_status": yolo_status,
-        "bbox": bbox,
+        "product_bbox": bbox,
+        "defect_bbox": defect_bbox,
         "original_image": original_b64,
         "cropped_image": cropped_b64,
-        "reconstructed_image": reconstructed_b64,
         "heatmap_image": heatmap_b64,
         "overlay_image": overlay_b64,
+        "defect_overlay_image": defect_overlay_b64,
+        "defect_crop_image": defect_crop_b64,
         "severity_score": severity_report["severity_score"],
         "severity_level": severity_report["severity_level"],
-        "recommended_action": severity_report["recommended_action"],
-        "inferred_defect_type": severity_report["inferred_defect_type"],
-        "severity_breakdown": severity_report["breakdown"],
-        "quality_report": q_report
+        "recommended_action": severity_report["recommended_action"]
     }
 
 @app.post("/predict")

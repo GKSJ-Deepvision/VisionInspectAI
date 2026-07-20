@@ -110,3 +110,33 @@ class DefectClassifier(nn.Module):
                         probs_dict[cls_name] = round(probs[i].item() * 100.0, 2)
                         
             return predicted_class, confidence_pct, probs_dict
+
+_classifier_cache = {}
+
+def load_classifier(category: str):
+    category = category.lower()
+    if category in _classifier_cache:
+        return _classifier_cache[category]
+        
+    classes = CATEGORY_DEFECT_CLASSES.get(category, ["good", "defective"])
+    model = DefectClassifier(num_classes=len(classes))
+    model_path = os.path.join("models", f"classifier_{category}.pth")
+    if os.path.exists(model_path):
+        try:
+            model.load_state_dict(torch.load(model_path, map_location="cpu"))
+            model.eval()
+        except Exception as e:
+            print(f"Error loading classifier for {category}: {e}")
+            
+    _classifier_cache[category] = (model, classes)
+    return model, classes
+
+def predict_defect_class(img_tensor, category: str):
+    """
+    Predicts specific defect sub-class (e.g. 'crack', 'broken_large', 'good') and confidence %.
+    """
+    model, classes = load_classifier(category)
+    if img_tensor.dim() == 3:
+        img_tensor = img_tensor.unsqueeze(0)
+    pred_class, conf, probs = model.predict_class(img_tensor, class_list=classes)
+    return pred_class, conf, probs

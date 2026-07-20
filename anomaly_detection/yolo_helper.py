@@ -69,6 +69,14 @@ def crop_product(pil_img: Image.Image, category: str = "bottle", enable_yolo: bo
             "toothbrush": [79],   # toothbrush
         }
         
+        # Alien / Non-Manufacturing COCO classes (e.g. animals, vehicles, people)
+        alien_coco_classes = {0, 1, 2, 3, 4, 5, 6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}
+        for box in boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            if cls_id in alien_coco_classes and conf > 0.45:
+                return pil_img, None, f"INVALID_PRODUCT_IMAGE: Detected non-industrial object (class {cls_id}, conf {conf:.1%})"
+
         # Check if we have specific target classes for the active category
         target_ids = target_coco_classes.get(category.lower(), [])
         

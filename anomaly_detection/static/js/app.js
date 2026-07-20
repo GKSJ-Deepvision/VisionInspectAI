@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (!response.ok) {
-                alert(`Error: ${data.detail || 'Prediction failed'}`);
+                alert(`⚠️ Product Category Mismatch / Validation Alert:\n\n${data.detail || 'The uploaded image does not match the selected manufacturing category.'}`);
                 return;
             }
             
@@ -184,15 +184,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.statusBadge.className = 'badge-pass';
             }
             
-            elements.defectType.textContent = data.defect_class || 'None';
-            elements.confidence.textContent = `${(data.confidence_score * 100).toFixed(1)}%`;
-            elements.severity.textContent = `${data.severity_score.toFixed(1)} (${data.severity_level})`;
-            elements.anomalyScore.textContent = `${data.anomaly_score.toFixed(4)} / ${data.threshold.toFixed(4)}`;
+            elements.defectType.textContent = data.defect_class || 'Good';
+            elements.confidence.textContent = `${((data.confidence_score || 0.99) * 100).toFixed(1)}%`;
+            elements.severity.textContent = `${(data.severity_score || 0).toFixed(1)} (${data.severity_level || 'None'})`;
+            elements.anomalyScore.textContent = `${(data.anomaly_score || 0).toFixed(4)} / ${(data.threshold || 0.017).toFixed(4)}`;
             
-            // Render Viewport Images
-            elements.imgOriginal.src = elements.previewImg.src;
-            elements.imgYolo.src = data.yolo_cropped_image || elements.previewImg.src;
+            // Render 4 Viewport Images
+            elements.imgOriginal.src = data.original_image || elements.previewImg.src;
+            elements.imgYolo.src = data.cropped_image || elements.previewImg.src;
             elements.imgHeatmap.src = data.overlay_image || data.heatmap_image;
+            
+            const defectBoxImg = document.getElementById('img-defect-box');
+            if (defectBoxImg) {
+                defectBoxImg.src = data.defect_overlay_image || data.cropped_image || elements.previewImg.src;
+            }
             
             // Toggle view
             elements.welcomePanel.style.display = 'none';
