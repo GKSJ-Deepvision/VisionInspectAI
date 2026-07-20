@@ -187,7 +187,27 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.defectType.textContent = data.defect_class || 'Good';
             elements.confidence.textContent = `${((data.confidence_score || 0.99) * 100).toFixed(1)}%`;
             elements.severity.textContent = `${(data.severity_score || 0).toFixed(1)} (${data.severity_level || 'None'})`;
-            elements.anomalyScore.textContent = `${(data.anomaly_score || 0).toFixed(4)} / ${(data.threshold || 0.017).toFixed(4)}`;
+            elements.anomalyScore.textContent = `${(data.anomaly_score || 0).toFixed(4)} / ${(data.threshold || 0.125).toFixed(4)}`;
+            
+            // Update Anomaly Gauge Meter
+            const score = data.anomaly_score || 0;
+            const threshold = data.threshold || 0.125;
+            const pct = Math.min(100, Math.max(5, (score / (threshold * 1.4)) * 100));
+            const gaugeBar = document.getElementById('gauge-bar');
+            const gaugeLabel = document.getElementById('gauge-label');
+
+            if (gaugeBar && gaugeLabel) {
+                gaugeBar.style.width = `${pct}%`;
+                if (data.defect_result === 'REJECT') {
+                    gaugeBar.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
+                    gaugeLabel.textContent = `${score.toFixed(4)} / ${threshold.toFixed(4)} (THRESHOLD EXCEEDED — REJECT)`;
+                    gaugeLabel.style.color = 'var(--danger)';
+                } else {
+                    gaugeBar.style.background = 'linear-gradient(90deg, #10b981, #00d2ff)';
+                    gaugeLabel.textContent = `${score.toFixed(4)} / ${threshold.toFixed(4)} (SAFE QUALITY VERIFIED — PASS)`;
+                    gaugeLabel.style.color = 'var(--success)';
+                }
+            }
             
             // Render 4 Viewport Images
             elements.imgOriginal.src = data.original_image || elements.previewImg.src;

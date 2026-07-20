@@ -103,24 +103,29 @@ def crop_product(pil_img: Image.Image, category: str = "bottle", enable_yolo: bo
         if best_box is not None:
             x1, y1, x2, y2 = best_box
             
-            # Minimum Area Check: ensure the detected box covers at least 8% of the image.
-            # Otherwise, treat it as background noise and bypass.
             width = x2 - x1
             height = y2 - y1
             area = width * height
             orig_w, orig_h = pil_img.size
             img_area = orig_w * orig_h
-            if (area / img_area) < 0.08:
+            if (area / img_area) < 0.05:
                 return pil_img, None, f"YOLO: Bypassed tiny crop ({area/img_area:.1%} of frame)"
                 
-            # Add a small padding (10%) around the crop to make sure we don't clip edges
-            pad_w = int(width * 0.05)
-            pad_h = int(height * 0.05)
+            # Hardware / Small items require generous safety margin (20%) and square aspect ratio
+            hardware_cats = {"metal_nut", "screw", "hazelnut", "capsule", "pill", "transistor", "bottle"}
+            margin_ratio = 0.22 if category in hardware_cats else 0.10
             
-            x1_pad = max(0, x1 - pad_w)
-            y1_pad = max(0, y1 - pad_h)
-            x2_pad = min(orig_w, x2 + pad_w)
-            y2_pad = min(orig_h, y2 + pad_h)
+            # Make bounding box a square 1:1 centered box to prevent clipping half the object
+            max_dim = max(width, height)
+            center_x = (x1 + x2) // 2
+            center_y = (y1 + y2) // 2
+            
+            half_size = int((max_dim // 2) * (1.0 + margin_ratio))
+            
+            x1_pad = max(0, center_x - half_size)
+            y1_pad = max(0, center_y - half_size)
+            x2_pad = min(orig_w, center_x + half_size)
+            y2_pad = min(orig_h, center_y + half_size)
             
             cropped_img = pil_img.crop((x1_pad, y1_pad, x2_pad, y2_pad))
             status_msg = f"YOLO: Detected and cropped product (Box: [{x1_pad}, {y1_pad}, {x2_pad}, {y2_pad}])"
