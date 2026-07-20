@@ -1119,8 +1119,8 @@
                         <div class="upload-icon">📤</div>
                         <div style="font-weight: 500;">Select or drag image</div>
                         <div class="upload-text">Supports PNG, JPG, JPEG, BMP</div>
-                        <input type="file" id="file-input" accept="image/*" style="display:none;">
                     </label>
+                    <input type="file" id="file-input" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;">
                     
                     <div class="preview-container" id="preview-box">
                         <img src="" alt="Preview" class="preview-img" id="preview-img">
@@ -1135,8 +1135,8 @@
                         <div class="upload-icon">📦</div>
                         <div style="font-weight: 500;">Upload multiple files</div>
                         <div class="upload-text">Select up to 20 images at once</div>
-                        <input type="file" id="batch-file-input" accept="image/*" multiple style="display:none;">
                     </label>
+                    <input type="file" id="batch-file-input" accept="image/*" multiple style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;">
                     <div class="file-list-panel" id="file-list-panel" style="display:none;">
                         <div class="file-list-header">
                             <span>Selected Files (<strong id="batch-count">0</strong>)</span>
