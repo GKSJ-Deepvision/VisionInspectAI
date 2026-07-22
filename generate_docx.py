@@ -419,7 +419,7 @@ def build_milestone2_docx(output_path):
     p.add_run("As prescribed by the project milestone plan, future work in Milestone 3 and Milestone 4 will focus on:\n"
               "1. Defect Classification & Categorization: Classifying specific defect types (e.g., scratch vs. hole vs. stain).\n"
               "2. Severity Scoring Framework: Computing mathematical defect severity scores based on size, location, defect type, and confidence.\n"
-              "3. Advanced Anomaly Models (PaDiM): Integrating Patch Distribution Modeling for zero-shot feature embedding alignment.\n"
+              "3. Advanced Anomaly Models (Future Milestones): Exploring Patch Distribution Modeling (PaDiM) for enhanced feature embedding alignment.\n"
               "4. Manufacturing Analytics Dashboard: Building trend charts, shift reports, and production quality risk analytics.\n"
               "5. Cloud & Container Deployment: Dockerizing the backend/frontend services for AWS/Azure deployment.")
 
