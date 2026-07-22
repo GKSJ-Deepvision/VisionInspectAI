@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from . import config
 from .model import AnomalyAutoencoder
+
 from .yolo_helper import crop_product
 from .preprocessor import validate_and_preprocess_image
 from .severity import calculate_severity_score
@@ -26,11 +27,11 @@ app = FastAPI(
 )
 
 # Mount Static Assets Directory
-STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "index.html"
+TEMPLATE_PATH = STATIC_DIR / "index.html"
 HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
 
 # Allow CORS for integration with frontend (React / Next.js)
@@ -53,24 +54,8 @@ predict_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-# Calibrated default thresholds for all 15 MVTec AD categories (SSIM + MSE Hybrid 3-Sigma)
-THRESHOLDS = {
-    "bottle": 0.195095,
-    "cable": 0.192328,
-    "capsule": 0.111777,
-    "carpet": 0.117227,
-    "grid": 0.072851,
-    "hazelnut": 0.129920,
-    "leather": 0.124406,
-    "metal_nut": 0.200536,
-    "pill": 0.125741,
-    "screw": 0.103276,
-    "tile": 0.169546,
-    "toothbrush": 0.245510,
-    "transistor": 0.137502,
-    "wood": 0.166859,
-    "zipper": 0.188865
-}
+# Pipeline-consistent thresholds optimized for balanced accuracy
+THRESHOLDS = config.CATEGORY_THRESHOLDS
 
 HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
 
@@ -102,8 +87,9 @@ def load_model_for_category(category: str):
 
 @app.on_event("startup")
 async def startup_event():
-    # Pre-load bottle category by default
-    load_model_for_category("bottle")
+    # Pre-load autoencoder for default category at startup
+    from anomaly_detection.inference import load_autoencoder
+    load_autoencoder("bottle")
 
 @app.get("/", response_class=HTMLResponse)
 def get_dashboard():
@@ -145,148 +131,59 @@ def predict_image_internal(
     category: str = "bottle",
     enable_yolo: bool = True
 ):
+    import time
+    t0 = time.time()
     category = category.lower()
-    orig_w, orig_h = pil_img.size
+    from anomaly_detection.inference import predict_defect
+    result = predict_defect(pil_img, category=category, enable_yolo=enable_yolo)
+    proc_time_ms = round((time.time() - t0) * 1000.0, 2)
     
-    # 2. Stage 1: Crop product with YOLO helper
-    cropped_img, bbox, yolo_status = crop_product(pil_img, category=category, enable_yolo=enable_yolo)
-    
-    # Product Category Validation: Check if alien / unrelated object was uploaded
-    if yolo_status.startswith("INVALID_PRODUCT_IMAGE"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid Product Image: Uploaded image does not match product category '{category}'."
-        )
-
-    # 3. Preprocess cropped product image for Autoencoder input
-    input_tensor = predict_transform(cropped_img).unsqueeze(0).to(device)
-    
-    # 4. Load model weights for the active category
-    active_model = load_model_for_category(category)
-    active_threshold = THRESHOLDS.get(category, 0.017)
-
-    # 5. Stage 2: Compute SSIM+MSE Anomaly Map & Multi-Class Classification
-    with torch.no_grad():
-        reconstructed_tensor, anomaly_map_tensor, anomaly_score_tensor = active_model.compute_anomaly_map(input_tensor)
-        anomaly_score = anomaly_score_tensor.item()
-        
-    anomaly_map_np = anomaly_map_tensor.squeeze(0).cpu().numpy()
-
-    # Predict multi-class sub-defect type (e.g., 'crack', 'broken_large', 'good')
-    predicted_defect, confidence_pct, _ = predict_defect_class(input_tensor.cpu(), category)
-    
-    # Is anomaly if anomaly_score exceeds threshold AND classifier does not classify as good
-    is_anomaly = (anomaly_score > active_threshold) or (predicted_defect.lower() != "good")
-    defect_result = "REJECT" if is_anomaly else "PASS"
-    defect_class = predicted_defect if is_anomaly else "Good"
-
-    # Severity Calculation
-    if is_anomaly:
-        severity_report = calculate_severity_score(
-            anomaly_map=anomaly_map_np,
-            anomaly_score=anomaly_score,
-            threshold=active_threshold,
-            defect_type=defect_class
-        )
-    else:
-        severity_report = {
-            "severity_score": 0.0,
-            "severity_level": "None",
-            "recommended_action": "Pass Product - Quality Control Verified",
-            "inferred_defect_type": "Good",
-            "breakdown": {"coverage_pct": 0.0, "peak_anomaly": 0.0}
-        }
-
-    # 6. Specific Defect Region Bounding Box Localization (Locating the CRACK / DEFECT AREA)
-    enhanced_cropped, _ = validate_and_preprocess_image(cropped_img)
-    cropped_np = np.array(enhanced_cropped.resize(config.IMAGE_SIZE))
-    defect_overlay_np = cropped_np.copy()
-    
-    defect_bbox = None
-    defect_crop_np = cropped_np.copy()
-    
-    if is_anomaly and anomaly_map_np.max() > 0:
-        # Binary mask of high anomaly intensity pixels
-        mask = (anomaly_map_np > (active_threshold * 0.8)).astype(np.uint8) * 255
-        mask_resized = cv2.resize(mask, (config.IMAGE_SIZE[0], config.IMAGE_SIZE[1]))
-        contours, _ = cv2.findContours(mask_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        valid_contours = [c for c in contours if cv2.contourArea(c) > 10]
-        if valid_contours:
-            all_pts = np.vstack(valid_contours)
-            dx, dy, dw, dh = cv2.boundingRect(all_pts)
-            defect_bbox = [int(dx), int(dy), int(dx + dw), int(dy + dh)]
-            
-            # Draw bright neon red bounding box around the SPECIFIC DEFECT AREA
-            cv2.rectangle(defect_overlay_np, (dx, dy), (dx + dw, dy + dh), (255, 0, 80), 3)
-            label = f"DEFECT: {defect_class.upper()} ({confidence_pct:.0f}%)"
-            cv2.putText(defect_overlay_np, label, (dx, max(15, dy - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 2)
-            
-            # Crop specific defect area
-            y1_crop, y2_crop = max(0, dy-8), min(config.IMAGE_SIZE[1], dy+dh+8)
-            x1_crop, x2_crop = max(0, dx-8), min(config.IMAGE_SIZE[0], dx+dw+8)
-            if (y2_crop - y1_crop) > 5 and (x2_crop - x1_crop) > 5:
-                defect_crop_np = cropped_np[y1_crop:y2_crop, x1_crop:x2_crop]
-
-    # Heatmap visualization
-    max_val = anomaly_map_np.max()
-    anomaly_map_norm = (anomaly_map_np / max_val * 255).astype(np.uint8) if max_val > 0 else np.zeros_like(anomaly_map_np, dtype=np.uint8)
-    heatmap = cv2.applyColorMap(anomaly_map_norm, cv2.COLORMAP_JET)
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-    
-    # Heatmap overlay
-    input_np = (input_tensor.squeeze(0).cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-    overlay = cv2.addWeighted(input_np, 0.65, heatmap, 0.35, 0)
-    
-    # Draw YOLO bounding box on original image if available
-    original_np = np.array(pil_img)
-    if bbox is not None:
-        x1, y1, x2, y2 = bbox
-        cv2.rectangle(original_np, (x1, y1), (x2, y2), (0, 210, 255), 4)
-
-    # Base64 encodings
-    original_b64 = image_to_base64(original_np)
-    cropped_b64 = image_to_base64(cropped_np)
-    heatmap_b64 = image_to_base64(heatmap)
-    overlay_b64 = image_to_base64(overlay)
-    defect_overlay_b64 = image_to_base64(defect_overlay_np)
-    defect_crop_b64 = image_to_base64(defect_crop_np)
-
     inspection_id = inspection_log.add_entry(
         category=category,
-        is_anomaly=is_anomaly,
-        anomaly_score=anomaly_score,
-        threshold=active_threshold,
-        severity_score=severity_report["severity_score"],
-        severity_level=severity_report["severity_level"],
-        recommended_action=severity_report["recommended_action"],
-        inferred_defect_type=defect_class,
-        severity_breakdown=severity_report["breakdown"],
-        quality_report={},
+        is_anomaly=result["is_anomaly"],
+        anomaly_score=result["anomaly_score"],
+        threshold=result["threshold"],
+        severity_score=result["severity_score"],
+        severity_level=result["severity_level"],
+        recommended_action=result["recommended_action"],
+        inferred_defect_type=result["defect_class"],
+        severity_breakdown=result["severity_breakdown"],
+        quality_report=result["quality_report"],
         filename=filename
     )
 
     return {
         "inspection_id": inspection_id,
-        "is_anomaly": is_anomaly,
-        "defect_result": defect_result,
-        "defect_class": defect_class,
-        "confidence_score": confidence_pct / 100.0,
-        "anomaly_score": round(anomaly_score, 6),
-        "threshold": active_threshold,
-        "category": category,
-        "yolo_status": yolo_status,
-        "product_bbox": bbox,
-        "defect_bbox": defect_bbox,
-        "original_image": original_b64,
-        "cropped_image": cropped_b64,
-        "heatmap_image": heatmap_b64,
-        "overlay_image": overlay_b64,
-        "defect_overlay_image": defect_overlay_b64,
-        "defect_crop_image": defect_crop_b64,
-        "severity_score": severity_report["severity_score"],
-        "severity_level": severity_report["severity_level"],
-        "recommended_action": severity_report["recommended_action"]
+        "category": result.get("category", category),
+        "is_anomaly": result["is_anomaly"],
+        "defect_result": result["defect_result"],
+        "defect_class": result["defect_class"],
+        "confidence_score": result["confidence_score"] / 100.0 if result["confidence_score"] > 1.0 else result["confidence_score"],
+        "anomaly_score": result["anomaly_score"],
+        "threshold": result["threshold"],
+        "severity_score": result["severity_score"],
+        "severity_level": result["severity_level"],
+        "recommended_action": result["recommended_action"],
+        "processing_time_ms": proc_time_ms,
+        "yolo_status": result["yolo_status"],
+        "bbox": result["bbox"],
+        "class_probabilities": result["class_probabilities"],
+        "quality_report": result["quality_report"],
+        "severity_breakdown": result["severity_breakdown"],
+        "original_image":      result["original_image"],
+        "cropped_image":       result["cropped_image"],
+        "reconstructed_image": result["reconstructed_image"],
+        "heatmap_image":       result["heatmap_image"],
+        "overlay_image":       result["overlay_image"],
+        "images": {
+            "original":      result["original_image"],
+            "cropped":       result["cropped_image"],
+            "reconstructed": result["reconstructed_image"],
+            "heatmap":       result["heatmap_image"],
+            "overlay":       result["overlay_image"],
+            "defect_overlay":result["overlay_image"],
+            "defect_crop":   result["cropped_image"]
+        }
     }
 
 @app.post("/predict")

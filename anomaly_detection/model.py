@@ -2,120 +2,255 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-def create_gaussian_window(window_size=11, sigma=1.5, channels=3):
-    """Generates a 2D Gaussian kernel for SSIM calculation."""
-    coords = torch.arange(window_size, dtype=torch.float32) - window_size // 2
-    g = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
-    g = g / g.sum()
-    window_1d = g.unsqueeze(1)
-    window_2d = window_1d.mm(window_1d.t()).float().unsqueeze(0).unsqueeze(0)
-    window = window_2d.expand(channels, 1, window_size, window_size).contiguous()
-    return window
 
-def compute_ssim_map(img1, img2, window_size=11, size_average=True):
+def weights_init(m):
     """
-    Computes Structural Similarity Index (SSIM) map between two image tensors (B x C x H x W).
-    Returns a per-pixel dissimilarity map (1.0 - SSIM) ranging in [0, 1].
+    Kaiming Normal weight initialization for Conv2d/ConvTranspose2d and
+    Gaussian initialization for BatchNorm2d layers. Improves convergence speed
+    and gradient stability during Autoencoder training.
     """
-    channels = img1.size(1)
-    window = create_gaussian_window(window_size, 1.5, channels).to(img1.device)
-    
-    padding = window_size // 2
-    mu1 = F.conv2d(img1, window, padding=padding, groups=channels)
-    mu2 = F.conv2d(img2, window, padding=padding, groups=channels)
-    
-    mu1_sq = mu1.pow(2)
-    mu2_sq = mu2.pow(2)
-    mu1_mu2 = mu1 * mu2
-    
-    sigma1_sq = F.conv2d(img1 * img1, window, padding=padding, groups=channels) - mu1_sq
-    sigma2_sq = F.conv2d(img2 * img2, window, padding=padding, groups=channels) - mu2_sq
-    sigma12 = F.conv2d(img1 * img2, window, padding=padding, groups=channels) - mu1_mu2
-    
-    c1 = 0.01 ** 2
-    c2 = 0.03 ** 2
-    
-    ssim_map = ((2 * mu1_mu2 + c1) * (2 * sigma12 + c2)) / ((mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2))
-    # Structural dissimilarity: 1.0 - SSIM (range 0.0 to 1.0)
-    dssim_map = torch.mean((1.0 - ssim_map) / 2.0, dim=1)
-    return dssim_map
+    if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        nn.init.kaiming_normal_(m.weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0.0)
+    elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+        if m.weight is not None:
+            nn.init.normal_(m.weight, 1.0, 0.02)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0.0)
+
 
 class AnomalyAutoencoder(nn.Module):
     """
-    Convolutional Autoencoder with Hybrid MSE + SSIM Anomaly Mapping
-    Learns to reconstruct normal images. Anomalies cause high structural (SSIM) & pixel (MSE) errors.
+    Convolutional Autoencoder for Unsupervised Anomaly Detection.
+
+    Architecture exactly matches existing checkpoint weights for backward compatibility:
+        encoder: Sequential of Conv2d(stride=2) → BN → LeakyReLU blocks
+        decoder: Sequential of ConvTranspose2d(stride=2) → BN → ReLU blocks
     """
     def __init__(self):
         super(AnomalyAutoencoder, self).__init__()
-        
-        # Encoder: 3 x 128 x 128 -> Latent space representation (256 x 8 x 8)
+
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # 32 x 64 x 64
+            nn.Conv2d(3,   32,  kernel_size=4, stride=2, padding=1),  # 128→64
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
-            
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1), # 64 x 32 x 32
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(32,  64,  kernel_size=4, stride=2, padding=1),  # 64→32
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
-            
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), # 128 x 16 x 16
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(64,  128, kernel_size=4, stride=2, padding=1),  # 32→16
             nn.BatchNorm2d(128),
-            nn.ReLU(True),
-            
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1), # 256 x 8 x 8
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),  # 16→8
             nn.BatchNorm2d(256),
-            nn.ReLU(True)
+            nn.LeakyReLU(0.2, inplace=True),
         )
-        
-        # Decoder: Latent space (256 x 8 x 8) -> Reconstructed 3 x 128 x 128 image
+
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), # 128 x 16 x 16
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 8→16
             nn.BatchNorm2d(128),
-            nn.ReLU(True),
-            
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), # 64 x 32 x 32
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(128, 64,  kernel_size=4, stride=2, padding=1),  # 16→32
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
-            
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1), # 32 x 64 x 64
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(64,  32,  kernel_size=4, stride=2, padding=1),  # 32→64
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
-            
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1), # 3 x 128 x 128
-            nn.Sigmoid()  # Reconstruct to [0, 1] range
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(32,  3,   kernel_size=4, stride=2, padding=1),  # 64→128
+            nn.Sigmoid(),
         )
+
+        # Apply robust weight initialization
+        self.apply(weights_init)
 
     def forward(self, x):
-        latent = self.encoder(x)
-        reconstructed = self.decoder(latent)
-        return reconstructed
+        z = self.encoder(x)
+        return self.decoder(z)
 
-    def compute_anomaly_map(self, x, use_ssim=True):
-        """
-        Computes the pixel-wise reconstruction error map and scalar anomaly score.
-        Uses Hybrid MSE (Pixel-wise L2) + SSIM (Structural Similarity) mapping.
-        """
-        self.eval()
-        with torch.no_grad():
-            reconstructed = self(x)
-            
-            # 1. Pixel-wise L2 (MSE) squared error map across color channels
-            mse_map = torch.mean((x - reconstructed) ** 2, dim=1)
-            
-            if use_ssim:
-                # 2. Structural Dissimilarity Map (SSIM)
-                ssim_map = compute_ssim_map(x, reconstructed)
-                # Hybrid Anomaly Map: 50% MSE + 50% SSIM
-                anomaly_map = 0.5 * mse_map + 0.5 * ssim_map
-            else:
-                anomaly_map = mse_map
-            
-            # Localized anomaly score: average of the top 5% highest error pixels.
-            flat_map = anomaly_map.view(anomaly_map.size(0), -1)
-            num_pixels = flat_map.size(1)
-            k = max(1, int(num_pixels * 0.05)) # top 5% pixels
-            
-            top_k_values, _ = torch.topk(flat_map, k, dim=1)
-            anomaly_score = torch.mean(top_k_values, dim=1)
-            
-            return reconstructed, anomaly_map, anomaly_score
+
+class ResBlock(nn.Module):
+    """Residual bottleneck block for feature preservation."""
+    def __init__(self, channels):
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(channels, channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(channels),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(channels, channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(channels)
+        )
+        self.act = nn.LeakyReLU(0.2, inplace=True)
+
+    def forward(self, x):
+        return self.act(x + self.conv(x))
+
+
+class ResizeConv2d(nn.Module):
+    """
+    Resize-Convolution block (Bilinear Upsampling + Conv2d).
+    Replaces ConvTranspose2d to eliminate checkerboard artifacts in reconstructed images.
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=3, scale_factor=2):
+        super().__init__()
+        self.scale_factor = scale_factor
+        self.conv = nn.Conv2d(
+            in_channels, out_channels, kernel_size=kernel_size,
+            padding=kernel_size // 2, bias=False
+        )
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.act = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = F.interpolate(x, scale_factor=self.scale_factor, mode='bilinear', align_corners=False)
+        x = self.conv(x)
+        x = self.bn(x)
+        return self.act(x)
+
+
+class OptimizedAnomalyAutoencoder(nn.Module):
+    """
+    High-Fidelity Anomaly Autoencoder using Resize-Convolutions and Bottleneck ResBlocks.
+    Eliminates transposed convolution checkerboard artifacts and maximizes reconstruction fidelity.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 32, 4, stride=2, padding=1),   # 128→64
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 64→32
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(64, 128, 4, stride=2, padding=1), # 32→16
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(128, 256, 4, stride=2, padding=1),# 16→8
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            ResBlock(256)
+        )
+
+        self.decoder = nn.Sequential(
+            ResizeConv2d(256, 128, scale_factor=2),     # 8→16
+            ResizeConv2d(128, 64,  scale_factor=2),     # 16→32
+            ResizeConv2d(64,  32,  scale_factor=2),     # 32→64
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False), # 64→128
+            nn.Conv2d(32, 3, 3, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.apply(weights_init)
+
+    def forward(self, x):
+        z = self.encoder(x)
+        return self.decoder(z)
+
+
+class SkipAutoencoder(nn.Module):
+    """
+    Deep ConvNet Autoencoder with Skip Connections & Residual Blocks.
+    Preserves fine spatial features needed for micro-defect detection.
+    """
+    def __init__(self):
+        super().__init__()
+        self.enc1 = nn.Sequential(nn.Conv2d(3, 32, 4, stride=2, padding=1), nn.BatchNorm2d(32), nn.LeakyReLU(0.2)) # 64x64
+        self.enc2 = nn.Sequential(nn.Conv2d(32, 64, 4, stride=2, padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(0.2)) # 32x32
+        self.enc3 = nn.Sequential(nn.Conv2d(64, 128, 4, stride=2, padding=1), nn.BatchNorm2d(128), nn.LeakyReLU(0.2)) # 16x16
+        self.res = ResBlock(128)
+        
+        self.dec3 = nn.Sequential(nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU()) # 32x32
+        self.dec2 = nn.Sequential(nn.ConvTranspose2d(128, 32, 4, stride=2, padding=1), nn.BatchNorm2d(32), nn.ReLU()) # 64x64
+        self.dec1 = nn.Sequential(nn.ConvTranspose2d(64, 3, 4, stride=2, padding=1), nn.Sigmoid()) # 128x128
+
+        self.apply(weights_init)
+
+    def forward(self, x):
+        e1 = self.enc1(x)
+        e2 = self.enc2(e1)
+        e3 = self.res(self.enc3(e2))
+        
+        d3 = self.dec3(e3)
+        d2 = self.dec2(torch.cat([d3, e2], dim=1)) # Skip connection at 32x32
+        out = self.dec1(torch.cat([d2, e1], dim=1)) # Skip connection at 64x64
+        return out
+
+
+class PaDiMFeatureExtractor(nn.Module):
+    """
+    PaDiM Patch Distribution Modeling Feature Extractor.
+    Extracts multi-scale representations from ResNet18 layers 1, 2, and 3.
+    """
+    def __init__(self):
+        super().__init__()
+        from torchvision import models
+        resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        self.stem = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
+        self.layer1 = resnet.layer1
+        self.layer2 = resnet.layer2
+        self.layer3 = resnet.layer3
+
+    def forward(self, x):
+        x = self.stem(x)
+        f1 = self.layer1(x)  # (B, 64, 32, 32)
+        f2 = self.layer2(f1) # (B, 128, 16, 16)
+        f3 = self.layer3(f2) # (B, 256, 8, 8)
+        
+        # Upsample features to match layer1 spatial resolution
+        target_size = f1.shape[-2:]
+        f2_up = F.interpolate(f2, size=target_size, mode='bilinear', align_corners=False)
+        f3_up = F.interpolate(f3, size=target_size, mode='bilinear', align_corners=False)
+        
+        # Concatenate multi-scale feature maps -> (B, 448, H, W)
+        return torch.cat([f1, f2_up, f3_up], dim=1)
+
+
+class SSIML1Loss(nn.Module):
+    """
+    Structural Similarity (SSIM) + L1 Loss for Autoencoder Reconstruction Training.
+    Provides robust device/dtype buffer casting and lower-bound clamping for numerical precision.
+    """
+    def __init__(self, alpha=0.4, window_size=11):
+        super().__init__()
+        self.alpha = alpha
+        self.window_size = window_size
+        self.register_buffer('kernel', self._gaussian_kernel(window_size, 1.5))
+
+    def _gaussian_kernel(self, size, sigma):
+        coords = torch.arange(size, dtype=torch.float32) - size // 2
+        g = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
+        kernel = g[:, None] * g[None, :]
+        kernel = kernel / kernel.sum()
+        return kernel.unsqueeze(0).unsqueeze(0).repeat(3, 1, 1, 1)
+
+    def ssim(self, x, y):
+        C1, C2 = 0.01 ** 2, 0.03 ** 2
+        kernel = self.kernel.to(device=x.device, dtype=x.dtype)
+        padding = self.window_size // 2
+
+        mu_x = F.conv2d(x, kernel, padding=padding, groups=3)
+        mu_y = F.conv2d(y, kernel, padding=padding, groups=3)
+        
+        sigma_x2 = F.conv2d(x * x, kernel, padding=padding, groups=3) - mu_x ** 2
+        sigma_y2 = F.conv2d(y * y, kernel, padding=padding, groups=3) - mu_y ** 2
+        sigma_xy = F.conv2d(x * y, kernel, padding=padding, groups=3) - mu_x * mu_y
+        
+        num = (2 * mu_x * mu_y + C1) * (2 * sigma_xy + C2)
+        den = (mu_x ** 2 + mu_y ** 2 + C1) * (sigma_x2 + sigma_y2 + C2)
+        return (num / (den + 1e-8)).mean()
+
+    def forward(self, x, y):
+        l1 = F.l1_loss(x, y)
+        ssim_val = self.ssim(x, y)
+        ssim_loss = torch.clamp(1.0 - ssim_val, min=0.0)
+        return self.alpha * l1 + (1.0 - self.alpha) * ssim_loss

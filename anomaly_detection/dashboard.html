@@ -3,2022 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VisionInspect AI - Manufacturing Defect Detection Dashboard</title>
-    <!-- Outfit Font & JetBrains Mono -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg-color: #080b16;
-            --panel-bg: rgba(17, 22, 43, 0.75);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --primary: #0078d4;
-            --primary-glow: rgba(0, 120, 212, 0.35);
-            --success: #107c10;
-            --success-glow: rgba(16, 124, 16, 0.3);
-            --danger: #d83b01;
-            --danger-glow: rgba(216, 59, 1, 0.3);
-            --warning: #ff8c00;
-            --font-main: 'Outfit', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 120, 212, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(16, 124, 16, 0.04) 0%, transparent 40%);
-            color: var(--text-main);
-            font-family: var(--font-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 40px;
-            background: rgba(8, 11, 22, 0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-dot {
-            width: 12px;
-            height: 12px;
-            background-color: #5cf25c;
-            border-radius: 50%;
-            box-shadow: 0 0 12px #5cf25c;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.9); box-shadow: 0 0 8px rgba(92, 242, 92, 0.5); }
-            50% { transform: scale(1.1); box-shadow: 0 0 16px rgba(92, 242, 92, 0.8); }
-            100% { transform: scale(0.9); box-shadow: 0 0 8px rgba(92, 242, 92, 0.5); }
-        }
-
-        h1 {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .system-status {
-            display: flex;
-            gap: 16px;
-        }
-
-        .status-pill {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .main-container {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            flex-grow: 1;
-            gap: 24px;
-            padding: 24px 40px;
-            max-width: 1800px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        }
-
-        .panel-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 8px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        select {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            outline: none;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
-
-        select:focus {
-            border-color: var(--primary);
-        }
-
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        /* Switch toggle styles */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #374151;
-            transition: .3s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            padding: 24px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: rgba(255, 255, 255, 0.01);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(0, 120, 212, 0.03);
-        }
-
-        .upload-icon {
-            font-size: 28px;
-        }
-
-        .upload-text {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        #file-input {
-            display: none;
-        }
-
-        .preview-container {
-            position: relative;
-            margin-top: 12px;
-            display: none;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            background: #000;
-            aspect-ratio: 1;
-        }
-
-        .preview-img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .remove-preview {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0,0,0,0.6);
-            border: none;
-            color: #fff;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .btn {
-            width: 100%;
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px var(--primary-glow);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px var(--primary-glow);
-            background: #0086f0;
-        }
-
-        .btn:disabled {
-            background: #1f2937;
-            color: #4b5563;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        /* Tabs Styles */
-        .tab-nav {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-        }
-
-        .tab-item {
-            padding: 10px 18px;
-            cursor: pointer;
-            font-weight: 500;
-            color: var(--text-muted);
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-size: 14px;
-            border: 1px solid transparent;
-        }
-
-        .tab-item:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .tab-item.active {
-            color: #fff;
-            background: rgba(0, 120, 212, 0.12);
-            border-color: rgba(0, 120, 212, 0.3);
-            box-shadow: 0 0 12px rgba(0, 120, 212, 0.15);
-        }
-
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .dashboard-content {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        /* Result cards styling */
-        .result-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 20px;
-        }
-
-        .result-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 220px;
-            position: relative;
-        }
-
-        .result-badge {
-            font-size: 42px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            padding: 8px 32px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-        }
-
-        .result-badge.pass {
-            background-color: rgba(16, 124, 16, 0.15);
-            color: #5cf25c;
-            border: 1.5px solid rgba(16, 124, 16, 0.4);
-            box-shadow: 0 0 20px rgba(16, 124, 16, 0.25);
-        }
-
-        .result-badge.fail {
-            background-color: rgba(216, 59, 1, 0.15);
-            color: #ff6b6b;
-            border: 1.5px solid rgba(216, 59, 1, 0.4);
-            box-shadow: 0 0 20px rgba(216, 59, 1, 0.25);
-        }
-
-        .score-bar-container {
-            width: 100%;
-            height: 16px;
-            background-color: rgba(0,0,0,0.4);
-            border-radius: 8px;
-            margin: 20px 0 10px 0;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-
-        .score-bar-fill {
-            height: 100%;
-            border-radius: 8px;
-            width: 0;
-            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
-        }
-
-        .score-bar-fill.pass {
-            background: linear-gradient(90deg, #107c10, #5cf25c);
-        }
-
-        .score-bar-fill.fail {
-            background: linear-gradient(90deg, #d83b01, #ff6b6b);
-        }
-
-        .threshold-marker {
-            position: absolute;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background-color: var(--warning);
-            box-shadow: 0 0 6px var(--warning);
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .metric-item {
-            background: rgba(255,255,255,0.01);
-            border: 1px solid var(--border-color);
-            padding: 10px 14px;
-            border-radius: 8px;
-        }
-
-        .metric-item label {
-            font-size: 11px;
-            color: var(--text-muted);
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .metric-val {
-            font-size: 14px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        /* Quality Metrics Styling */
-        .quality-card {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-top: 16px;
-        }
-
-        .quality-metric {
-            background: rgba(255,255,255,0.015);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 14px;
-            text-align: center;
-        }
-
-        .quality-metric label {
-            font-size: 11px;
-            color: var(--text-muted);
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .quality-metric .val {
-            font-size: 18px;
-            font-weight: 700;
-            margin: 4px 0;
-            font-family: var(--font-mono);
-            color: #fff;
-        }
-
-        .quality-metric .status-tag {
-            font-size: 10.5px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 12px;
-            display: inline-block;
-        }
-
-        .status-tag.ok { background: rgba(16, 124, 16, 0.15); color: #5cf25c; }
-        .status-tag.warn { background: rgba(255, 140, 0, 0.15); color: var(--warning); }
-        .status-tag.fail { background: rgba(216, 59, 1, 0.15); color: #ff6b6b; }
-
-        .warnings-box {
-            margin-top: 16px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            background: rgba(255, 140, 0, 0.04);
-            border-left: 3px solid var(--warning);
-            font-size: 12.5px;
-            display: none;
-            color: #ffb86c;
-        }
-
-        .warnings-box ul {
-            padding-left: 16px;
-        }
-
-        /* Severity scoring elements */
-        .severity-score-grid {
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            gap: 20px;
-            margin-top: 16px;
-            align-items: center;
-        }
-
-        .severity-gauge-container {
-            display: flex;
-            justify-content: center;
-        }
-
-        .severity-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 6px solid rgba(255,255,255,0.03);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.5s ease;
-        }
-
-        .severity-circle.low { border-color: rgba(16, 124, 16, 0.35); box-shadow: 0 0 15px rgba(16,124,16,0.15); }
-        .severity-circle.medium { border-color: rgba(255, 140, 0, 0.35); box-shadow: 0 0 15px rgba(255,140,0,0.15); }
-        .severity-circle.high { border-color: rgba(216, 59, 1, 0.35); box-shadow: 0 0 15px rgba(216,59,1,0.15); }
-        .severity-circle.critical { border-color: rgba(216, 59, 1, 0.7); box-shadow: 0 0 20px rgba(216,59,1,0.35); }
-
-        .severity-val { font-size: 26px; font-weight: 800; color: #fff; font-family: var(--font-mono); }
-        .severity-lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .severity-badge-lbl {
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 4px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            text-transform: uppercase;
-        }
-        .severity-badge-lbl.low { background: rgba(16, 124, 16, 0.2); color: #5cf25c; }
-        .severity-badge-lbl.medium { background: rgba(255, 140, 0, 0.2); color: var(--warning); }
-        .severity-badge-lbl.high { background: rgba(216, 59, 1, 0.2); color: #ff6b6b; }
-        .severity-badge-lbl.critical { background: rgba(216, 59, 1, 0.3); color: #ff3b30; animation: pulseRed 1.5s infinite; }
-
-        .severity-breakdown-panel {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .severity-breakdown-panel .breakdown-item {
-            background: rgba(255,255,255,0.01);
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .severity-breakdown-panel .breakdown-item strong {
-            color: #fff;
-            font-family: var(--font-mono);
-        }
-
-        /* Image grid styling */
-        .images-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-        }
-
-        @media (max-width: 1200px) {
-            .images-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .image-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s;
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .image-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-        }
-
-        .image-card-title {
-            padding: 10px 14px;
-            font-size: 12.5px;
-            font-weight: 600;
-            color: #fff;
-            background: rgba(255,255,255,0.02);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .image-wrapper {
-            flex-grow: 1;
-            background: #000;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .image-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            transition: transform 0.5s;
-        }
-
-        .image-card:hover .image-wrapper img {
-            transform: scale(1.03);
-        }
-
-        /* Batch Tab Elements */
-        .batch-drop-zone {
-            border: 2px dashed rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.01);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .batch-drop-zone:hover {
-            border-color: var(--primary);
-            background: rgba(0, 120, 212, 0.04);
-        }
-
-        .file-list-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .file-list-header {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .file-list {
-            max-height: 220px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            padding: 4px;
-        }
-
-        .file-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12.5px;
-            padding: 8px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            color: var(--text-main);
-        }
-
-        .file-item:last-child { border-bottom: none; }
-        
-        .file-item-status {
-            font-weight: 600;
-            font-size: 11px;
-            padding: 1px 6px;
-            border-radius: 4px;
-        }
-        .file-item-status.queued { background: rgba(255,255,255,0.08); color: var(--text-muted); }
-        .file-item-status.processing { background: rgba(0,120,212,0.2); color: #72c3ff; }
-        .file-item-status.success { background: rgba(16,124,16,0.2); color: #5cf25c; }
-        .file-item-status.failed { background: rgba(216,59,1,0.2); color: #ff6b6b; }
-
-        .batch-summary-cards {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .batch-summary-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 16px;
-            text-align: center;
-        }
-
-        .batch-summary-card .val {
-            font-size: 26px;
-            font-weight: 700;
-            color: #fff;
-            margin-top: 4px;
-        }
-
-        .batch-summary-card .lbl {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .batch-results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 16px;
-        }
-
-        .batch-result-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-        .batch-result-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255,255,255,0.15);
-        }
-
-        .batch-result-card.fail {
-            border-left: 4px solid var(--danger);
-        }
-
-        .batch-result-card.pass {
-            border-left: 4px solid var(--success);
-        }
-
-        .batch-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .batch-card-title {
-            font-size: 13.5px;
-            font-weight: 600;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 180px;
-        }
-
-        .batch-card-badge {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        .batch-card-badge.pass { background: rgba(16,124,16,0.15); color: #5cf25c; }
-        .batch-card-badge.fail { background: rgba(216,59,1,0.15); color: #ff6b6b; }
-
-        .batch-card-body {
-            display: flex;
-            gap: 12px;
-            font-size: 12.5px;
-        }
-
-        .batch-card-img {
-            width: 70px;
-            height: 70px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: #000;
-        }
-
-        .batch-card-metrics {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 4px;
-            flex-grow: 1;
-        }
-
-        .batch-card-footer {
-            border-top: 1px solid rgba(255,255,255,0.04);
-            padding-top: 8px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-        }
-
-        /* History Table Styling */
-        .history-table-container {
-            overflow-x: auto;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13.5px;
-            text-align: left;
-        }
-
-        .history-table th {
-            background: rgba(255,255,255,0.02);
-            color: #fff;
-            font-weight: 600;
-            padding: 14px 16px;
-            border-bottom: 1.5px solid var(--border-color);
-        }
-
-        .history-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            color: var(--text-main);
-        }
-
-        .history-table tr:hover td {
-            background: rgba(255,255,255,0.015);
-            color: #fff;
-        }
-
-        .badge-status {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-        .badge-status.pass { background: rgba(16,124,16,0.15); color: #5cf25c; }
-        .badge-status.fail { background: rgba(216,59,1,0.15); color: #ff6b6b; }
-
-        .btn-sm {
-            padding: 4px 10px;
-            font-size: 12px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background: rgba(255,255,255,0.03);
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-sm:hover {
-            border-color: var(--primary);
-            background: rgba(0, 120, 212, 0.12);
-        }
-
-        /* Analytics Tab Styling */
-        .analytics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .analytics-stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            width: 100%;
-        }
-
-        .chart-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
-        }
-
-        .chart-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 16px;
-            width: 100%;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            padding-bottom: 8px;
-        }
-
-        /* Welcome panels / loaders */
-        .welcome-panel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            min-height: 400px;
-            gap: 16px;
-        }
-
-        .welcome-icon { font-size: 48px; }
-        .welcome-title { font-size: 20px; font-weight: 600; color: #fff; }
-        .welcome-desc { font-size: 14px; color: var(--text-muted); max-width: 500px; line-height: 1.6; }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(8, 11, 22, 0.9);
-            backdrop-filter: blur(16px);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 30px;
-        }
-
-        .spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            width: 100%;
-            max-width: 380px;
-        }
-
-        .step-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
-            color: var(--text-muted);
-            transition: all 0.3s;
-        }
-
-        .step-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #374151;
-            transition: all 0.3s;
-        }
-
-        .step-item.active {
-            color: #fff;
-            font-weight: 500;
-        }
-        .step-item.active .step-dot {
-            background-color: var(--primary);
-            box-shadow: 0 0 10px var(--primary);
-        }
-
-        .step-item.done {
-            color: #5cf25c;
-        }
-        .step-item.done .step-dot {
-            background-color: #5cf25c;
-            box-shadow: 0 0 8px #5cf25c;
-        }
-
-        /* Lightbox modal */
-        .lightbox {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.9);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(12px);
-        }
-
-        .lightbox img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .lightbox-close {
-            position: absolute;
-            top: 24px; right: 24px;
-            color: white;
-            font-size: 32px;
-            cursor: pointer;
-        }
-
-        /* Responsive layout */
-        @media (max-width: 1024px) {
-            .main-container {
-                grid-template-columns: 1fr;
-                padding: 20px;
-            }
-        }
-    </style>
+    <title>VisionInspect AI — Industrial Quality Inspection System</title>
+    <meta name="description" content="AI-powered real-time manufacturing defect detection using Convolutional Autoencoders, YOLO, and SSIM anomaly localization.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <header>
-        <div class="logo-container">
-            <div class="logo-dot"></div>
-            <h1>VisionInspect AI</h1>
-        </div>
-        <div class="system-status">
-            <div class="status-pill">
-                <span style="color: #5cf25c">●</span> Category: <span id="current-cat-pill" style="font-weight: 600;">bottle</span>
+<!-- ══════════════════════════ HEADER ══════════════════════════ -->
+<header class="header">
+    <div class="header-inner">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
             </div>
-            <div class="status-pill">
-                Device: <span id="current-device-pill" style="font-weight: 600; text-transform: uppercase;">cpu</span>
-            </div>
-            <div class="status-pill" style="border-color: rgba(16, 124, 16, 0.3)">
-                System: <span style="font-weight: 600; color: #5cf25c;">ONLINE</span>
-            </div>
-        </div>
-    </header>
-
-    <div class="main-container">
-        <!-- Sidebar controls -->
-        <div class="sidebar">
-            <div class="panel">
-                <div class="panel-title">🛠️ Configuration</div>
-                
-                <div class="input-group">
-                    <label for="category-select">Product Category</label>
-                    <select id="category-select">
-                        <option value="bottle" selected>bottle (Bottle Surface)</option>
-                        <option value="cable">cable (Wired Cable)</option>
-                        <option value="capsule">capsule (Pill Capsule)</option>
-                        <option value="carpet">carpet (Textile Carpet)</option>
-                        <option value="grid">grid (Metal Grid)</option>
-                        <option value="hazelnut">hazelnut (Hazelnut Nut)</option>
-                        <option value="leather">leather (Leather Texture)</option>
-                        <option value="metal_nut">metal_nut (Hex Metal Nut)</option>
-                        <option value="pill">pill (Medical Pill)</option>
-                        <option value="screw">screw (Metal Screw)</option>
-                        <option value="tile">tile (Ceramic Tile)</option>
-                        <option value="toothbrush">toothbrush (Toothbrush Bristles)</option>
-                        <option value="transistor">transistor (Component Transistor)</option>
-                        <option value="wood">wood (Wood Grain Texture)</option>
-                        <option value="zipper">zipper (Metal Zipper)</option>
-                    </select>
-                </div>
-
-                <div class="toggle-container">
-                    <label for="yolo-toggle" style="display:flex; flex-direction:column; gap:4px; cursor:pointer;">
-                        <span style="font-weight:600; color:#fff;">YOLOv8 Preprocessing</span>
-                        <span style="font-size:11px; color:var(--text-muted);">Stage 1: Crop and isolate product</span>
-                    </label>
-                    <label class="switch">
-                        <input type="checkbox" id="yolo-toggle" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <!-- Single File Input -->
-                <div class="input-group" id="single-upload-group">
-                    <label>Product Image Upload</label>
-                    <div class="upload-area" id="drop-zone" style="position: relative; cursor: pointer;">
-                        <div class="upload-icon">📤</div>
-                        <div style="font-weight: 500;">Select or drag image</div>
-                        <div class="upload-text">Supports PNG, JPG, JPEG, BMP</div>
-                        <input type="file" id="file-input" accept="image/*" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;">
-                    </div>
-                    
-                    <div class="preview-container" id="preview-box">
-                        <img src="" alt="Preview" class="preview-img" id="preview-img">
-                        <button class="remove-preview" id="remove-btn">×</button>
-                    </div>
-                </div>
-
-                <!-- Batch File Input -->
-                <div class="input-group" id="batch-upload-group" style="display:none;">
-                    <label>Batch Product Images Upload</label>
-                    <div class="batch-drop-zone" id="batch-drop-zone" style="position: relative; cursor: pointer;">
-                        <div class="upload-icon">📦</div>
-                        <div style="font-weight: 500;">Upload multiple files</div>
-                        <div class="upload-text">Select up to 20 images at once</div>
-                        <input type="file" id="batch-file-input" accept="image/*" multiple style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;">
-                    </div>
-                    <div class="file-list-panel" id="file-list-panel" style="display:none;">
-                        <div class="file-list-header">
-                            <span>Selected Files (<strong id="batch-count">0</strong>)</span>
-                            <a href="#" id="batch-clear-btn" style="color:var(--danger); font-size:11px; text-decoration:none; font-weight:600;">Clear All</a>
-                        </div>
-                        <div class="file-list" id="batch-file-list"></div>
-                    </div>
-                </div>
-
-                <button class="btn" id="inspect-btn" disabled>🔍 Inspect Product</button>
-            </div>
-            
-            <div class="panel">
-                <div class="panel-title" style="margin-bottom:12px;">ℹ️ Architecture Info</div>
-                <div style="font-size:12.5px; color: var(--text-muted); line-height: 1.5; display:flex; flex-direction:column; gap:8px;">
-                    <div><strong>Stage 1 (YOLO):</strong> Detects, crops and normalizes the target product in the frame to remove background noise.</div>
-                    <div><strong>Stage 2 (Autoencoder):</strong> Evaluates the cropped object against a category-specific reconstruction model.</div>
-                </div>
+            <div>
+                <span class="logo-title">VisionInspect AI</span>
+                <span class="logo-sub">Industrial Quality Inspection System</span>
             </div>
         </div>
 
-        <!-- Main Dashboard View -->
-        <div class="dashboard-content">
-            <!-- Tabs Navigation -->
-            <div class="tab-nav">
-                <div class="tab-item active" id="tab-single" onclick="switchTab('single')">🔍 Single Inspection</div>
-                <div class="tab-item" id="tab-batch" onclick="switchTab('batch')">📦 Batch Inspection</div>
-                <div class="tab-item" id="tab-analytics" onclick="switchTab('analytics')">📈 Quality Analytics</div>
-                <div class="tab-item" id="tab-history" onclick="switchTab('history')">📜 Inspection Log</div>
+        <div class="header-right">
+            <div class="model-badge" id="model-badge">
+                <span class="badge-dot"></span>
+                <span id="model-status-text">Model: Ready</span>
             </div>
-
-            <!-- Single Tab Content -->
-            <div class="tab-content active" id="content-single">
-                <!-- Welcome Panel (Show initially) -->
-                <div class="panel welcome-panel" id="welcome-panel">
-                    <div class="welcome-icon">🔍</div>
-                    <div class="welcome-title">Quality Inspection System Ready</div>
-                    <div class="welcome-desc">Configure the options in the sidebar, upload a product image from the MVTec AD dataset, and click inspect to check for manufacturing defects.</div>
-                </div>
-
-                <!-- Result Cards (Show after analysis) -->
-                <div id="results-display-wrapper" style="display:none; flex-direction:column; gap:20px;">
-                    <div class="result-grid" id="result-grid">
-                        <div class="panel result-card" id="decision-panel">
-                            <div class="result-badge" id="result-badge">PASS</div>
-                            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="yolo-status-text">YOLO: Active Crop</div>
-                            
-                            <!-- Progress bar -->
-                            <div class="score-bar-container">
-                                <div class="score-bar-fill" id="score-bar-fill"></div>
-                                <div class="threshold-marker" id="threshold-marker"></div>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; width:100%; max-width:320px; font-size:12px; color:var(--text-muted);">
-                                <span>Anomaly Score: <strong id="score-text">0.00</strong></span>
-                                <span style="color:var(--warning)">Thresh: <strong id="thresh-text">0.05</strong></span>
-                            </div>
-                        </div>
-
-                        <!-- Severity Panel -->
-                        <div class="panel" style="display:flex; flex-direction:column; justify-content:center;">
-                            <div class="panel-title" style="margin-bottom:12px;">🧠 Defect Classification & Severity</div>
-                            <div class="severity-score-grid">
-                                <div class="severity-gauge-container">
-                                    <div class="severity-circle" id="severity-gauge">
-                                        <div class="severity-lbl">Severity</div>
-                                        <div class="severity-val" id="severity-val">0</div>
-                                        <div class="severity-badge-lbl" id="severity-level-badge">Low</div>
-                                    </div>
-                                </div>
-                                <div class="severity-breakdown-panel">
-                                    <div class="breakdown-item">
-                                        <span>Defect Size (30%)</span>
-                                        <strong id="sev-size-score">0</strong>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span>Defect Location (25%)</span>
-                                        <strong id="sev-loc-score">0</strong>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span>Defect Type (25%)</span>
-                                        <strong id="sev-type-score">0</strong>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span>Model Confidence (20%)</span>
-                                        <strong id="sev-conf-score">0</strong>
-                                    </div>
-                                    <div class="breakdown-item" style="grid-column: span 2;">
-                                        <span>Inferred Category</span>
-                                        <strong id="inferred-defect-lbl" style="text-transform: capitalize;">Normal Product</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Image Quality Check (Stage 1 Report) -->
-                    <div class="panel">
-                        <div class="panel-title" style="margin-bottom:12px;">🔍 Image Processing & Quality Control (Stage 1)</div>
-                        <div class="quality-card">
-                            <div class="quality-metric">
-                                <label>Sharpness Score (Blur)</label>
-                                <div class="val" id="q-blur-val">0.0</div>
-                                <span class="status-tag" id="q-blur-status">-</span>
-                            </div>
-                            <div class="quality-metric">
-                                <label>Exposure Score (Brightness)</label>
-                                <div class="val" id="q-brightness-val">0.0</div>
-                                <span class="status-tag" id="q-brightness-status">-</span>
-                            </div>
-                            <div class="quality-metric">
-                                <label>Contrast Index</label>
-                                <div class="val" id="q-contrast-val">0.0</div>
-                                <span class="status-tag" id="q-contrast-status">-</span>
-                            </div>
-                        </div>
-                        <div class="warnings-box" id="q-warnings-box">
-                            <strong>⚠️ Quality Warnings Detected:</strong>
-                            <ul id="q-warnings-list" style="margin-top: 6px;"></ul>
-                        </div>
-                    </div>
-
-                    <!-- Image View Grid (Show after analysis) -->
-                    <div class="images-grid" id="images-grid">
-                        <div class="image-card" onclick="openLightbox(this)">
-                            <div class="image-card-title">1. Original Image</div>
-                            <div class="image-wrapper">
-                                <img id="img-original" src="" alt="Original">
-                            </div>
-                        </div>
-                        <div class="image-card" onclick="openLightbox(this)">
-                            <div class="image-card-title">2. Enhanced Crop (YOLO ROI)</div>
-                            <div class="image-wrapper">
-                                <img id="img-cropped" src="" alt="Cropped ROI">
-                            </div>
-                        </div>
-                        <div class="image-card" onclick="openLightbox(this)">
-                            <div class="image-card-title">3. Model Reconstruction</div>
-                            <div class="image-wrapper">
-                                <img id="img-reconstructed" src="" alt="Reconstructed">
-                            </div>
-                        </div>
-                        <div class="image-card" onclick="openLightbox(this)">
-                            <div class="image-card-title">4. Defect Heatmap Overlay</div>
-                            <div class="image-wrapper">
-                                <img id="img-overlay" src="" alt="Heatmap Overlay">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recommended Action -->
-                    <div class="panel" style="border-left: 4px solid var(--primary);">
-                        <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">⚖️ Recommended Quality Action</div>
-                        <p id="recommended-action-text" style="font-size: 14px; color: var(--text-muted); font-style: italic;">No defect found. Accept the item.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Batch Tab Content -->
-            <div class="tab-content" id="content-batch">
-                <div class="panel" id="batch-welcome-panel">
-                    <div class="welcome-icon">📦</div>
-                    <div class="welcome-title">Batch Quality Inspection</div>
-                    <div class="welcome-desc">Switch sidebar to upload multiple files, configure the options, and click inspect to inspect up to 20 images in batch mode.</div>
-                </div>
-
-                <div id="batch-results-display-wrapper" style="display:none; flex-direction:column; gap:20px;">
-                    <!-- Batch Analytics Summary -->
-                    <div class="batch-summary-cards">
-                        <div class="batch-summary-card" style="border-bottom: 3px solid var(--primary);">
-                            <div class="lbl">Total Processed</div>
-                            <div class="val" id="batch-stat-total">0</div>
-                        </div>
-                        <div class="batch-summary-card" style="border-bottom: 3px solid var(--success);">
-                            <div class="lbl">Pass Rate</div>
-                            <div class="val" id="batch-stat-pass-rate">0%</div>
-                        </div>
-                        <div class="batch-summary-card" style="border-bottom: 3px solid var(--danger);">
-                            <div class="lbl">Failed (Defective)</div>
-                            <div class="val" id="batch-stat-fail">0</div>
-                        </div>
-                        <div class="batch-summary-card" style="border-bottom: 3px solid var(--warning);">
-                            <div class="lbl">Average Severity</div>
-                            <div class="val" id="batch-stat-avg-severity">0.0</div>
-                        </div>
-                    </div>
-
-                    <!-- Results list -->
-                    <div class="panel">
-                        <div class="panel-title">📦 Inspection Results</div>
-                        <div class="batch-results-grid" id="batch-results-grid"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analytics Tab Content -->
-            <div class="tab-content" id="content-analytics">
-                <div class="analytics-grid">
-                    <div class="panel chart-card">
-                        <div class="chart-title">⚖️ Pass vs Defect Ratio</div>
-                        <div style="width: 220px; height: 220px; position: relative;">
-                            <canvas id="chart-pass-fail"></canvas>
-                        </div>
-                    </div>
-                    <div class="panel chart-card">
-                        <div class="chart-title">📊 Defect Severity Level Distribution</div>
-                        <div style="width: 100%; height: 220px; position: relative;">
-                            <canvas id="chart-severity"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title">📈 System Operational Metrics</div>
-                    <div class="analytics-stats-grid">
-                        <div class="metric-item">
-                            <label>Total Inspections Checked</label>
-                            <div class="metric-val" id="stats-total-count" style="font-size: 20px; font-family: var(--font-mono);">0</div>
-                        </div>
-                        <div class="metric-item">
-                            <label>Defect Detection Rate</label>
-                            <div class="metric-val" id="stats-defect-rate" style="font-size: 20px; font-family: var(--font-mono); color: var(--danger);">0.00%</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- History Tab Content -->
-            <div class="tab-content" id="content-history">
-                <div class="panel">
-                    <div class="panel-title">📜 Quality Control Inspection Log</div>
-                    <div class="history-table-container">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Filename</th>
-                                    <th>Category</th>
-                                    <th>Result</th>
-                                    <th>Severity Score</th>
-                                    <th>Defect Type</th>
-                                    <th>Report</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-table-body">
-                                <tr>
-                                    <td colspan="7" style="text-align: center; color: var(--text-muted);">No records logged yet. Run an inspection to populate.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="header-status">
+                <span class="pulse-dot"></span>
+                <span id="server-status-text">Connecting…</span>
             </div>
         </div>
     </div>
+</header>
 
-    <!-- Pipeline Loading Screen -->
-    <div class="loading-overlay" id="loading-screen">
-        <div class="spinner"></div>
-        <div class="loading-steps">
-            <div class="step-item" id="step-1"><div class="step-dot"></div>1. Running Image Processing & Quality Control (Stage 1)...</div>
-            <div class="step-item" id="step-2"><div class="step-dot"></div>2. Running YOLOv8 Product Crop Alignment...</div>
-            <div class="step-item" id="step-3"><div class="step-dot"></div>3. Loading Category Autoencoder weights...</div>
-            <div class="step-item" id="step-4"><div class="step-dot"></div>4. Reconstructing & computing pixel MSE...</div>
-            <div class="step-item" id="step-5"><div class="step-dot"></div>5. Generating defect heatmap and severity index...</div>
+<!-- ══════════════════════════ MAIN LAYOUT ══════════════════════════ -->
+<main class="main-layout">
+
+    <!-- ── LEFT PANEL: Controls ── -->
+    <aside class="controls-panel glass">
+        <h2 class="panel-title">Inspection Setup</h2>
+
+        <!-- Category -->
+        <div class="form-group">
+            <label class="form-label" for="category-select">Product Category</label>
+            <select id="category-select" class="form-select">
+                <option value="auto" selected>✨ Auto-Detect Product</option>
+                <option value="bottle">Bottle</option>
+                <option value="cable">Cable</option>
+                <option value="capsule">Capsule</option>
+                <option value="carpet">Carpet</option>
+                <option value="grid">Grid</option>
+                <option value="hazelnut">Hazelnut</option>
+                <option value="leather">Leather</option>
+                <option value="metal_nut">Metal Nut</option>
+                <option value="pill">Pill</option>
+                <option value="screw">Screw</option>
+                <option value="tile">Tile</option>
+                <option value="toothbrush">Toothbrush</option>
+                <option value="transistor">Transistor</option>
+                <option value="wood">Wood</option>
+                <option value="zipper">Zipper</option>
+            </select>
         </div>
-    </div>
 
-    <!-- Lightbox Zoom Modal -->
-    <div class="lightbox" id="lightbox-modal" onclick="closeLightbox()">
-        <span class="lightbox-close">&times;</span>
-        <img id="lightbox-img" src="" alt="Zoomed">
-    </div>
+        <!-- YOLO Toggle -->
+        <div class="form-group">
+            <label class="form-label">YOLO Object Crop</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="yolo-toggle" checked>
+                <span class="toggle-track">
+                    <span class="toggle-thumb"></span>
+                </span>
+                <span class="toggle-label" id="yolo-label">Enabled</span>
+            </label>
+        </div>
 
-    <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const previewBox = document.getElementById('preview-box');
-        const previewImg = document.getElementById('preview-img');
-        const removeBtn = document.getElementById('remove-btn');
-        const inspectBtn = document.getElementById('inspect-btn');
-        
-        const welcomePanel = document.getElementById('welcome-panel');
-        const resultsDisplayWrapper = document.getElementById('results-display-wrapper');
-        const resultGrid = document.getElementById('result-grid');
-        const imagesGrid = document.getElementById('images-grid');
-        const loadingScreen = document.getElementById('loading-screen');
-        
-        // Batch elements
-        const batchDropZone = document.getElementById('batch-drop-zone');
-        const batchFileInput = document.getElementById('batch-file-input');
-        const fileListPanel = document.getElementById('file-list-panel');
-        const fileList = document.getElementById('batch-file-list');
-        const clearBtn = document.getElementById('batch-clear-btn');
-        const batchWelcome = document.getElementById('batch-welcome-panel');
-        const batchResultsWrapper = document.getElementById('batch-results-display-wrapper');
-        const batchResultsGrid = document.getElementById('batch-results-grid');
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*" hidden>
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <p class="upload-text">Drop product image here</p>
+            <p class="upload-sub">Supports PNG, JPG, BMP, TIFF</p>
+        </div>
 
-        let selectedFile = null;
-        let batchFiles = [];
-        let activeTab = 'single';
-        
-        // Charts Singletons
-        let passFailChart = null;
-        let severityChart = null;
+        <!-- Image Preview -->
+        <div id="preview-wrap" class="preview-wrap hidden">
+            <img id="preview-img" src="" alt="Preview">
+            <span class="preview-label">Ready for inspection</span>
+        </div>
 
-        // Switch Tabs Layout
-        function switchTab(tabId) {
-            activeTab = tabId;
-            
-            // Toggle active tabs list
-            document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            document.getElementById(`content-${tabId}`).classList.add('active');
-            
-            // Adjust Sidebar uploading layout dynamically
-            if (tabId === 'batch') {
-                document.getElementById('single-upload-group').style.display = 'none';
-                document.getElementById('batch-upload-group').style.display = 'block';
-                toggleInspectBtn(batchFiles.length > 0);
-            } else {
-                document.getElementById('single-upload-group').style.display = 'block';
-                document.getElementById('batch-upload-group').style.display = 'none';
-                toggleInspectBtn(selectedFile !== null);
-            }
-            
-            // Refresh table / charts on switch
-            if (tabId === 'history') {
-                loadHistoryTable();
-            } else if (tabId === 'analytics') {
-                loadAnalyticsCharts();
-            }
-        }
+        <!-- Analyze Button -->
+        <button id="analyze-btn" class="btn-primary" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span>Analyze Image</span>
+        </button>
+    </aside>
 
-        function toggleInspectBtn(enable) {
-            if (enable) {
-                inspectBtn.removeAttribute('disabled');
-            } else {
-                inspectBtn.setAttribute('disabled', 'true');
-            }
-        }
+    <!-- ── RIGHT PANEL: Inspection Results ── -->
+    <section class="results-area">
 
-        // Fetch initial server category config
-        async function fetchStatus() {
-            try {
-                const response = await fetch('/status');
-                const data = await response.json();
-                document.getElementById('current-device-pill').textContent = data.device;
-                document.getElementById('current-cat-pill').textContent = data.category;
-                document.getElementById('category-select').value = data.category;
-            } catch (err) {
-                console.error("Error fetching system status:", err);
-            }
-        }
-        window.addEventListener('DOMContentLoaded', fetchStatus);
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            </div>
+            <h3>System Ready for Inspection</h3>
+            <p>Select a product category, upload an image,<br>and click <strong>Analyze Image</strong> to run defect inspection.</p>
+        </div>
 
-        // Sidebar Upload handlers
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)'; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
-        });
-        fileInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
-        });
+        <!-- Loading Overlay with Multi-stage Steps -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="spinner-ring"></div>
+            <p class="loading-main">Running AI Inspection Pipeline…</p>
+            <div class="pipeline-steps">
+                <div class="step-item active" id="step-1">Stage 1: YOLO Product Detection & Crop</div>
+                <div class="step-item" id="step-2">Stage 2: Autoencoder Reconstruction</div>
+                <div class="step-item" id="step-3">Stage 3: SSIM Anomaly Scoring & Classification</div>
+            </div>
+        </div>
 
-        function isImageFile(file) {
-            if (!file) return false;
-            if (file.type && file.type.startsWith('image/')) return true;
-            const name = file.name || '';
-            const ext = name.split('.').pop().toLowerCase();
-            return ['png', 'jpg', 'jpeg', 'bmp', 'webp', 'tif', 'tiff', 'gif'].includes(ext);
-        }
+        <!-- Error Toast Banner -->
+        <div id="error-toast" class="error-toast hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="error-msg">Error executing inspection.</span>
+            <button class="toast-close" id="toast-close">&times;</button>
+        </div>
 
-        function handleFile(file) {
-            if (!isImageFile(file)) {
-                alert('Please upload a valid image file (PNG, JPG, JPEG, BMP, WEBP).');
-                return;
-            }
-            selectedFile = file;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                previewImg.src = e.target.result;
-                dropZone.style.display = 'none';
-                previewBox.style.display = 'block';
-                toggleInspectBtn(true);
-            };
-            reader.readAsDataURL(file);
-        }
+        <!-- Results Dashboard Panel -->
+        <div id="results-panel" class="results-panel hidden">
 
-        removeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            selectedFile = null;
-            fileInput.value = '';
-            previewImg.src = '';
-            previewBox.style.display = 'none';
-            dropZone.style.display = 'flex';
-            toggleInspectBtn(false);
-        });
+            <!-- ── Verdict Status Header ── -->
+            <div class="status-bar" id="status-bar">
+                <div class="verdict-badge" id="verdict-badge">PENDING</div>
+                <div class="verdict-meta">
+                    <span class="meta-item">Category: <strong id="verdict-category">—</strong></span>
+                    <span class="sep">·</span>
+                    <span class="meta-item">Defect: <strong id="verdict-defect">—</strong></span>
+                </div>
+                <div class="verdict-conf">
+                    Confidence: <strong id="verdict-conf">—</strong>
+                    <span class="sep">·</span>
+                    Time: <strong id="verdict-time">—</strong>
+                </div>
+            </div>
 
-        // Batch upload handlers
-        batchFileInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        batchDropZone.addEventListener('dragover', (e) => { e.preventDefault(); batchDropZone.style.borderColor = 'var(--primary)'; });
-        batchDropZone.addEventListener('dragleave', () => { batchDropZone.style.borderColor = 'rgba(255, 255, 255, 0.12)'; });
-        batchDropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            batchDropZone.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-            if (e.dataTransfer.files.length > 0) handleBatchFiles(e.dataTransfer.files);
-        });
-        batchFileInput.addEventListener('change', () => {
-            if (batchFileInput.files.length > 0) handleBatchFiles(batchFileInput.files);
-        });
+            <!-- ── 5 Visual Inspection Cards ── -->
+            <div class="image-grid">
+                <div class="img-card">
+                    <div class="img-label">1. Original Scan</div>
+                    <div class="img-frame">
+                        <img id="img-original" src="" alt="Original Scan">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">2. YOLO Crop</div>
+                    <div class="img-frame">
+                        <img id="img-cropped" src="" alt="YOLO Crop">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">3. AE Reconstruction</div>
+                    <div class="img-frame">
+                        <img id="img-reconstructed" src="" alt="AE Reconstruction">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">4. Defect Heatmap</div>
+                    <div class="img-frame">
+                        <img id="img-heatmap" src="" alt="Defect Heatmap">
+                    </div>
+                </div>
+                <div class="img-card featured">
+                    <div class="img-label highlight">5. Defect Localization</div>
+                    <div class="img-frame">
+                        <img id="img-overlay" src="" alt="Defect Overlay Localization">
+                    </div>
+                </div>
+            </div>
 
-        function handleBatchFiles(filesList) {
-            const validFiles = Array.from(filesList).filter(isImageFile);
-            if (validFiles.length === 0) {
-                alert('Please upload image files.');
-                return;
-            }
-            
-            // Limit to 20
-            batchFiles = batchFiles.concat(validFiles).slice(0, 20);
-            updateBatchFileList();
-        }
+            <!-- ── Reconstruction Error & Threshold Progress ── -->
+            <div class="score-section glass">
+                <div class="score-header">
+                    <div>
+                        <span class="score-label">Reconstruction Error (Anomaly Score)</span>
+                        <span class="score-value" id="anomaly-score-val">—</span>
+                    </div>
+                    <div class="thresh-label-wrap">
+                        <span class="thresh-label">Calibrated Threshold</span>
+                        <span class="thresh-value" id="threshold-val">—</span>
+                    </div>
+                </div>
+                <div class="threshold-bar-track" id="bar-track">
+                    <div class="threshold-bar-fill" id="bar-fill"></div>
+                    <div class="threshold-marker" id="bar-marker"></div>
+                    <div class="threshold-marker-label" id="bar-marker-label">Threshold</div>
+                </div>
+                <div class="bar-legend">
+                    <span>0.0000</span>
+                    <span class="bar-scale-mid" id="bar-scale-mid">—</span>
+                    <span id="bar-scale-max">—</span>
+                </div>
+            </div>
 
-        function updateBatchFileList() {
-            document.getElementById('batch-count').textContent = batchFiles.length;
-            fileList.innerHTML = '';
-            
-            if (batchFiles.length > 0) {
-                fileListPanel.style.display = 'flex';
-                batchFiles.forEach((file, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'file-item';
-                    row.innerHTML = `
-                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">${file.name}</span>
-                        <span class="file-item-status queued" id="batch-status-${index}">Queued</span>
-                    `;
-                    fileList.appendChild(row);
-                });
-                toggleInspectBtn(true);
-            } else {
-                fileListPanel.style.display = 'none';
-                toggleInspectBtn(false);
-            }
-        }
+            <!-- ── Metrics Dashboard Grid ── -->
+            <div class="metrics-grid">
+                <div class="metric-card glass">
+                    <span class="metric-label">Product Category</span>
+                    <span class="metric-value" id="metric-category-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Prediction Verdict</span>
+                    <span class="metric-value" id="metric-prediction-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Defect Type</span>
+                    <span class="metric-value" id="defect-type-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Reconstruction Error</span>
+                    <span class="metric-value" id="metric-error-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Threshold Used</span>
+                    <span class="metric-value" id="metric-threshold-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Classification Confidence</span>
+                    <span class="metric-value" id="metric-conf-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Severity Level</span>
+                    <span class="metric-value" id="severity-level-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Processing Time</span>
+                    <span class="metric-value" id="metric-time-val">—</span>
+                </div>
+            </div>
 
-        clearBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            batchFiles = [];
-            batchFileInput.value = '';
-            updateBatchFileList();
-        });
+            <!-- ── Operator Recommended Action Banner ── -->
+            <div class="action-banner glass" id="action-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <div>
+                    <span class="action-title">Recommended Operator Action</span>
+                    <span class="action-body" id="action-text">—</span>
+                </div>
+            </div>
 
-        // Pipeline Loader simulation
-        function runLoadingSteps(callback) {
-            loadingScreen.style.display = 'flex';
-            const steps = [
-                document.getElementById('step-1'),
-                document.getElementById('step-2'),
-                document.getElementById('step-3'),
-                document.getElementById('step-4'),
-                document.getElementById('step-5')
-            ];
-            
-            steps.forEach(s => s.className = 'step-item');
-            let current = 0;
-            steps[0].classList.add('active');
-            
-            const interval = setInterval(() => {
-                steps[current].classList.remove('active');
-                steps[current].classList.add('done');
-                current++;
-                
-                if (current < steps.length) {
-                    steps[current].classList.add('active');
-                } else {
-                    clearInterval(interval);
-                    setTimeout(() => {
-                        loadingScreen.style.display = 'none';
-                        callback();
-                    }, 400);
-                }
-            }, 300);
-        }
+            <!-- ── Severity Breakdown Bars ── -->
+            <div class="breakdown-section glass" id="breakdown-section">
+                <h4 class="breakdown-title">Defect Severity & Spatial Breakdown</h4>
+                <div id="breakdown-bars"></div>
+            </div>
 
-        // Run inspection trigger
-        inspectBtn.addEventListener('click', () => {
-            if (activeTab === 'single') {
-                runSingleInspection();
-            } else if (activeTab === 'batch') {
-                runBatchInspection();
-            }
-        });
+        </div>
+    </section>
+</main>
 
-        async function runSingleInspection() {
-            if (!selectedFile) return;
-            const category = document.getElementById('category-select').value;
-            const enableYolo = document.getElementById('yolo-toggle').checked;
-            
-            runLoadingSteps(async () => {
-                const formData = new FormData();
-                formData.append('file', selectedFile);
-                
-                try {
-                    const response = await fetch(`/predict?category=${category}&enable_yolo=${enableYolo}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                    
-                    const data = await response.json();
-                    renderResults(data);
-                    
-                    // Automatically update system header status
-                    document.getElementById('current-cat-pill').textContent = category;
-                } catch (err) {
-                    alert(`Inspection failed: ${err.message}`);
-                }
-            });
-        }
-
-        function renderResults(data) {
-            welcomePanel.style.display = 'none';
-            resultsDisplayWrapper.style.display = 'flex';
-            
-            // Set basic values
-            const badge = document.getElementById('result-badge');
-            const fill = document.getElementById('score-bar-fill');
-            const marker = document.getElementById('threshold-marker');
-            
-            if (data.is_anomaly) {
-                badge.textContent = "FAIL";
-                badge.className = "result-badge fail";
-                fill.className = "score-bar-fill fail";
-                document.getElementById('metric-decision').textContent = "🔴 REJECT (Defected)";
-                document.getElementById('metric-decision').style.color = 'var(--danger)';
-            } else {
-                badge.textContent = "PASS";
-                badge.className = "result-badge pass";
-                fill.className = "score-bar-fill pass";
-                document.getElementById('metric-decision').textContent = "🟢 ACCEPT (Normal)";
-                document.getElementById('metric-decision').style.color = '#5cf25c';
-            }
-            
-            document.getElementById('score-text').textContent = data.anomaly_score.toFixed(6);
-            document.getElementById('thresh-text').textContent = data.threshold.toFixed(4);
-            document.getElementById('metric-score').textContent = data.anomaly_score.toFixed(6);
-            document.getElementById('metric-category').textContent = data.category;
-            document.getElementById('metric-device').textContent = document.getElementById('current-device-pill').textContent;
-            document.getElementById('yolo-status-text').textContent = data.yolo_status;
-            
-            // Scale fill bar
-            const threshold = data.threshold;
-            const score = data.anomaly_score;
-            marker.style.left = '50%';
-            
-            let fillPct = 0;
-            if (score <= threshold) {
-                fillPct = (score / threshold) * 50;
-            } else {
-                const overFactor = (score - threshold) / (threshold * 2);
-                fillPct = 50 + Math.min(50, overFactor * 50);
-            }
-            fill.style.width = `${fillPct}%`;
-            
-            // Stage 1 QC Report
-            const qr = data.quality_report;
-            document.getElementById('q-blur-val').textContent = qr.blur_score.toFixed(1);
-            document.getElementById('q-brightness-val').textContent = qr.brightness.toFixed(1);
-            document.getElementById('q-contrast-val').textContent = qr.contrast.toFixed(1);
-            
-            // QC Status badges
-            setupQCPill('q-blur-status', qr.blur_score >= 100 ? 'ok' : 'warn', qr.blur_score >= 100 ? 'SHARP' : 'BLURRY');
-            
-            const brightTag = (qr.brightness >= 40 && qr.brightness <= 230) ? 'ok' : 'fail';
-            const brightLbl = (qr.brightness < 40) ? 'DARK' : (qr.brightness > 230 ? 'OVEREXPOSED' : 'NORMAL');
-            setupQCPill('q-brightness-status', brightTag, brightLbl);
-            
-            setupQCPill('q-contrast-status', qr.contrast >= 15 ? 'ok' : 'fail', qr.contrast >= 15 ? 'HIGH' : 'LOW CONTRAST');
-            
-            // QC warnings lists
-            const wBox = document.getElementById('q-warnings-box');
-            const wList = document.getElementById('q-warnings-list');
-            wList.innerHTML = '';
-            if (qr.warnings && qr.warnings.length > 0) {
-                wBox.style.display = 'block';
-                qr.warnings.forEach(w => {
-                    const li = document.createElement('li');
-                    li.textContent = w;
-                    wList.appendChild(li);
-                });
-            } else {
-                wBox.style.display = 'none';
-            }
-            
-            // Severity scoring elements
-            const sevScore = data.severity_score;
-            const sevLvl = data.severity_level;
-            document.getElementById('severity-val').textContent = Math.round(sevScore);
-            
-            const sevBadge = document.getElementById('severity-level-badge');
-            sevBadge.textContent = sevLvl;
-            sevBadge.className = `severity-badge-lbl ${sevLvl.toLowerCase()}`;
-            
-            const gauge = document.getElementById('severity-gauge');
-            gauge.className = `severity-circle ${sevLvl.toLowerCase()}`;
-            
-            // Breakdown stats
-            const b = data.severity_breakdown;
-            document.getElementById('sev-size-score').textContent = Math.round(b.size_score);
-            document.getElementById('sev-loc-score').textContent = Math.round(b.location_score);
-            document.getElementById('sev-type-score').textContent = Math.round(b.type_score);
-            document.getElementById('sev-conf-score').textContent = Math.round(b.confidence_score);
-            
-            const defLabel = document.getElementById('inferred-defect-lbl');
-            defLabel.textContent = data.inferred_defect_type.replace('_', ' ');
-            if (data.is_anomaly) {
-                defLabel.style.color = 'var(--danger)';
-            } else {
-                defLabel.style.color = '#5cf25c';
-            }
-            
-            // Update recommended action text
-            document.getElementById('recommended-action-text').textContent = data.recommended_action;
-            
-            // Update image sources
-            document.getElementById('img-original').src = data.original_image;
-            document.getElementById('img-cropped').src = data.cropped_image;
-            document.getElementById('img-reconstructed').src = data.reconstructed_image;
-            document.getElementById('img-overlay').src = data.overlay_image;
-            
-            resultGrid.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function setupQCPill(id, tag, text) {
-            const el = document.getElementById(id);
-            el.className = `status-tag ${tag}`;
-            el.textContent = text;
-        }
-
-        // Run batch inspection
-        async function runBatchInspection() {
-            if (batchFiles.length === 0) return;
-            
-            const category = document.getElementById('category-select').value;
-            const enableYolo = document.getElementById('yolo-toggle').checked;
-            
-            batchWelcome.style.display = 'none';
-            batchResultsWrapper.style.display = 'flex';
-            batchResultsGrid.innerHTML = '';
-            
-            // Set all files status to processing
-            for(let i=0; i<batchFiles.length; i++) {
-                const statusPill = document.getElementById(`batch-status-${i}`);
-                if (statusPill) {
-                    statusPill.className = 'file-item-status processing';
-                    statusPill.textContent = 'Processing';
-                }
-            }
-            
-            inspectBtn.setAttribute('disabled', 'true');
-            
-            // Create FormData with multiple files
-            const formData = new FormData();
-            batchFiles.forEach(file => {
-                formData.append('files', file);
-            });
-            
-            try {
-                const response = await fetch(`/batch-predict?category=${category}&enable_yolo=${enableYolo}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                const data = await response.json();
-                
-                // Update stats
-                document.getElementById('batch-stat-total').textContent = data.batch_size;
-                document.getElementById('batch-stat-pass-rate').textContent = `${data.pass_rate}%`;
-                document.getElementById('batch-stat-fail').textContent = data.anomalous_count;
-                
-                let totalSev = 0;
-                
-                data.results.forEach((res, i) => {
-                    const statusPill = document.getElementById(`batch-status-${i}`);
-                    if (statusPill) {
-                        if (res.error) {
-                            statusPill.className = 'file-item-status failed';
-                            statusPill.textContent = 'Failed';
-                        } else {
-                            statusPill.className = 'file-item-status success';
-                            statusPill.textContent = 'Done';
-                        }
-                    }
-                    
-                    if (res.error) return;
-                    totalSev += res.severity_score;
-                    
-                    // Create card
-                    const card = document.createElement('div');
-                    card.className = `batch-result-card ${res.is_anomaly ? 'fail' : 'pass'}`;
-                    card.innerHTML = `
-                        <div class="batch-card-header">
-                            <span class="batch-card-title">${batchFiles[i].name}</span>
-                            <span class="batch-card-badge ${res.is_anomaly ? 'fail' : 'pass'}">${res.is_anomaly ? 'FAIL' : 'PASS'}</span>
-                        </div>
-                        <div class="batch-card-body">
-                            <img class="batch-card-img" src="${res.cropped_image}" alt="Cropped ROI">
-                            <div class="batch-card-metrics">
-                                <div>Score: <strong style="font-family:var(--font-mono);">${res.anomaly_score.toFixed(6)}</strong></div>
-                                <div>Severity: <strong style="color:var(--warning);">${Math.round(res.severity_score)} (${res.severity_level})</strong></div>
-                            </div>
-                        </div>
-                        <div class="batch-card-footer">
-                            <span style="color:var(--text-muted); text-transform:capitalize;">${res.inferred_defect_type.replace('_',' ')}</span>
-                            <a href="/report/${res.inspection_id}?format=html" target="_blank" style="color:var(--primary); text-decoration:none; font-weight:600;">View Certificate</a>
-                        </div>
-                    `;
-                    batchResultsGrid.appendChild(card);
-                });
-                
-                const avgSev = batchFiles.length > 0 ? (totalSev / batchFiles.length) : 0;
-                document.getElementById('batch-stat-avg-severity').textContent = avgSev.toFixed(1);
-                
-            } catch (err) {
-                alert(`Batch inspection failed: ${err.message}`);
-                // reset status pills
-                for(let i=0; i<batchFiles.length; i++) {
-                    const statusPill = document.getElementById(`batch-status-${i}`);
-                    if (statusPill) {
-                        statusPill.className = 'file-item-status failed';
-                        statusPill.textContent = 'Error';
-                    }
-                }
-            } finally {
-                inspectBtn.removeAttribute('disabled');
-            }
-        }
-
-        // Fetch and render Log history table
-        async function loadHistoryTable() {
-            try {
-                const response = await fetch('/history?limit=50');
-                const list = await response.json();
-                const tbody = document.getElementById('history-table-body');
-                tbody.innerHTML = '';
-                
-                if (list.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No records logged yet. Run an inspection to populate.</td></tr>`;
-                    return;
-                }
-                
-                list.forEach(entry => {
-                    const date = new Date(entry.timestamp).toLocaleString();
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="font-family:var(--font-mono); font-size:12.5px;">${date}</td>
-                        <td style="font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${entry.filename}</td>
-                        <td style="text-transform:uppercase; font-size:12px;">${entry.category}</td>
-                        <td><span class="badge-status ${entry.is_anomaly ? 'fail' : 'pass'}">${entry.is_anomaly ? 'FAIL' : 'PASS'}</span></td>
-                        <td style="font-family:var(--font-mono); font-weight:600;">${Math.round(entry.severity_score)} (${entry.severity_level})</td>
-                        <td style="text-transform:capitalize;">${entry.inferred_defect_type.replace('_',' ')}</td>
-                        <td>
-                            <button class="btn-sm" onclick="window.open('/report/${entry.inspection_id}?format=html', '_blank')">Certificate</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (err) {
-                console.error("Error loading history:", err);
-            }
-        }
-
-        // Fetch and load Analytics Charts
-        async function loadAnalyticsCharts() {
-            try {
-                const response = await fetch('/analytics');
-                const data = await response.json();
-                
-                // Set text fields
-                document.getElementById('stats-total-count').textContent = data.total_inspections;
-                document.getElementById('stats-defect-rate').textContent = `${data.defect_rate}%`;
-                
-                // 1. Pass / Fail Pie Chart
-                const ctxPie = document.getElementById('chart-pass-fail').getContext('2d');
-                if (passFailChart) passFailChart.destroy();
-                
-                if (data.total_inspections === 0) {
-                    ctxPie.clearRect(0, 0, 220, 220);
-                } else {
-                    passFailChart = new Chart(ctxPie, {
-                        type: 'pie',
-                        data: {
-                            labels: ['Approved (PASS)', 'Rejected (FAIL)'],
-                            datasets: [{
-                                data: [data.total_inspections - data.anomalous_count, data.anomalous_count],
-                                backgroundColor: ['#107c10', '#d83b01'],
-                                borderColor: '#080b16',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: { color: '#9ca3af', font: { family: 'Outfit' } }
-                                }
-                            }
-                        }
-                    });
-                }
-                
-                // 2. Severity Level Bar Chart
-                const ctxBar = document.getElementById('chart-severity').getContext('2d');
-                if (severityChart) severityChart.destroy();
-                
-                const sevCounts = data.severity_distribution;
-                severityChart = new Chart(ctxBar, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Low', 'Medium', 'High', 'Critical'],
-                        datasets: [{
-                            label: 'Product Count',
-                            data: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical],
-                            backgroundColor: ['#107c10', '#ff8c00', '#d83b01', '#ff3b30'],
-                            borderWidth: 0,
-                            borderRadius: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            x: {
-                                grid: { display: false },
-                                ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
-                            },
-                            y: {
-                                grid: { color: 'rgba(255,255,255,0.05)' },
-                                ticks: { color: '#9ca3af', font: { family: 'Outfit' }, precision: 0 }
-                            }
-                        }
-                    });
-                
-            } catch (err) {
-                console.error("Error loading analytics:", err);
-            }
-        }
-
-        // Lightbox modal handlers
-        const lightbox = document.getElementById('lightbox-modal');
-        const lightboxImg = document.getElementById('lightbox-img');
-
-        function openLightbox(card) {
-            const img = card.querySelector('img');
-            if (img && img.src && !img.src.endsWith('/')) {
-                lightboxImg.src = img.src;
-                lightbox.style.display = 'flex';
-            }
-        }
-
-        function closeLightbox() {
-            lightbox.style.display = 'none';
-            lightboxImg.src = '';
-        }
-    </script>
+<script src="/static/app.js"></script>
 </body>
 </html>

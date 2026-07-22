@@ -5,15 +5,17 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from . import config
+from .preprocessor import get_category_transforms
 
 class MVTecDataset(Dataset):
     """
     Custom PyTorch Dataset for MVTec Anomaly Detection.
     Loads normal samples for training, and both normal and anomalous samples for testing.
+    Uses category-optimized preprocessing transforms to ensure training-inference consistency.
     """
     def __init__(self, dataset_dir=None, category=None, split="train", transform=None):
         self.dataset_dir = Path(dataset_dir or config.DATASET_DIR)
-        self.category = category or config.CATEGORY
+        self.category = (category or config.CATEGORY).lower()
         self.split = split
         
         self.category_dir = self.dataset_dir / self.category
@@ -24,20 +26,13 @@ class MVTecDataset(Dataset):
         self.labels = []  # 0 for normal (good), 1 for anomalous
         self.defect_types = []  # string description (e.g. 'good', 'broken_large')
         
-        # Define default transforms if none provided
+        # Define category-optimized transforms if none provided
         if transform is None:
-            if split == "train":
-                self.transform = transforms.Compose([
-                    transforms.Resize(config.IMAGE_SIZE),
-                    transforms.RandomHorizontalFlip(p=0.5),
-                    transforms.RandomVerticalFlip(p=0.5),
-                    transforms.ToTensor()
-                ])
-            else:
-                self.transform = transforms.Compose([
-                    transforms.Resize(config.IMAGE_SIZE),
-                    transforms.ToTensor()
-                ])
+            self.transform = get_category_transforms(
+                category=self.category,
+                split=self.split,
+                image_size=config.IMAGE_SIZE
+            )
         else:
             self.transform = transform
             
@@ -73,7 +68,7 @@ class MVTecDataset(Dataset):
         label = self.labels[idx]
         defect_type = self.defect_types[idx]
         
-        # Load image
+        # Load image consistently in 3-channel RGB mode
         img = Image.open(img_path).convert("RGB")
         
         if self.transform:
@@ -81,7 +76,7 @@ class MVTecDataset(Dataset):
             
         return img, label, defect_type, img_path
 
-def get_dataloaders(dataset_dir=None, category=None, batch_size=None):
+def get_dataloaders(dataset_dir=None, category=None, batch_size=None, num_workers=0):
     """
     Helper function to create Train and Test dataloaders.
     """
@@ -90,11 +85,23 @@ def get_dataloaders(dataset_dir=None, category=None, batch_size=None):
     train_dataset = MVTecDataset(dataset_dir=dataset_dir, category=category, split="train")
     test_dataset = MVTecDataset(dataset_dir=dataset_dir, category=category, split="test")
     
+    pin_memory = torch.cuda.is_available()
+    
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, drop_last=False
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory
     )
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, drop_last=False
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        drop_last=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory
     )
     
     return train_loader, test_loader
