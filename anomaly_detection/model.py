@@ -186,34 +186,6 @@ class SkipAutoencoder(nn.Module):
         return out
 
 
-class PaDiMFeatureExtractor(nn.Module):
-    """
-    PaDiM Patch Distribution Modeling Feature Extractor.
-    Extracts multi-scale representations from ResNet18 layers 1, 2, and 3.
-    """
-    def __init__(self):
-        super().__init__()
-        from torchvision import models
-        resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-        self.stem = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
-        self.layer1 = resnet.layer1
-        self.layer2 = resnet.layer2
-        self.layer3 = resnet.layer3
-
-    def forward(self, x):
-        x = self.stem(x)
-        f1 = self.layer1(x)  # (B, 64, 32, 32)
-        f2 = self.layer2(f1) # (B, 128, 16, 16)
-        f3 = self.layer3(f2) # (B, 256, 8, 8)
-        
-        # Upsample features to match layer1 spatial resolution
-        target_size = f1.shape[-2:]
-        f2_up = F.interpolate(f2, size=target_size, mode='bilinear', align_corners=False)
-        f3_up = F.interpolate(f3, size=target_size, mode='bilinear', align_corners=False)
-        
-        # Concatenate multi-scale feature maps -> (B, 448, H, W)
-        return torch.cat([f1, f2_up, f3_up], dim=1)
-
 
 class SSIML1Loss(nn.Module):
     """
