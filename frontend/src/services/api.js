@@ -1,5 +1,14 @@
 const BASE_URL = 'http://localhost:5000'
 
+export async function checkBackendHealth() {
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, { method: 'OPTIONS' })
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
 export async function loginRequest(username, password) {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: 'POST',
