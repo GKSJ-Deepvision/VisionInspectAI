@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionInspect AI — Industrial Quality Inspection System</title>
+    <meta name="description" content="AI-powered real-time manufacturing defect detection using Convolutional Autoencoders, YOLO, and SSIM anomaly localization.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════ HEADER ══════════════════════════ -->
+<header class="header">
+    <div class="header-inner">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </div>
+            <div>
+                <span class="logo-title">VisionInspect AI</span>
+                <span class="logo-sub">Industrial Quality Inspection System</span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div class="model-badge" id="model-badge">
+                <span class="badge-dot"></span>
+                <span id="model-status-text">Model: Ready</span>
+            </div>
+            <div class="header-status">
+                <span class="pulse-dot"></span>
+                <span id="server-status-text">Connecting…</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════════════════ MAIN LAYOUT ══════════════════════════ -->
+<main class="main-layout">
+
+    <!-- ── LEFT PANEL: Controls ── -->
+    <aside class="controls-panel glass">
+        <h2 class="panel-title">Inspection Setup</h2>
+
+        <!-- Category -->
+        <div class="form-group">
+            <label class="form-label" for="category-select">Product Category</label>
+            <select id="category-select" class="form-select">
+                <option value="auto" selected>✨ Auto-Detect Product</option>
+                <option value="bottle">Bottle</option>
+                <option value="cable">Cable</option>
+                <option value="capsule">Capsule</option>
+                <option value="carpet">Carpet</option>
+                <option value="grid">Grid</option>
+                <option value="hazelnut">Hazelnut</option>
+                <option value="leather">Leather</option>
+                <option value="metal_nut">Metal Nut</option>
+                <option value="pill">Pill</option>
+                <option value="screw">Screw</option>
+                <option value="tile">Tile</option>
+                <option value="toothbrush">Toothbrush</option>
+                <option value="transistor">Transistor</option>
+                <option value="wood">Wood</option>
+                <option value="zipper">Zipper</option>
+            </select>
+        </div>
+
+        <!-- YOLO Toggle -->
+        <div class="form-group">
+            <label class="form-label">YOLO Object Crop</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="yolo-toggle" checked>
+                <span class="toggle-track">
+                    <span class="toggle-thumb"></span>
+                </span>
+                <span class="toggle-label" id="yolo-label">Enabled</span>
+            </label>
+        </div>
+
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*" hidden>
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <p class="upload-text">Drop product image here</p>
+            <p class="upload-sub">Supports PNG, JPG, BMP, TIFF</p>
+        </div>
+
+        <!-- Image Preview -->
+        <div id="preview-wrap" class="preview-wrap hidden">
+            <img id="preview-img" src="" alt="Preview">
+            <span class="preview-label">Ready for inspection</span>
+        </div>
+
+        <!-- Analyze Button -->
+        <button id="analyze-btn" class="btn-primary" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span>Analyze Image</span>
+        </button>
+    </aside>
+
+    <!-- ── RIGHT PANEL: Inspection Results ── -->
+    <section class="results-area">
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            </div>
+            <h3>System Ready for Inspection</h3>
+            <p>Select a product category, upload an image,<br>and click <strong>Analyze Image</strong> to run defect inspection.</p>
+        </div>
+
+        <!-- Loading Overlay with Multi-stage Steps -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="spinner-ring"></div>
+            <p class="loading-main">Running AI Inspection Pipeline…</p>
+            <div class="pipeline-steps">
+                <div class="step-item active" id="step-1">Stage 1: YOLO Product Detection & Crop</div>
+                <div class="step-item" id="step-2">Stage 2: Autoencoder Reconstruction</div>
+                <div class="step-item" id="step-3">Stage 3: SSIM Anomaly Scoring & Classification</div>
+            </div>
+        </div>
+
+        <!-- Error Toast Banner -->
+        <div id="error-toast" class="error-toast hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="error-msg">Error executing inspection.</span>
+            <button class="toast-close" id="toast-close">&times;</button>
+        </div>
+
+        <!-- Results Dashboard Panel -->
+        <div id="results-panel" class="results-panel hidden">
+
+            <!-- ── Verdict Status Header ── -->
+            <div class="status-bar" id="status-bar">
+                <div class="verdict-badge" id="verdict-badge">PENDING</div>
+                <div class="verdict-meta">
+                    <span class="meta-item">Category: <strong id="verdict-category">—</strong></span>
+                    <span class="sep">·</span>
+                    <span class="meta-item">Defect: <strong id="verdict-defect">—</strong></span>
+                </div>
+                <div class="verdict-conf">
+                    Confidence: <strong id="verdict-conf">—</strong>
+                    <span class="sep">·</span>
+                    Time: <strong id="verdict-time">—</strong>
+                </div>
+            </div>
+
+            <!-- ── 5 Visual Inspection Cards ── -->
+            <div class="image-grid">
+                <div class="img-card">
+                    <div class="img-label">1. Original Scan</div>
+                    <div class="img-frame">
+                        <img id="img-original" src="" alt="Original Scan">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">2. YOLO Crop</div>
+                    <div class="img-frame">
+                        <img id="img-cropped" src="" alt="YOLO Crop">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">3. AE Reconstruction</div>
+                    <div class="img-frame">
+                        <img id="img-reconstructed" src="" alt="AE Reconstruction">
+                    </div>
+                </div>
+                <div class="img-card">
+                    <div class="img-label">4. Defect Heatmap</div>
+                    <div class="img-frame">
+                        <img id="img-heatmap" src="" alt="Defect Heatmap">
+                    </div>
+                </div>
+                <div class="img-card featured">
+                    <div class="img-label highlight">5. Defect Localization</div>
+                    <div class="img-frame">
+                        <img id="img-overlay" src="" alt="Defect Overlay Localization">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Reconstruction Error & Threshold Progress ── -->
+            <div class="score-section glass">
+                <div class="score-header">
+                    <div>
+                        <span class="score-label">Reconstruction Error (Anomaly Score)</span>
+                        <span class="score-value" id="anomaly-score-val">—</span>
+                    </div>
+                    <div class="thresh-label-wrap">
+                        <span class="thresh-label">Calibrated Threshold</span>
+                        <span class="thresh-value" id="threshold-val">—</span>
+                    </div>
+                </div>
+                <div class="threshold-bar-track" id="bar-track">
+                    <div class="threshold-bar-fill" id="bar-fill"></div>
+                    <div class="threshold-marker" id="bar-marker"></div>
+                    <div class="threshold-marker-label" id="bar-marker-label">Threshold</div>
+                </div>
+                <div class="bar-legend">
+                    <span>0.0000</span>
+                    <span class="bar-scale-mid" id="bar-scale-mid">—</span>
+                    <span id="bar-scale-max">—</span>
+                </div>
+            </div>
+
+            <!-- ── Metrics Dashboard Grid ── -->
+            <div class="metrics-grid">
+                <div class="metric-card glass">
+                    <span class="metric-label">Product Category</span>
+                    <span class="metric-value" id="metric-category-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Prediction Verdict</span>
+                    <span class="metric-value" id="metric-prediction-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Defect Type</span>
+                    <span class="metric-value" id="defect-type-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Reconstruction Error</span>
+                    <span class="metric-value" id="metric-error-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Threshold Used</span>
+                    <span class="metric-value" id="metric-threshold-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Classification Confidence</span>
+                    <span class="metric-value" id="metric-conf-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Severity Level</span>
+                    <span class="metric-value" id="severity-level-val">—</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="metric-label">Processing Time</span>
+                    <span class="metric-value" id="metric-time-val">—</span>
+                </div>
+            </div>
+
+            <!-- ── Operator Recommended Action Banner ── -->
+            <div class="action-banner glass" id="action-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <div>
+                    <span class="action-title">Recommended Operator Action</span>
+                    <span class="action-body" id="action-text">—</span>
+                </div>
+            </div>
+
+            <!-- ── Severity Breakdown Bars ── -->
+            <div class="breakdown-section glass" id="breakdown-section">
+                <h4 class="breakdown-title">Defect Severity & Spatial Breakdown</h4>
+                <div id="breakdown-bars"></div>
+            </div>
+
+        </div>
+    </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
