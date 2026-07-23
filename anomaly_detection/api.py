@@ -12,6 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from . import config
 from .model import AnomalyAutoencoder
+from backend.routes.upload import router as upload_router
+from backend.routes.preprocess import router as preprocess_router
+from backend.routes.dataset import router as dataset_router
+from backend.routes.augmentation import router as augmentation_router
+from backend.routes.statistics import router as statistics_router
 
 from .yolo_helper import crop_product
 from .preprocessor import validate_and_preprocess_image
@@ -25,6 +30,12 @@ app = FastAPI(
     description="API for detecting manufacturing defects using Unsupervised Convolutional Autoencoders.",
     version="1.1.0"
 )
+
+app.include_router(upload_router)
+app.include_router(preprocess_router)
+app.include_router(dataset_router)
+app.include_router(augmentation_router)
+app.include_router(statistics_router)
 
 # Mount Static Assets Directory
 STATIC_DIR = Path(__file__).resolve().parent.parent / "frontend"

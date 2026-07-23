@@ -1,7 +1,6 @@
-import HeatmapOverlay from './HeatmapOverlay';
 import SeverityBadge from './SeverityBadge';
 
-function ImageTile({ label, preview, showHeatmap, result, processed }) {
+function ImageTile({ label, preview, processed }) {
   return (
     <div className="bg-panel border border-gridline p-4 flex-1">
       <p className="text-xs font-mono text-muted uppercase mb-3">{label}</p>
@@ -19,15 +18,7 @@ function ImageTile({ label, preview, showHeatmap, result, processed }) {
             No image yet
           </div>
         )}
-        {showHeatmap && result && (
-          <HeatmapOverlay heatmap={result.heatmap} level={result.severityLevel} />
-        )}
       </div>
-      {processed && (
-        <p className="text-[10px] font-mono text-muted mt-2">
-          Simulated preprocessing view — replace with backend-processed image once available.
-        </p>
-      )}
     </div>
   );
 }
@@ -45,16 +36,34 @@ export default function InspectionResult({ preview, result, isLoading }) {
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <ImageTile label="Uploaded Image" preview={preview} />
-        <ImageTile
-          label="Processed Image (Defect Heatmap)"
-          preview={preview}
-          processed
-          showHeatmap
-          result={result}
-        />
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+
+  <ImageTile
+    label="Original Image"
+    preview={result?.originalImage || preview}
+  />
+
+  <ImageTile
+    label="YOLO Crop"
+    preview={result?.croppedImage || preview}
+  />
+
+  <ImageTile
+    label="AE Reconstruction"
+    preview={result?.reconstructedImage}
+  />
+
+  <ImageTile
+    label="Anomaly Heatmap"
+    preview={result?.heatmapImage}
+  />
+
+  <ImageTile
+    label="Defect Localization"
+    preview={result?.processedImage}
+  />
+
+</div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-graphite border border-gridline p-4">
