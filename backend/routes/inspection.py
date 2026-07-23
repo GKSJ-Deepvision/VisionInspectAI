@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 
 from routes.auth import get_current_user, role_required, ROLE_ADMIN, ROLE_QUALITY_ENGINEER, ROLE_QUALITY_INSPECTOR
 from services.inference import run_inference
+from services.inference_log_service import save_inference_result
 
 inspection_bp = Blueprint("inspection", __name__)
 
@@ -93,6 +94,10 @@ def inspect_image():
         result["id"] = cur.lastrowid
     finally:
         conn.close()
+
+    mongo_id = save_inference_result(result)
+    if mongo_id:
+        result["mongo_id"] = mongo_id
 
     return jsonify(result), 201
 
