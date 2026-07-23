@@ -8,7 +8,7 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
 
     def fake_runtime_settings():
         class RuntimeSettings:
-            baseline_threshold = 61.99
+            baseline_threshold = 1.45
             padim_score_threshold = 0.5
             review_severity_threshold = 40
             fail_severity_threshold = 60
@@ -20,7 +20,7 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
 
     def fake_inspect_image_runtime(image_path, config):
         assert image_path == expected_image
-        assert config.baseline_threshold == 61.99
+        assert config.baseline_threshold == 1.45
         return {
             "prediction": "Defective",
             "defect_type": "contamination",
@@ -39,8 +39,14 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
             "fallback_reason": None,
         }
 
-    monkeypatch.setattr("app.services.model_settings_service.load_runtime_settings", fake_runtime_settings)
-    monkeypatch.setattr("app.services.prediction_service.resolve_backend_path", fake_resolve_backend_path)
+    monkeypatch.setattr(
+        "app.services.model_settings_service.load_runtime_settings",
+        fake_runtime_settings,
+    )
+    monkeypatch.setattr(
+        "app.services.prediction_service.resolve_backend_path",
+        fake_resolve_backend_path,
+    )
     monkeypatch.setattr("ml.inference.inspect_image", fake_inspect_image_runtime)
 
     result = predict.inspect_image(expected_image)

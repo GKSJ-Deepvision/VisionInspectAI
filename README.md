@@ -166,9 +166,11 @@ models/
 
 - Product category: MVTec AD bottle
 - Anomaly detector: PaDiM
-- Fallback detector: OpenCV reference comparison
+- Fallback detector: OpenCV normal-profile residual comparison
 - Feature extractor: ResNet18
 - Defect classifier: scikit-learn pipeline
 - Output: prediction, defect type, confidence, anomaly score, heatmap, severity and quality decision
+
+The `normal_profile.npz` artifact contains the normal-image mean, expected pixel variation, and product-region mask used by the fallback detector. It allows fallback inference without keeping the full dataset in the repository.
 
 Additional product categories require their own training data, evaluation and calibrated decision thresholds.

@@ -19,10 +19,34 @@ if str(BACKEND_DIR) not in sys.path:
 def default_demo_image() -> Path:
     """Return a real MVTec bottle image for command-line demonstration."""
     candidates = [
-        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "contamination",
-        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "broken_large",
-        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "broken_small",
-        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "good",
+        PROJECT_ROOT
+        / "data"
+        / "raw"
+        / "mvtec_anomaly_detection"
+        / "bottle"
+        / "test"
+        / "contamination",
+        PROJECT_ROOT
+        / "data"
+        / "raw"
+        / "mvtec_anomaly_detection"
+        / "bottle"
+        / "test"
+        / "broken_large",
+        PROJECT_ROOT
+        / "data"
+        / "raw"
+        / "mvtec_anomaly_detection"
+        / "bottle"
+        / "test"
+        / "broken_small",
+        PROJECT_ROOT
+        / "data"
+        / "raw"
+        / "mvtec_anomaly_detection"
+        / "bottle"
+        / "test"
+        / "good",
     ]
     for directory in candidates:
         image_paths = sorted(directory.glob("*.png"))
@@ -47,6 +71,13 @@ def inspect_image(image_path: str | Path | None = None) -> dict:
         classifier_model_path=resolve_backend_path(settings.classifier_model_path),
         model_metadata_path=resolve_backend_path(settings.model_metadata_path),
         baseline_reference_path=resolve_backend_path(settings.baseline_reference_path),
+        baseline_profile_path=resolve_backend_path(
+            getattr(
+                settings,
+                "baseline_profile_path",
+                "../models/inference/normal_profile.npz",
+            )
+        ),
         baseline_threshold=runtime_settings.baseline_threshold,
         padim_score_threshold=runtime_settings.padim_score_threshold,
         review_severity_threshold=runtime_settings.review_severity_threshold,
@@ -74,8 +105,12 @@ def inspect_image(image_path: str | Path | None = None) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run VisionInspect AI inference on one image.")
-    parser.add_argument("--image", type=str, default=None, help="Path to an input product image.")
+    parser = argparse.ArgumentParser(
+        description="Run VisionInspect AI inference on one image."
+    )
+    parser.add_argument(
+        "--image", type=str, default=None, help="Path to an input product image."
+    )
     parser.add_argument(
         "--use-padim",
         action="store_true",

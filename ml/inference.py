@@ -8,7 +8,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ml.baseline_detector import anomaly_map, anomaly_score, heatmap_overlay, preprocess_gray
+from ml.baseline_detector import (
+    anomaly_map,
+    anomaly_mask,
+    anomaly_score,
+    heatmap_overlay,
+    load_reference_profile,
+    normalized_anomaly_map,
+    preprocess_gray,
+)
 from ml.padim_detector import PadimInferenceError, predict_with_padim
 
 
@@ -24,6 +32,7 @@ class InferenceConfig:
     classifier_model_path: Path
     model_metadata_path: Path
     baseline_reference_path: Path
+    baseline_profile_path: Path
     baseline_threshold: float
     padim_score_threshold: float
     review_severity_threshold: float
@@ -55,6 +64,14 @@ def load_reference_image(path_value: str) -> np.ndarray:
     return reference.astype(np.float32)
 
 
+@lru_cache(maxsize=4)
+def load_normal_profile(path_value: str) -> dict:
+    try:
+        return load_reference_profile(path_value)
+    except FileNotFoundError as exc:
+        raise InferenceError(str(exc)) from exc
+
+
 def baseline_fallback_classification(score: float, baseline_threshold: float) -> dict:
     is_defective = score > baseline_threshold
     margin = abs(score - baseline_threshold) / max(baseline_threshold, 1)
@@ -70,7 +87,9 @@ def baseline_fallback_classification(score: float, baseline_threshold: float) ->
     }
 
 
-def compute_defect_geometry(binary_mask: np.ndarray, predicted_defect_type: str) -> dict:
+def compute_defect_geometry(
+    binary_mask: np.ndarray, predicted_defect_type: str
+) -> dict:
     if predicted_defect_type == "good" or not np.any(binary_mask):
         return {
             "area_ratio": 0.0,
@@ -88,17 +107,26 @@ def compute_defect_geometry(binary_mask: np.ndarray, predicted_defect_type: str)
 
 
 def baseline_anomaly_prediction(image_bgr: np.ndarray, config: InferenceConfig) -> dict:
-    reference = load_reference_image(str(config.baseline_reference_path))
-    diff_map = anomaly_map(image_bgr, reference)
-    score = round(float(anomaly_score(diff_map)), 4)
-    binary_mask = diff_map > config.baseline_threshold
-    classification = baseline_fallback_classification(score, config.baseline_threshold)
+    threshold = 1.45 if config.baseline_threshold > 10 else config.baseline_threshold
+    if config.baseline_profile_path.exists():
+        profile = load_normal_profile(str(config.baseline_profile_path))
+        diff_map = normalized_anomaly_map(image_bgr, profile)
+        score = round(
+            float(anomaly_score(diff_map, mask=profile["foreground_mask"])), 4
+        )
+    else:
+        reference = load_reference_image(str(config.baseline_reference_path))
+        diff_map = anomaly_map(image_bgr, reference)
+        score = round(float(anomaly_score(diff_map)), 4)
+
+    binary_mask = anomaly_mask(diff_map, threshold)
+    classification = baseline_fallback_classification(score, threshold)
 
     return {
         "engine": "baseline",
         "anomaly_score": score,
-        "decision_threshold": config.baseline_threshold,
-        "is_defective": score > config.baseline_threshold,
+        "decision_threshold": threshold,
+        "is_defective": score > threshold,
         "detection_confidence": classification["confidence"],
         "anomaly_map": diff_map,
         "pred_mask": binary_mask,
@@ -107,7 +135,9 @@ def baseline_anomaly_prediction(image_bgr: np.ndarray, config: InferenceConfig) 
     }
 
 
-def live_anomaly_prediction(image_path: Path, image_bgr: np.ndarray, config: InferenceConfig) -> dict:
+def live_anomaly_prediction(
+    image_path: Path, image_bgr: np.ndarray, config: InferenceConfig
+) -> dict:
     if config.use_padim_inference:
         try:
             return predict_with_padim(
@@ -125,7 +155,13 @@ def live_anomaly_prediction(image_path: Path, image_bgr: np.ndarray, config: Inf
     return baseline_anomaly_prediction(image_bgr, config)
 
 
-def classify_prediction(image_path: Path, score: float, detection_confidence: float, is_defective: bool, config: InferenceConfig) -> dict:
+def classify_prediction(
+    image_path: Path,
+    score: float,
+    detection_confidence: float,
+    is_defective: bool,
+    config: InferenceConfig,
+) -> dict:
     if not is_defective:
         return {
             "defect_type": "good",
@@ -138,11 +174,15 @@ def classify_prediction(image_path: Path, score: float, detection_confidence: fl
 
         classification = classify_defect_type(image_path, config.classifier_model_path)
     except Exception:
-        classification = baseline_fallback_classification(score, config.baseline_threshold)
+        classification = baseline_fallback_classification(
+            score, config.baseline_threshold
+        )
 
     if classification["defect_type"] == "good":
         classification["defect_type"] = "unknown_defect"
-    classification["confidence"] = max(float(classification["confidence"]), detection_confidence)
+    classification["confidence"] = max(
+        float(classification["confidence"]), detection_confidence
+    )
     return classification
 
 
@@ -182,17 +222,25 @@ def build_explainability(
     fallback_used: bool,
     fallback_reason: str | None,
 ) -> dict:
-    heatmap_intensity = float(np.percentile(anomaly_map_value, 95)) if anomaly_map_value.size else 0.0
+    heatmap_intensity = (
+        float(np.percentile(anomaly_map_value, 95)) if anomaly_map_value.size else 0.0
+    )
     area_percent = float(geometry["area_ratio"] * 100)
     notes: list[str] = []
     if prediction == "Good":
         notes.append("Anomaly score stayed below the active decision threshold.")
     else:
         notes.append("Anomaly score exceeded the active decision threshold.")
-        notes.append(f"Defect area covers approximately {area_percent:.2f}% of the inspected image.")
+        notes.append(
+            f"Defect area covers approximately {area_percent:.2f}% of the inspected image."
+        )
         if geometry.get("is_critical_location"):
-            notes.append("Detected anomaly is located in a critical center-region heuristic zone.")
-        notes.append(f"Classifier selected '{defect_type}' with {confidence * 100:.1f}% confidence.")
+            notes.append(
+                "Detected anomaly is located in a critical center-region heuristic zone."
+            )
+        notes.append(
+            f"Classifier selected '{defect_type}' with {confidence * 100:.1f}% confidence."
+        )
     if fallback_used:
         notes.append(f"Fallback inference was used: {fallback_reason}")
 
@@ -227,7 +275,9 @@ def inspect_image(image_path: str | Path, config: InferenceConfig) -> dict:
     is_defective = bool(anomaly["is_defective"])
     detection_confidence = float(anomaly["detection_confidence"])
 
-    classification = classify_prediction(image_path, score, detection_confidence, is_defective, config)
+    classification = classify_prediction(
+        image_path, score, detection_confidence, is_defective, config
+    )
     confidence = float(classification["confidence"])
     defect_type = classification["defect_type"]
     prediction = "Defective" if is_defective else "Good"
