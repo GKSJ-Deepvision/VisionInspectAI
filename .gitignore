@@ -23,6 +23,9 @@ backend/processed/
 # Preprocessed Dataset
 backend/processed_dataset/
 
+# Augmented Dataset 
+backend/augmented_dataset/
+
 # Logs
 backend/logs/
 

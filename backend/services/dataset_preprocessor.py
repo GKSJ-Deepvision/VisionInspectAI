@@ -3,10 +3,12 @@ import cv2
 import numpy as np
 
 # Dataset location
-DATASET_PATH = "Dataset"
+from backend.config import (
+    DATASET_PATH,
+    PROCESSED_DATASET_PATH
+)
 
-# Output folder
-OUTPUT_PATH = "backend/processed_dataset"
+OUTPUT_PATH = PROCESSED_DATASET_PATH
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 def preprocess_image(image):

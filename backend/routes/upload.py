@@ -5,7 +5,7 @@ from backend.utils.validation import validate_extension, validate_image
 
 router = APIRouter()
 
-UPLOAD_FOLDER = "backend/uploads"
+from backend.config import UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
