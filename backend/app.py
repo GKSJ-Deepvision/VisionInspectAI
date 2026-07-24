@@ -71,6 +71,8 @@ def init_db(path):
             cur.execute("ALTER TABLE users ADD COLUMN email TEXT")
         if "created_at" not in columns:
             cur.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
+        if "role" not in columns:
+            cur.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'quality_engineer'")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS inspection_results (

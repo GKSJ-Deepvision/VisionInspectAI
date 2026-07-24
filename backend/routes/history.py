@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from flask import Blueprint, current_app, jsonify, request
+from routes.auth import get_current_user, role_required, ROLE_ADMIN, ROLE_QUALITY_ENGINEER, ROLE_QUALITY_INSPECTOR
 
 history_bp = Blueprint("history", __name__)
 
@@ -18,7 +19,10 @@ def get_db_connection():
 
 
 @history_bp.route("", methods=["GET"])
+@role_required(ROLE_QUALITY_INSPECTOR, ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def history():
+    user = get_current_user()
+
     limit = request.args.get("limit", 50, type=int)
     offset = request.args.get("offset", 0, type=int)
     
@@ -28,12 +32,16 @@ def history():
             """
             SELECT id, user_id, filename, status, score, created_at
             FROM inspection_results
+            WHERE user_id = ?
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
             """,
-            (limit, offset)
+            (user["id"], limit, offset)
         ).fetchall()
-        total = conn.execute("SELECT COUNT(*) as count FROM inspection_results").fetchone()["count"]
+        total = conn.execute(
+            "SELECT COUNT(*) as count FROM inspection_results WHERE user_id = ?",
+            (user["id"],),
+        ).fetchone()["count"]
     finally:
         conn.close()
 
@@ -46,12 +54,15 @@ def history():
 
 
 @history_bp.route("/<int:inspection_id>", methods=["GET"])
+@role_required(ROLE_QUALITY_INSPECTOR, ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def get_inspection(inspection_id):
+    user = get_current_user()
+
     conn = get_db_connection()
     try:
         row = conn.execute(
-            "SELECT * FROM inspection_results WHERE id = ?",
-            (inspection_id,)
+            "SELECT * FROM inspection_results WHERE id = ? AND user_id = ?",
+            (inspection_id, user["id"])
         ).fetchone()
     finally:
         conn.close()

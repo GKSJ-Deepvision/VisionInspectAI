@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from functools import wraps
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -7,6 +8,11 @@ import jwt
 from flask import Blueprint, current_app, jsonify, request
 
 auth_bp = Blueprint("auth", __name__)
+
+ROLE_QUALITY_INSPECTOR = "quality_inspector"
+ROLE_QUALITY_ENGINEER = "quality_engineer"
+ROLE_ADMIN = "admin"
+VALID_ROLES = {ROLE_QUALITY_INSPECTOR, ROLE_QUALITY_ENGINEER, ROLE_ADMIN}
 
 
 def get_db_connection():
@@ -19,11 +25,12 @@ def get_db_connection():
     return conn
 
 
-def create_access_token(user_id: int, username: str) -> str:
+def create_access_token(user_id: int, username: str, role: str = "quality_engineer") -> str:
     secret_key = current_app.config.get("SECRET_KEY") or os.environ.get("SECRET_KEY", "visioninspect_dev_secret_key_2026")
     payload = {
         "sub": str(user_id),
         "username": username,
+        "role": role,
         "iat": int(datetime.now(timezone.utc).timestamp()),
         "exp": int((datetime.now(timezone.utc) + timedelta(hours=24)).timestamp()),
     }
@@ -48,16 +55,42 @@ def get_current_user():
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None
 
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        return None
+
     conn = get_db_connection()
     try:
         user = conn.execute(
-            "SELECT id, username, email FROM users WHERE id = ?",
-            (int(payload.get("sub")),),
+            "SELECT id, username, email, role FROM users WHERE id = ?",
+            (user_id,),
         ).fetchone()
     finally:
         conn.close()
 
     return user
+
+
+def role_required(*allowed_roles):
+    """Require authentication and one of the supplied application roles."""
+    invalid_roles = set(allowed_roles) - VALID_ROLES
+    if invalid_roles:
+        raise ValueError(f"Unknown role(s): {', '.join(sorted(invalid_roles))}")
+
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            user = get_current_user()
+            if not user:
+                return jsonify({"error": "unauthorized"}), 401
+            if user["role"] not in allowed_roles:
+                return jsonify({"error": "forbidden", "role": user["role"]}), 403
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -84,12 +117,12 @@ def register():
     finally:
         conn.close()
 
-    token = create_access_token(user_id, username)
+    token = create_access_token(user_id, username, "quality_engineer")
     return jsonify({
         "message": "registered",
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": user_id, "username": username, "email": email},
+        "user": {"id": user_id, "username": username, "email": email, "role": "quality_engineer"},
     }), 201
 
 
@@ -105,7 +138,7 @@ def login():
     conn = get_db_connection()
     try:
         user = conn.execute(
-            "SELECT id, username, email FROM users WHERE username = ? AND password = ?",
+            "SELECT id, username, email, role FROM users WHERE username = ? AND password = ?",
             (username, password),
         ).fetchone()
     finally:
@@ -114,12 +147,12 @@ def login():
     if not user:
         return jsonify({"error": "invalid credentials"}), 401
 
-    token = create_access_token(user["id"], user["username"])
+    token = create_access_token(user["id"], user["username"], user["role"])
     return jsonify({
         "message": "logged in",
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": user["id"], "username": user["username"], "email": user["email"]},
+        "user": {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]},
     }), 200
 
 
@@ -129,4 +162,4 @@ def me():
     if not user:
         return jsonify({"error": "unauthorized"}), 401
 
-    return jsonify({"user": {"id": user["id"], "username": user["username"], "email": user["email"]}}), 200
+    return jsonify({"user": {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]}}), 200

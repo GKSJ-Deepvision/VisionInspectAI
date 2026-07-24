@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 
 
-def run_inference(filename: str, user_id: int = None) -> dict:
+def run_inference(filename: str, user_id: int = None, upload_dir: str = None) -> dict:
     """
     Run PatchCore inference on uploaded image
     
@@ -17,7 +17,7 @@ def run_inference(filename: str, user_id: int = None) -> dict:
         Dictionary with inference results including status and anomaly score
     """
     try:
-        upload_dir = os.path.join(Path(__file__).resolve().parents[1], "uploads")
+        upload_dir = upload_dir or os.path.join(Path(__file__).resolve().parents[1], "uploads")
         image_path = os.path.join(upload_dir, filename)
         
         if not os.path.exists(image_path):
@@ -25,6 +25,7 @@ def run_inference(filename: str, user_id: int = None) -> dict:
                 "filename": filename,
                 "status": "error",
                 "score": 0.0,
+                "user_id": user_id,
                 "error": "file not found"
             }
         
@@ -47,6 +48,7 @@ def run_inference(filename: str, user_id: int = None) -> dict:
             "filename": filename,
             "status": "error",
             "score": 0.0,
+            "user_id": user_id,
             "error": str(e)
         }
 

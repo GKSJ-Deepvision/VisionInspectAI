@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from flask import Blueprint, current_app, jsonify
+from routes.auth import get_current_user, role_required, ROLE_ADMIN, ROLE_QUALITY_ENGINEER
 
 analytics_bp = Blueprint("analytics", __name__)
 
@@ -18,7 +19,10 @@ def get_db_connection():
 
 
 @analytics_bp.route("", methods=["GET"])
+@role_required(ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def analytics():
+    user = get_current_user()
+
     conn = get_db_connection()
     try:
         stats = conn.execute(
@@ -29,7 +33,9 @@ def analytics():
                 MAX(score) as max_score,
                 MIN(score) as min_score
             FROM inspection_results
-            """
+            WHERE user_id = ?
+            """,
+            (user["id"],)
         ).fetchone()
     finally:
         conn.close()
@@ -45,15 +51,20 @@ def analytics():
 
 
 @analytics_bp.route("/by-status", methods=["GET"])
+@role_required(ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def analytics_by_status():
+    user = get_current_user()
+
     conn = get_db_connection()
     try:
         stats = conn.execute(
             """
             SELECT status, COUNT(*) as count
             FROM inspection_results
+            WHERE user_id = ?
             GROUP BY status
-            """
+            """,
+            (user["id"],)
         ).fetchall()
     finally:
         conn.close()
