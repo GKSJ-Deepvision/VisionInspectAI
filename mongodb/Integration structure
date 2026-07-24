@@ -1,0 +1,14 @@
+backend/
+│
+├── database/
+│   └── mongo_connection.py
+│
+├── services/
+│   └── inference_log_service.py
+│
+├── routes/
+│   └── inspection.py   
+│
+├── .env.example
+│
+└── requirements.txt

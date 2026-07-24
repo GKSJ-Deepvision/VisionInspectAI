@@ -1,5 +1,44 @@
 const BASE_URL = 'http://localhost:5000'
 
+export async function checkBackendHealth() {
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, { method: 'OPTIONS' })
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+export async function getAnalytics(token) {
+  const res = await fetch(`${BASE_URL}/api/analytics`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Failed to load analytics')
+  }
+
+  return res.json()
+}
+
+export async function getAnalyticsByStatus(token) {
+  const res = await fetch(`${BASE_URL}/api/analytics/by-status`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Failed to load analytics by status')
+  }
+
+  return res.json()
+}
+
 export async function loginRequest(username, password) {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: 'POST',
@@ -48,30 +87,45 @@ function randomBetween(min, max) {
 }
 
 // Pretends to call the backend's /api/inspect endpoint
-export async function inspectImage(file) {
-  await new Promise((resolve) => setTimeout(resolve, 1500)) // fakes network + AI processing time
+export async function inspectImage(file, token) {
+  const formData = new FormData()
+  formData.append('file', file)
 
-  const defect = DEFECT_TYPES[Math.floor(Math.random() * DEFECT_TYPES.length)]
-  const size = randomBetween(20, 95)
-  const location = randomBetween(20, 95)
-  const confidence = randomBetween(65, 99)
-  const severity = computeSeverity({ size, location, defectType: defect.typeScore, confidence })
+  const res = await fetch(`${BASE_URL}/api/inspection/image`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
 
-  return {
-    id: crypto.randomUUID(),
-    fileName: file.name,
-    defectType: defect.type,
-    severity,
-    result: severity.level === 'Critical' || severity.level === 'High' ? 'FAIL' : 'PASS',
-    confidence,
-    inspectedAt: new Date().toISOString(),
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      data.message || data.error || 'Inspection failed'
+    )
   }
-}
-export async function getInspectionHistory() {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return JSON.parse(localStorage.getItem('vi_inspections') || '[]')
-}
 
+  return data
+}
+export async function getInspectionHistory(token) {
+  const res = await fetch(
+    `${BASE_URL}/api/history?limit=50&offset=0`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    throw new Error('Failed to load inspection history')
+  }
+
+  return res.json()
+}
 export async function saveInspection(record) {
   const existing = JSON.parse(localStorage.getItem('vi_inspections') || '[]')
   const updated = [record, ...existing].slice(0, 50)

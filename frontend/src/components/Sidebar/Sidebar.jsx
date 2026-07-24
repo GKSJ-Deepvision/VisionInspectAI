@@ -1,15 +1,22 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 
-const navItems = [
+const facultyInspectorNav = [
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/inspection', label: 'Inspection' },
+  { to: '/inspection', label: 'Create Inspection' },
+  { to: '/history', label: 'Inspection History' },
+]
+
+const qualityEngineerNav = [
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/inspection', label: 'All Inspections' },
   { to: '/history', label: 'History' },
   { to: '/analytics', label: 'Analytics' },
 ]
 
 export default function Sidebar() {
   const { user, logoutUser } = useAuth()
+  const navItems = user?.role === 'Faculty Inspector' ? facultyInspectorNav : qualityEngineerNav
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -41,13 +48,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-4 py-4 border-t border-gray-700">
-        <p className="text-xs text-gray-400">{user?.name}</p>
-        <p className="text-[11px] text-gray-500 mb-3">{user?.role}</p>
-        <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-400">
-          Log out
-        </button>
-      </div>
     </aside>
   )
 }

@@ -113,7 +113,6 @@ def login():
 
     if not user:
         return jsonify({"error": "invalid credentials"}), 401
-
     token = create_access_token(user["id"], user["username"])
     return jsonify({
         "message": "logged in",
