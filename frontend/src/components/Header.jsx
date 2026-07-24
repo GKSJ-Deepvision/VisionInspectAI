@@ -5,7 +5,7 @@ import { checkBackendHealth } from '../services/api.js'
 import eyeLogo from '../assets/eye-logo.png'
 
 export default function Header() {
-  const { user, logoutUser } = useAuth()
+  const { user, logoutUser, hasPermission } = useAuth()
   const navigate = useNavigate()
 
   const [isOnline, setIsOnline] = useState(null)
@@ -15,7 +15,10 @@ export default function Header() {
 
     async function check() {
       const result = await checkBackendHealth()
-      if (mounted) setIsOnline(result)
+
+      if (mounted) {
+        setIsOnline(result)
+      }
     }
 
     check()
@@ -33,25 +36,48 @@ export default function Header() {
     navigate('/login')
   }
 
-  const navItems =
-  user?.role === 'Faculty Inspector'
-    ? [
-        { to: '/dashboard', label: 'Dashboard' },
-        { to: '/inspection', label: 'Inspection' },
-        { to: '/history', label: 'History' },
-        { to: '/reports', label: 'Reports' },
-      ]
-    : [
-        { to: '/dashboard', label: 'Dashboard' },
-        { to: '/inspection', label: 'Inspection' },
-        { to: '/history', label: 'History' },
-        { to: '/analytics', label: 'Analytics' },
-        { to: '/reports', label: 'Reports' },
-      ]
+  // Navigation items based on user permissions
+  const allNavItems = [
+    {
+      to: '/dashboard',
+      label: 'Dashboard',
+      permission: 'dashboard',
+    },
+    {
+      to: '/inspection',
+      label: 'Inspection',
+      permission: 'inspection',
+    },
+    {
+      to: '/history',
+      label: 'History',
+      permission: 'history',
+    },
+    {
+      to: '/analytics',
+      label: 'Analytics',
+      permission: 'analytics',
+    },
+    {
+      to: '/reports',
+      label: 'Reports',
+      permission: 'reports',
+    },
+    {
+      to: '/admin',
+      label: 'Admin',
+      permission: 'admin',
+    },
+  ]
+
+  // Only show navigation items the current user has permission to access
+  const navItems = allNavItems.filter((item) =>
+    hasPermission(item.permission)
+  )
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-md border-b border-gray-700">
-      
+
       <div className="max-w-7xl mx-auto px-8 h-24 flex items-center justify-between">
 
         {/* ================= LOGO ================= */}
@@ -70,6 +96,7 @@ export default function Header() {
               <span className="text-white">
                 VisionInspect
               </span>{' '}
+
               <span className="text-blue-400">
                 AI
               </span>
@@ -106,6 +133,7 @@ export default function Header() {
 
             </div>
           </div>
+
         </div>
 
 
@@ -141,10 +169,13 @@ export default function Header() {
               {user?.name || 'Himabindhu Ravuri'}
             </h3>
 
-            <p className="text-xs uppercase tracking-[2px] text-blue-400 mt-1">
-              {user?.role || 'Quality Engineer'}
-            </p>
-
+          <p className="text-xs uppercase tracking-[2px] text-blue-400 mt-1">
+  {{
+    quality_inspector: 'Quality Inspector',
+    quality_engineer: 'Quality Engineer',
+    admin: 'Admin',
+  }[user?.role] || 'Quality Engineer'}
+</p>
           </div>
 
 
@@ -168,8 +199,15 @@ export default function Header() {
               strokeLinejoin="round"
             >
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+
               <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
+
+              <line
+                x1="15"
+                y1="12"
+                x2="3"
+                y2="12"
+              />
             </svg>
 
           </button>

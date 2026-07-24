@@ -3,32 +3,42 @@ import { loginRequest } from '../services/api.js'
 
 const AuthContext = createContext(null)
 
-// Define permissions for each role
+// Role-based permissions
+//
+// Quality Inspector:
+// - Can access Dashboard
+// - Can perform Image Inspection
+//
+// Quality Engineer:
+// - Can access Dashboard
+// - Can perform Image Inspection
+// - Can view History
+// - Can view Analytics
+// - Can view Reports
+//
+// Admin:
+// - Has full access to all available modules
 const ROLE_PERMISSIONS = {
-  'Faculty Inspector': [
+  quality_inspector: [
     'dashboard',
     'inspection',
     'history',
   ],
 
-  'Quality Engineer': [
+  quality_engineer: [
     'dashboard',
     'inspection',
     'history',
     'analytics',
+    'reports',
   ],
 
-  'Production Manager': [
-    'dashboard',
-    'history',
-    'analytics',
-  ],
-
-  Admin: [
+  admin: [
     'dashboard',
     'inspection',
     'history',
     'analytics',
+    'reports',
     'admin',
   ],
 }
@@ -54,15 +64,15 @@ export function AuthProvider({ children }) {
   }, [user])
 
   // Login
-  async function loginUser({ username, password, role }) {
+  async function loginUser({ username, password }) {
     const data = await loginRequest(username, password)
 
     const loggedInUser = {
-      name: data.user.username,
-      email: data.user.email,
-      token: data.access_token,
-      role: role,
-    }
+  name: data.user.username,
+  email: data.user.email,
+  token: data.access_token,
+  role: data.user.role,
+}
 
     setUser(loggedInUser)
 
@@ -75,7 +85,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('vi_user')
   }
 
-  // Check if user has permission for a specific page
+  // Check if current user has permission for a specific page
   function hasPermission(permission) {
     if (!user?.role) {
       return false
@@ -86,7 +96,7 @@ export function AuthProvider({ children }) {
     return permissions.includes(permission)
   }
 
-  // Check if user has a specific role
+  // Check if current user has one of the specified roles
   function hasRole(...roles) {
     if (!user?.role) {
       return false

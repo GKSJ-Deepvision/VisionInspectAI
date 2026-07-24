@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext.jsx'
-import Reports from './pages/Reports.jsx'
 
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
@@ -8,9 +7,14 @@ import Dashboard from './pages/Dashboard.jsx'
 import Inspection from './pages/Inspection.jsx'
 import History from './pages/History.jsx'
 import Analytics from './pages/Analytics.jsx'
+import Reports from './pages/Reports.jsx'
 
 
-// Protect pages that require login
+// =====================================================
+// PROTECTED ROUTE
+// User must be logged in
+// =====================================================
+
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
 
@@ -22,21 +26,31 @@ function ProtectedRoute({ children }) {
 }
 
 
-// Only Quality Engineers can access Analytics
-function QualityEngineerRoute({ children }) {
-  const { user } = useAuth()
+// =====================================================
+// PERMISSION-BASED ROUTE
+// User must be logged in and have required permission
+// =====================================================
 
+function PermissionRoute({ permission, children }) {
+  const { user, hasPermission } = useAuth()
+
+  // Not logged in
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  if (user.role !== 'Quality Engineer') {
+  // Logged in but does not have permission
+  if (!hasPermission(permission)) {
     return <Navigate to="/dashboard" replace />
   }
 
   return children
 }
 
+
+// =====================================================
+// APPLICATION ROUTES
+// =====================================================
 
 export default function App() {
   return (
@@ -55,56 +69,94 @@ export default function App() {
       />
 
 
-      {/* ================= PROTECTED ROUTES ================= */}
+      {/* ================= DASHBOARD ================= */}
 
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <PermissionRoute permission="dashboard">
             <Dashboard />
-          </ProtectedRoute>
+          </PermissionRoute>
         }
       />
+
+
+      {/* ================= INSPECTION ================= */}
 
       <Route
         path="/inspection"
         element={
-          <ProtectedRoute>
+          <PermissionRoute permission="inspection">
             <Inspection />
-          </ProtectedRoute>
+          </PermissionRoute>
         }
       />
+
+
+      {/* ================= HISTORY ================= */}
 
       <Route
         path="/history"
         element={
-          <ProtectedRoute>
+          <PermissionRoute permission="history">
             <History />
-          </ProtectedRoute>
+          </PermissionRoute>
         }
       />
 
 
-      {/* ================= QUALITY ENGINEER ONLY ================= */}
+      {/* ================= ANALYTICS ================= */}
 
       <Route
         path="/analytics"
         element={
-          <QualityEngineerRoute>
+          <PermissionRoute permission="analytics">
             <Analytics />
-          </QualityEngineerRoute>
+          </PermissionRoute>
         }
       />
 
 
-      {/* ================= DEFAULT ================= */}
+      {/* ================= REPORTS ================= */}
+
+      <Route
+        path="/reports"
+        element={
+          <PermissionRoute permission="reports">
+            <Reports />
+          </PermissionRoute>
+        }
+      />
+
+
+      {/* ================= ADMIN ================= */}
+
+      <Route
+        path="/admin"
+        element={
+          <PermissionRoute permission="admin">
+            <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold">
+                  Admin Panel
+                </h1>
+
+                <p className="text-gray-400 mt-3">
+                  User and system management will be available here.
+                </p>
+              </div>
+            </div>
+          </PermissionRoute>
+        }
+      />
+
+
+      {/* ================= DEFAULT ROUTE ================= */}
 
       <Route
         path="*"
         element={<Navigate to="/login" replace />}
       />
-
-      <Route path="/reports" element={<Reports />} />
 
     </Routes>
   )

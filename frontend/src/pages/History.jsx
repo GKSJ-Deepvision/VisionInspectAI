@@ -1,28 +1,79 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Layout from '../components/Layout.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { getInspectionHistory } from '../services/api.js'
 
 export default function History() {
+  const { user } = useAuth()
+
+  const [history, setHistory] = useState([])
   const [search, setSearch] = useState('')
   const [resultFilter, setResultFilter] = useState('ALL')
   const [severityFilter, setSeverityFilter] = useState('ALL')
 
-  // Real inspection data will be connected from the backend later.
-  // For now, keep history empty.
-  const history = []
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Load real inspection history from backend
+  useEffect(() => {
+    async function loadHistory() {
+      if (!user?.token) {
+        setError('Authentication token not found. Please login again.')
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError('')
+
+        const data = await getInspectionHistory(user.token)
+
+        // Backend may return either an array
+        // or an object containing history/results
+        const records = Array.isArray(data)
+          ? data
+          : data.history || data.results || data.inspections || []
+
+        setHistory(records)
+      } catch (err) {
+        console.error('Failed to load history:', err)
+        setError(
+          err.message || 'Failed to load inspection history.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadHistory()
+  }, [user?.token])
 
   const total = history.length
 
   const passed = history.filter(
-    item => item.result === 'PASS'
+    item =>
+      item.result === 'PASS' ||
+      item.status === 'PASS' ||
+      item.status === 'passed'
   ).length
 
   const failed = history.filter(
-    item => item.result === 'FAIL'
+    item =>
+      item.result === 'FAIL' ||
+      item.status === 'FAIL' ||
+      item.status === 'failed'
   ).length
 
-  const critical = history.filter(
-    item => item.severity?.level === 'Critical'
-  ).length
+  const critical = history.filter(item => {
+    const severity =
+      item.severity?.level ||
+      item.severity ||
+      item.severity_level ||
+      ''
+
+    return severity === 'Critical'
+  }).length
 
   const filteredHistory = useMemo(() => {
     return history.filter(item => {
@@ -35,20 +86,31 @@ export default function History() {
       const severity =
         item.severity?.level ||
         item.severity ||
+        item.severity_level ||
         ''
 
       const fileName =
         item.file ||
+        item.filename ||
         item.fileName ||
         ''
 
+      const result =
+        item.result ||
+        item.status ||
+        ''
+
       const matchesSearch =
-        fileName.toLowerCase().includes(search.toLowerCase()) ||
-        defect.toLowerCase().includes(search.toLowerCase())
+        fileName
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        defect
+          .toLowerCase()
+          .includes(search.toLowerCase())
 
       const matchesResult =
         resultFilter === 'ALL' ||
-        item.result === resultFilter
+        result === resultFilter
 
       const matchesSeverity =
         severityFilter === 'ALL' ||
@@ -60,7 +122,12 @@ export default function History() {
         matchesSeverity
       )
     })
-  }, [history, search, resultFilter, severityFilter])
+  }, [
+    history,
+    search,
+    resultFilter,
+    severityFilter,
+  ])
 
   return (
     <Layout>
@@ -148,6 +215,7 @@ export default function History() {
                 <option value="ALL">All Results</option>
                 <option value="PASS">Passed</option>
                 <option value="FAIL">Failed</option>
+                <option value="completed">Completed</option>
               </select>
 
               <select
@@ -166,125 +234,157 @@ export default function History() {
 
           </div>
 
-          {/* History Table / Empty State */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          {/* Loading */}
+          {loading && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-16 text-center">
+              <p className="text-blue-400">
+                Loading inspection history...
+              </p>
+            </div>
+          )}
 
-            {filteredHistory.length === 0 ? (
-              <div className="p-16 text-center">
+          {/* Error */}
+          {!loading && error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 text-red-400">
+              {error}
+            </div>
+          )}
 
-                <div className="text-gray-600 text-5xl mb-5">
-                  —
+          {/* History Table */}
+          {!loading && !error && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+
+              {filteredHistory.length === 0 ? (
+                <div className="p-16 text-center">
+
+                  <div className="text-gray-600 text-5xl mb-5">
+                    —
+                  </div>
+
+                  <h3 className="text-xl font-semibold text-gray-300">
+                    No Inspection Records Available
+                  </h3>
+
+                  <p className="text-gray-500 mt-3 max-w-md mx-auto">
+                    No inspection records were found for your account.
+                  </p>
+
                 </div>
+              ) : (
+                <div className="overflow-x-auto">
 
-                <h3 className="text-xl font-semibold text-gray-300">
-                  No Inspection Records Available
-                </h3>
+                  <table className="w-full">
 
-                <p className="text-gray-500 mt-3 max-w-md mx-auto">
-                  Inspection history will appear here once the AI inspection
-                  service and backend database are connected.
-                </p>
+                    <thead>
+                      <tr className="bg-gray-800/70 text-gray-400 text-sm uppercase">
 
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
+                        <th className="text-left px-6 py-4">
+                          File
+                        </th>
 
-                <table className="w-full">
+                        <th className="text-left px-6 py-4">
+                          Defect
+                        </th>
 
-                  <thead>
-                    <tr className="bg-gray-800/70 text-gray-400 text-sm uppercase">
+                        <th className="text-left px-6 py-4">
+                          Severity
+                        </th>
 
-                      <th className="text-left px-6 py-4">
-                        File
-                      </th>
+                        <th className="text-left px-6 py-4">
+                          Score
+                        </th>
 
-                      <th className="text-left px-6 py-4">
-                        Defect
-                      </th>
+                        <th className="text-left px-6 py-4">
+                          Result
+                        </th>
 
-                      <th className="text-left px-6 py-4">
-                        Severity
-                      </th>
+                      </tr>
+                    </thead>
 
-                      <th className="text-left px-6 py-4">
-                        Score
-                      </th>
+                    <tbody className="divide-y divide-gray-800">
 
-                      <th className="text-left px-6 py-4">
-                        Result
-                      </th>
+                      {filteredHistory.map((item, index) => {
 
-                    </tr>
-                  </thead>
+                        const severity =
+                          item.severity?.level ||
+                          item.severity ||
+                          item.severity_level ||
+                          'Unknown'
 
-                  <tbody className="divide-y divide-gray-800">
+                        const score =
+                          item.severity?.score ??
+                          item.score ??
+                          item.ai_score ??
+                          '—'
 
-                    {filteredHistory.map((item, index) => {
+                        const defect =
+                          item.defect ||
+                          item.defect_type ||
+                          item.defectType ||
+                          'Unknown'
 
-                      const severity =
-                        item.severity?.level ||
-                        item.severity ||
-                        'Unknown'
+                        const fileName =
+                          item.file ||
+                          item.filename ||
+                          item.fileName ||
+                          'Unknown'
 
-                      const score =
-                        item.severity?.score ??
-                        item.score ??
-                        '—'
+                        const result =
+                          item.result ||
+                          item.status ||
+                          'UNKNOWN'
 
-                      const defect =
-                        item.defect ||
-                        item.defect_type ||
-                        item.defectType ||
-                        'Unknown'
+                        return (
+                          <tr
+                            key={item.id || item.inspection_id || index}
+                            className="hover:bg-gray-800/40 transition"
+                          >
 
-                      return (
-                        <tr
-                          key={item.id || index}
-                          className="hover:bg-gray-800/40 transition"
-                        >
+                            <td className="px-6 py-5 font-medium text-gray-200">
+                              {fileName}
+                            </td>
 
-                          <td className="px-6 py-5 font-medium text-gray-200">
-                            {item.file || item.fileName || 'Unknown'}
-                          </td>
+                            <td className="px-6 py-5 text-gray-300">
+                              {defect}
+                            </td>
 
-                          <td className="px-6 py-5 text-gray-300">
-                            {defect}
-                          </td>
+                            <td className="px-6 py-5">
+                              <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-sm">
+                                {severity}
+                              </span>
+                            </td>
 
-                          <td className="px-6 py-5">
-                            <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-sm">
-                              {severity}
-                            </span>
-                          </td>
+                            <td className="px-6 py-5 text-gray-300">
+                              {score}
+                            </td>
 
-                          <td className="px-6 py-5 text-gray-300">
-                            {score}
-                          </td>
+                            <td className="px-6 py-5">
+                              <span
+                                className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                  result === 'PASS'
+                                    ? 'bg-green-500/10 text-green-400'
+                                    : result === 'FAIL'
+                                    ? 'bg-red-500/10 text-red-400'
+                                    : 'bg-blue-500/10 text-blue-400'
+                                }`}
+                              >
+                                {result}
+                              </span>
+                            </td>
 
-                          <td className="px-6 py-5">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                item.result === 'PASS'
-                                  ? 'bg-green-500/10 text-green-400'
-                                  : 'bg-red-500/10 text-red-400'
-                              }`}
-                            >
-                              {item.result || 'UNKNOWN'}
-                            </span>
-                          </td>
+                          </tr>
+                        )
+                      })}
 
-                        </tr>
-                      )
-                    })}
+                    </tbody>
 
-                  </tbody>
+                  </table>
 
-                </table>
+                </div>
+              )}
 
-              </div>
-            )}
-
-          </div>
+            </div>
+          )}
 
         </div>
       </div>

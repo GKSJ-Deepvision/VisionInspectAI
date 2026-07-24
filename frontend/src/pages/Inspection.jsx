@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import Layout from '../components/Layout.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { inspectImage } from '../services/api.js'
 
 export default function Inspection() {
+  const { user } = useAuth()
+
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isDragging, setIsDragging] = useState(false)
   const [message, setMessage] = useState('')
+  const [isInspecting, setIsInspecting] = useState(false)
+  const [results, setResults] = useState([])
 
   function handleFiles(files) {
     const imageFiles = Array.from(files).filter(file =>
@@ -40,15 +46,41 @@ export default function Inspection() {
     )
   }
 
-  function handleInspection() {
+  async function handleInspection() {
     if (selectedFiles.length === 0) {
       setMessage('Please select at least one image.')
       return
     }
 
-    setMessage(
-      'Images selected successfully. AI inspection will be available once the inspection API is connected.'
-    )
+    if (!user?.token) {
+      setMessage('Authentication token not found. Please login again.')
+      return
+    }
+
+    setIsInspecting(true)
+    setMessage('')
+    setResults([])
+
+    try {
+      const inspectionResults = []
+
+      for (const file of selectedFiles) {
+        const result = await inspectImage(file, user.token)
+
+        inspectionResults.push({
+          fileName: file.name,
+          ...result,
+        })
+      }
+
+      setResults(inspectionResults)
+      setMessage('AI inspection completed successfully.')
+    } catch (error) {
+      console.error('Inspection error:', error)
+      setMessage(error.message || 'AI inspection failed. Please try again.')
+    } finally {
+      setIsInspecting(false)
+    }
   }
 
   return (
@@ -188,7 +220,8 @@ export default function Inspection() {
 
                       <button
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center"
+                        disabled={isInspecting}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center disabled:opacity-50"
                         title="Remove image"
                       >
                         ×
@@ -206,9 +239,12 @@ export default function Inspection() {
                 <div className="mt-8 flex justify-end">
                   <button
                     onClick={handleInspection}
-                    className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
+                    disabled={isInspecting}
+                    className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Start AI Inspection
+                    {isInspecting
+                      ? 'Running AI Inspection...'
+                      : 'Start AI Inspection'}
                   </button>
                 </div>
 
@@ -219,6 +255,62 @@ export default function Inspection() {
             {message && (
               <div className="mt-6 px-4 py-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300">
                 {message}
+              </div>
+            )}
+
+            {/* Inspection Results */}
+            {results.length > 0 && (
+              <div className="mt-8">
+
+                <h2 className="text-xl font-semibold mb-4">
+                  Inspection Results
+                </h2>
+
+                <div className="space-y-4">
+                  {results.map((result, index) => (
+                    <div
+                      key={`${result.fileName}-${index}`}
+                      className="bg-gray-950 border border-gray-800 rounded-xl p-5"
+                    >
+                      <h3 className="font-semibold text-white">
+                        {result.fileName}
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
+
+                        <p className="text-gray-400">
+                          Status:{' '}
+                          <span className="text-white">
+                            {result.status || 'N/A'}
+                          </span>
+                        </p>
+
+                        <p className="text-gray-400">
+                          AI Score:{' '}
+                          <span className="text-white">
+                            {result.ai_score ?? result.score ?? 'N/A'}
+                          </span>
+                        </p>
+
+                        <p className="text-gray-400">
+                          Inspection ID:{' '}
+                          <span className="text-white">
+                            {result.inspection_id || result.id || 'N/A'}
+                          </span>
+                        </p>
+
+                        <p className="text-gray-400">
+                          User ID:{' '}
+                          <span className="text-white">
+                            {result.user_id || 'N/A'}
+                          </span>
+                        </p>
+
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
               </div>
             )}
 
