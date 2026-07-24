@@ -8,54 +8,90 @@ and product quality assessment using Computer Vision and Deep Learning.
 VisionInspectAI/
 │
 ├── backend/
-│   ├── app/                     # FastAPI backend
+
+│   ├── app/  # FastAPI backend
+
 │   ├── inspection_plots/        # Generated reports & visualizations
+
 │   └── visualization/
+
 │       ├── main.py
+
 │       └── src/
+
 │           ├── config.py
+
 │           ├── dataset_loader.py
+
 │           ├── preprocessing.py
+
 │           ├── image_quality.py
+
 │           ├── feature_extraction.py
+
 │           ├── visualization.py
+
 │           ├── pipeline.py
+
 │           └── ...
+
 │
 ├── dataset/                     # MVTec AD Dataset (Ignored in Git)
+
 │
+
 ├── frontend/                    # React Frontend
+
 │
+
 └── docs/
+
 
 ## Inspection Pipeline
 
 MVTec AD Dataset
+
         │
         ▼
+        
 Dataset Loader
+
         │
         ▼
+        
 Image Quality Analysis
+
         │
         ▼
+        
 Image Preprocessing
+
         │
         ▼
+        
 Feature Extraction
+
         │
         ▼
+        
 Model Inference
 (Classification + Defect Detection)
+
         │
         ▼
+        
 Inspection Report
+
         │
         ▼
+        
 FastAPI Backend
+
         │
         ▼
+        
 React Frontend
+
 
 ## Current Modules
 
