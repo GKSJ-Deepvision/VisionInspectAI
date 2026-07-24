@@ -1,21 +1,40 @@
-# Deep Learning
-torch
-torchvision
-lightning
+
+# Core Deep Learning
+torch==2.7.1
+torchvision==0.22.1
+torchaudio==2.7.1
 
 # Anomaly Detection
-anomalib
-faiss-cpu
+
+anomalib==2.1.0
+lightning==2.5.2
+torchmetrics==1.8.0
+timm==1.0.19
 
 # Computer Vision
-opencv-python
-Pillow
+opencv-python==4.12.0.88
+Pillow==11.3.0
+albumentations==2.0.8
+scikit-image==0.25.2
+imageio==2.37.0
 
-# Data Processing
-numpy
-pandas
-scikit-learn
-scipy
+# Scientific Computing
+numpy==2.3.2
+scipy==1.16.1
+pandas==2.3.1
+scikit-learn==1.7.1
 
-# Progress
-tqdm
+# Visualization
+matplotlib==3.10.5
+seaborn==0.13.2
+
+# Utilities
+
+tqdm==4.67.1
+PyYAML==6.0.2
+python-dotenv==1.1.1
+requests==2.32.4
+
+# Logging & Monitoring
+
+tensorboard==2.20.0
