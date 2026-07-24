@@ -1,5 +1,8 @@
+import numpy as np
+import pandas as pd
 from pathlib import Path
 from src.utils import count_images
+
 
 # gets stats for a single category
 def get_category_statistics(category_path):
@@ -90,4 +93,56 @@ def display_defect_percentages(dataset_path, category):
     for defect, count in statistics.items():
         percentage = (count / total) * 100
         print(f"{defect:<25}{percentage:>7.2f}%")
-        
+
+def generate_dataset_report(dataset_path):
+    """
+    Generate dataset analytics as a pandas DataFrame.
+    """
+    summary = get_dataset_summary(dataset_path)
+
+    df = pd.DataFrame(summary)
+
+    df["Total"] = (
+        df["Train"]
+        + df["Test"]
+        + df["Ground Truth"]
+    )
+    return df
+
+def calculate_dataset_metrics(dataset_path):
+    """
+    Calculate overall dataset metrics.
+    """
+    df = generate_dataset_report(dataset_path)
+
+    metrics = {
+        "Total Categories": len(df),
+        "Total Training Images": int(df["Train"].sum()),
+        "Total Testing Images": int(df["Test"].sum()),
+        "Total Ground Truth Masks": int(df["Ground Truth"].sum()),
+        "Total Images": int(df["Total"].sum()),
+        "Largest Category": df.loc[
+            df["Total"].idxmax(),
+            "Category"
+        ],
+        "Smallest Category": df.loc[
+            df["Total"].idxmin(),
+            "Category"
+        ]
+    }
+    return metrics
+
+def display_dataset_metrics(dataset_path):
+    """
+    Display overall dataset metrics.
+    """
+    metrics = calculate_dataset_metrics(dataset_path)
+    print("\n")
+    print("=" * 50)
+    print("DATASET ANALYTICS")
+    print("=" * 50)
+
+    for key, value in metrics.items():
+        print(f"{key:<28}: {value}")
+
+    print("=" * 50)   

@@ -1,68 +1,99 @@
-from fastapi import APIRouter, HTTPException, Depends
+import hashlib
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-import app.models.db_models as db_models
-import hashlib
-import jwt
-from datetime import datetime, timedelta
+from sqlalchemy import func
+import app.models as db_models
+import app.schemas as schemas
+
+try:
+    from app.core.database import get_db
+except ImportError:
+    from app.core.database import SessionLocal
+    def get_db():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
 
 router = APIRouter()
 
-SECRET_KEY = "visioninspect_secret_key_for_industry_4_0"
-ALGORITHM = "HS256"
+class RegisterRequest(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    role: str
 
-# Simple password hashing helper
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    return hashlib.sha256(password.strip().encode()).hexdigest()
 
-# Data formats we expect from the frontend
-class UserRegister(BaseModel):
-    username: str
-    password: str
-    role: str  # 'quality_engineer', 'owner', or 'client'
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
+def check_admin_role(user: db_models.User):
+    if user.role not in ["ADMIN", "OWNER"]:
+        raise HTTPException(status_code=403, detail="Admin privileges required")
 
 @router.post("/register")
-def register_user(user: UserRegister, db: Session = Depends(get_db)):
-    # Check if username already exists
-    existing_user = db.query(db_models.User).filter(db_models.User.username == user.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username already registered.")
+def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
+    clean_email = req.email.strip().lower()
+    existing = db.query(db_models.User).filter(func.lower(db_models.User.email) == clean_email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="This corporate email is already registered in SQLite.")
     
-    # Create new user
     new_user = db_models.User(
-        username=user.username,
-        hashed_password=hash_password(user.password),
-        role=user.role
+        full_name=req.full_name.strip(),
+        email=clean_email,
+        password_hash=hash_password(req.password),
+        role=req.role.strip().upper()
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    return {"status": "Success", "message": f"User {user.username} created as {user.role}!"}
+    return {
+        "status": "SUCCESS",
+        "user": {"id": new_user.id, "name": new_user.full_name, "email": new_user.email, "role": new_user.role}
+    }
 
 @router.post("/login")
-def login_user(user: UserLogin, db: Session = Depends(get_db)):
-    # Find user in database
-    db_user = db.query(db_models.User).filter(db_models.User.username == user.username).first()
-    if not db_user or db_user.hashed_password != hash_password(user.password):
-        raise HTTPException(status_code=401, detail="Invalid username or password.")
+def login_user(req: LoginRequest, db: Session = Depends(get_db)):
+    clean_email = req.email.strip().lower()
+    hashed = hash_password(req.password)
     
-    # Generate login token
-    token_payload = {
-        "sub": db_user.username,
-        "role": db_user.role,
-        "exp": datetime.utcnow() + timedelta(hours=12)
-    }
-    token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
+    user = db.query(db_models.User).filter(
+        func.lower(db_models.User.email) == clean_email,
+        db_models.User.password_hash == hashed
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid corporate email or password. Please verify credentials.")
     
     return {
-        "access_token": token,
-        "token_type": "bearer",
-        "username": db_user.username,
-        "role": db_user.role
+        "status": "SUCCESS",
+        "user": {"id": user.id, "name": user.full_name, "email": user.email, "role": user.role}
     }
+
+@router.get("/users", response_model=list[schemas.UserOut])
+def get_users(db: Session = Depends(get_db)):
+    users = db.query(db_models.User).all()
+    return users
+
+@router.get("/users/{user_id}", response_model=schemas.UserOut)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(db_models.User).filter(db_models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.put("/users/{user_id}/role", response_model=schemas.UserOut)
+def update_user_role(user_id: int, req: schemas.UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(db_models.User).filter(db_models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = req.role.strip().upper()
+    db.commit()
+    db.refresh(user)
+    return user
