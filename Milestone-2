@@ -1,0 +1,20 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9
+pytest 8.4.1
+
+collected 12 items
+
+tests/test_backend.py::test_register_user                  PASSED
+tests/test_backend.py::test_login_user                     PASSED
+tests/test_backend.py::test_login_returns_role             PASSED
+tests/test_backend.py::test_get_current_user               PASSED
+tests/test_backend.py::test_user_history                   PASSED
+tests/test_backend.py::test_history_by_id                  PASSED
+tests/test_backend.py::test_analytics_summary              PASSED
+tests/test_backend.py::test_analytics_by_status            PASSED
+tests/test_backend.py::test_image_inspection               PASSED
+tests/test_backend.py::test_role_access_inspector          PASSED
+tests/test_backend.py::test_role_access_engineer           PASSED
+tests/test_backend.py::test_role_access_admin              PASSED
+
+========================== 12 passed in 1.26s ==========================
