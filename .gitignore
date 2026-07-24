@@ -5,8 +5,6 @@ __pycache__/
 .vscode/
 .idea/
 
-AI/outputs/Patchcore/
-AI/outputs/predictions/
-AI/outputs/reports/
+
 instance/
 *.db
