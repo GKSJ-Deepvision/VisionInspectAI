@@ -1,147 +1,589 @@
 import Layout from "../components/Layout";
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
+import jsPDF from "jspdf";
+
 import {
+  Download,
   CheckCircle,
-  Image,
+  Image as ImageIcon,
+  FileImage,
+  Layers,
+  Monitor,
+  AlertTriangle,
+  Cpu,
 } from "lucide-react";
 
 function Results() {
-
   const { state } = useLocation();
+
+  const [downloading, setDownloading] = useState(false);
 
   if (!state) {
     return (
       <Layout title="Inspection Results">
-        <h2>No Inspection Found</h2>
+        <div className="bg-[#1F2937] rounded-2xl p-10 text-center shadow-lg">
+
+          <AlertTriangle
+            size={60}
+            className="mx-auto text-red-400 mb-5"
+          />
+
+          <h2 className="text-3xl font-bold">
+            No Inspection Found
+          </h2>
+
+          <p className="text-gray-400 mt-3">
+            Please upload an image first.
+          </p>
+
+        </div>
       </Layout>
     );
   }
 
-  const { image, result } = state;
+  const {
+    image,
+    processedImage,
+    result,
+  } = state;
 
-  return (
+  const isDefective = result.defect === "Defective";
+
+  // Convert image URL to Base64
+  const imageToBase64 = (url) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+
+      img.crossOrigin = "anonymous";
+
+      img.onload = () => {
+        const canvas =
+          document.createElement("canvas");
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(img, 0, 0);
+
+        resolve(canvas.toDataURL("image/png"));
+      };
+
+      img.onerror = reject;
+
+      img.src = url;
+    });
+
+  const downloadPDF = async () => {
+    try {
+      setDownloading(true);
+
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(22);
+      pdf.text("VisionInspect AI", 20, 18);
+
+      pdf.setFontSize(16);
+      pdf.text(
+        "Manufacturing Quality Inspection Report",
+        20,
+        28
+      );
+
+      pdf.setDrawColor(0);
+      pdf.line(20, 32, 190, 32);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(12);
+
+      pdf.text(
+        `Filename : ${result.filename}`,
+        20,
+        45
+      );
+
+      pdf.text(
+        `Prediction : ${result.defect}`,
+        20,
+        53
+      );
+
+      pdf.text(
+        `Confidence : ${result.confidence}%`,
+        20,
+        61
+      );
+
+      pdf.text(
+        `Original Size : ${result.original_width} × ${result.original_height}`,
+        20,
+        69
+      );
+
+      pdf.text(
+        `Processed Size : ${result.processed_size}`,
+        20,
+        77
+      );
+
+      pdf.text(
+        `Channels : ${result.channels}`,
+        20,
+        85
+      );
+
+      pdf.text(
+        `Status : Inspection Completed`,
+        20,
+        93
+      );
+            // ---------------- Images ---------------- //
+
+      try {
+        const originalBase64 = await imageToBase64(image);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text("Original Image", 20, 108);
+
+        pdf.addImage(
+          originalBase64,
+          "PNG",
+          20,
+          112,
+          75,
+          75
+        );
+
+      } catch (e) {
+        pdf.setFont("helvetica", "italic");
+        pdf.text(
+          "Original image unavailable.",
+          20,
+          120
+        );
+      }
+
+      try {
+        const processedBase64 =
+          await imageToBase64(processedImage);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text(
+          "Processed Image",
+          115,
+          108
+        );
+
+        pdf.addImage(
+          processedBase64,
+          "PNG",
+          115,
+          112,
+          75,
+          75
+        );
+
+      } catch (e) {
+        pdf.setFont("helvetica", "italic");
+        pdf.text(
+          "Processed image unavailable.",
+          115,
+          120
+        );
+      }
+
+      // ---------------- Preprocessing ---------------- //
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+
+      pdf.text(
+        "Image Preprocessing",
+        20,
+        200
+      );
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(12);
+
+      let y = 210;
+
+      result.preprocessing.forEach((step) => {
+
+        pdf.text(`• ${step}`, 25, y);
+
+        y += 8;
+
+      });
+
+      y += 6;
+
+      pdf.setFont("helvetica", "bold");
+
+      pdf.text(
+        "AI Inspection Result",
+        20,
+        y
+      );
+
+      y += 10;
+
+      pdf.setFont("helvetica", "normal");
+
+      pdf.text(
+        `Prediction : ${result.defect}`,
+        25,
+        y
+      );
+
+      y += 8;
+
+      pdf.text(
+        `Confidence : ${result.confidence}%`,
+        25,
+        y
+      );
+
+      y += 8;
+
+      pdf.text(
+        `Generated : ${new Date().toLocaleString()}`,
+        25,
+        y
+      );
+
+      pdf.setDrawColor(180);
+
+      pdf.line(
+        20,
+        280,
+        190,
+        280
+      );
+
+      pdf.setFontSize(10);
+
+      pdf.text(
+        "Generated by VisionInspect AI",
+        20,
+        286
+      );
+
+      pdf.save(
+        `${result.filename}_Inspection_Report.pdf`
+      );
+
+      setDownloading(false);
+
+    } catch (err) {
+
+      console.error(err);
+
+      setDownloading(false);
+
+      alert("Unable to generate PDF");
+
+    }
+  };
+    return (
     <Layout title="Inspection Results">
+      <div className="space-y-8">
 
-      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Images */}
 
-        {/* Image */}
+        <div className="grid lg:grid-cols-2 gap-8">
 
-        <div className="bg-[#1F2937] rounded-2xl p-8">
+          {/* Original Image */}
 
-          <h2 className="text-2xl font-bold mb-6">
+          <div className="bg-[#1F2937] rounded-2xl p-6 shadow-lg">
 
-            Uploaded Image
+            <div className="flex items-center gap-3 mb-5">
+              <ImageIcon className="text-emerald-400" />
 
-          </h2>
+              <h2 className="text-2xl font-bold">
+                Original Image
+              </h2>
+            </div>
 
-          <img
-            src={image}
-            alt=""
-            className="rounded-xl w-full"
-          />
+            <img
+              src={image}
+              alt="Original"
+              className="w-full rounded-xl border border-gray-700"
+            />
+
+          </div>
+
+          {/* Processed Image */}
+
+          <div className="bg-[#1F2937] rounded-2xl p-6 shadow-lg">
+
+            <div className="flex items-center gap-3 mb-5">
+              <Cpu className="text-blue-400" />
+
+              <h2 className="text-2xl font-bold">
+                Processed Image
+              </h2>
+            </div>
+
+            <img
+              src={processedImage}
+              alt="Processed"
+              className="w-full rounded-xl border border-gray-700"
+            />
+
+          </div>
 
         </div>
 
-        {/* Result */}
+        {/* Inspection Summary */}
 
-        <div className="bg-[#1F2937] rounded-2xl p-8">
+        <div className="bg-[#1F2937] rounded-2xl p-8 shadow-lg">
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-8">
 
-            <CheckCircle
-              className="text-green-400"
-            />
+            <CheckCircle className="text-green-400" />
 
-            <h2 className="text-2xl font-bold">
-
-              Inspection Details
-
+            <h2 className="text-3xl font-bold">
+              Inspection Summary
             </h2>
 
           </div>
 
-          <div className="space-y-5 mt-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-            <div>
+            <div className="bg-[#111827] rounded-xl p-5">
 
-              <p className="text-gray-400">
-                Message
-              </p>
-
-              <h3>{result.message}</h3>
-
-            </div>
-
-            <div>
+              <FileImage className="text-emerald-400 mb-3" />
 
               <p className="text-gray-400">
                 Filename
               </p>
 
-              <h3>{result.filename}</h3>
+              <h3 className="font-semibold break-all mt-2">
+                {result.filename}
+              </h3>
 
             </div>
 
-            <div>
+            <div className="bg-[#111827] rounded-xl p-5">
+
+              <Monitor className="text-blue-400 mb-3" />
 
               <p className="text-gray-400">
                 Original Size
               </p>
 
-              <h3>
-
+              <h3 className="font-semibold mt-2">
                 {result.original_width} × {result.original_height}
-
               </h3>
 
             </div>
 
-            <div>
+            <div className="bg-[#111827] rounded-xl p-5">
+
+              <Layers className="text-yellow-400 mb-3" />
 
               <p className="text-gray-400">
                 Channels
               </p>
 
-              <h3>
-
+              <h3 className="font-semibold mt-2">
                 {result.channels}
-
               </h3>
 
             </div>
 
-            <div>
+            <div className="bg-[#111827] rounded-xl p-5">
+
+              <Cpu className="text-purple-400 mb-3" />
 
               <p className="text-gray-400">
                 Processed Size
               </p>
 
-              <h3>
-
+              <h3 className="font-semibold mt-2">
                 {result.processed_size}
-
               </h3>
 
             </div>
 
           </div>
 
-          <div className="mt-8">
+        </div>
+                {/* AI Prediction & Backend Response */}
 
-            <h2 className="text-xl font-bold mb-4">
+        <div className="grid lg:grid-cols-2 gap-8">
 
-              Preprocessing
+          {/* AI Prediction */}
 
+          <div className="bg-[#1F2937] rounded-2xl p-6 shadow-lg">
+
+            <div className="flex items-center gap-3 mb-6">
+              <CheckCircle className="text-green-400" />
+
+              <h2 className="text-2xl font-bold">
+                AI Prediction
+              </h2>
+            </div>
+
+            <div
+              className={`inline-flex px-5 py-2 rounded-full font-semibold ${
+                isDefective
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-green-500/20 text-green-400"
+              }`}
+            >
+              {result.defect}
+            </div>
+
+            <div className="mt-6">
+
+              <p className="text-gray-400 mb-2">
+                Confidence Score
+              </p>
+
+              <div className="w-full bg-gray-700 rounded-full h-4">
+
+                <div
+                  className={`h-4 rounded-full ${
+                    isDefective
+                      ? "bg-red-500"
+                      : "bg-green-500"
+                  }`}
+                  style={{
+                    width: `${result.confidence || 0}%`,
+                  }}
+                />
+
+              </div>
+
+              <h2 className="text-3xl font-bold mt-4">
+                {result.confidence}%
+              </h2>
+
+            </div>
+
+            <div className="mt-8">
+
+              <span
+                className={`px-5 py-2 rounded-full font-semibold ${
+                  isDefective
+                    ? "bg-red-500/20 text-red-400"
+                    : "bg-green-500/20 text-green-400"
+                }`}
+              >
+                {isDefective
+                  ? "⚠ Defect Detected"
+                  : "✔ No Defect Detected"}
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* Backend Response */}
+
+          <div className="bg-[#1F2937] rounded-2xl p-6 shadow-lg">
+
+            <div className="flex items-center gap-3 mb-6">
+
+              <Cpu className="text-blue-400" />
+
+              <h2 className="text-2xl font-bold">
+                Backend Response
+              </h2>
+
+            </div>
+
+            <div className="space-y-4">
+
+              <div className="bg-[#111827] rounded-xl p-4">
+
+                <p className="text-gray-400 text-sm">
+                  Status
+                </p>
+
+                <h3 className="font-semibold mt-2">
+                  {result.message}
+                </h3>
+
+              </div>
+
+              <div className="bg-[#111827] rounded-xl p-4">
+
+                <p className="text-gray-400 text-sm">
+                  Prediction
+                </p>
+
+                <h3 className="font-semibold mt-2">
+                  {result.defect}
+                </h3>
+
+              </div>
+
+              <div className="bg-[#111827] rounded-xl p-4">
+
+                <p className="text-gray-400 text-sm">
+                  Model Confidence
+                </p>
+
+                <h3 className="font-semibold mt-2">
+                  {result.confidence}%
+                </h3>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Image Preprocessing */}
+
+        <div className="bg-[#1F2937] rounded-2xl p-8 shadow-lg">
+
+          <div className="flex items-center gap-3 mb-6">
+
+            <Layers className="text-emerald-400" />
+
+            <h2 className="text-2xl font-bold">
+              Image Preprocessing Steps
             </h2>
 
-            {result.preprocessing.map((step, index) => (
+          </div>
+
+          <div className="space-y-4">
+
+            {result.preprocessing?.map((step, index) => (
 
               <div
                 key={index}
-                className="bg-[#111827] p-3 rounded-xl mb-3"
+                className="bg-[#111827] border border-gray-700 rounded-xl px-5 py-4 flex items-center gap-4"
               >
 
-                ✅ {step}
+                <div className="w-10 h-10 rounded-full bg-emerald-500 text-black font-bold flex items-center justify-center">
+
+                  {index + 1}
+
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold">
+                    {step}
+                  </h3>
+
+                  <p className="text-sm text-gray-400">
+                    Completed Successfully
+                  </p>
+
+                </div>
 
               </div>
 
@@ -150,6 +592,26 @@ function Results() {
           </div>
 
         </div>
+
+      </div>
+
+      {/* Download Button */}
+
+      <div className="mt-10 flex justify-center">
+
+        <button
+          onClick={downloadPDF}
+          disabled={downloading}
+          className="flex items-center gap-3 bg-emerald-500 hover:bg-emerald-600 px-8 py-4 rounded-xl font-semibold transition disabled:opacity-50"
+        >
+
+          <Download size={22} />
+
+          {downloading
+            ? "Generating PDF..."
+            : "Download Inspection Report"}
+
+        </button>
 
       </div>
 

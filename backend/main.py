@@ -1,19 +1,29 @@
 from fastapi import FastAPI, UploadFile, File
-from auth import router as auth_router
 from fastapi.middleware.cors import CORSMiddleware
-from inspection import router as inspection_router
+from fastapi.staticfiles import StaticFiles
+
+from auth import router as auth_router
 from history import router as history_router
+from dashboard import router as dashboard_router
+
+from preprocessing import preprocess_image
+from ai.model import predict_defect
+from database import history_collection
+
+from datetime import datetime
 
 import os
 import shutil
 
-from preprocessing import preprocess_image
-
 app = FastAPI()
 
+# ------------------ Routers ------------------ #
+
 app.include_router(auth_router)
-app.include_router(inspection_router)
 app.include_router(history_router)
+app.include_router(dashboard_router)
+
+# ------------------ CORS ------------------ #
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,45 +36,86 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Upload folder
-UPLOAD_FOLDER = "../uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# ------------------ Folders ------------------ #
 
-# Processed folder
+UPLOAD_FOLDER = "../uploads"
 PROCESSED_FOLDER = "../processed"
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
+# ------------------ Serve Processed Images ------------------ #
+
+app.mount(
+    "/processed",
+    StaticFiles(directory=PROCESSED_FOLDER),
+    name="processed"
+)
+
+# ------------------ Home ------------------ #
 
 @app.get("/")
 def home():
-    return {"message": "VisionInspect AI Backend Running"}
+    return {
+        "message": "VisionInspect AI Backend Running"
+    }
 
+# ------------------ Upload Image ------------------ #
 
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
 
-    # Save uploaded image
+    # Save Uploaded Image
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Preprocess image
+    # Image Preprocessing
     result = preprocess_image(file_path, PROCESSED_FOLDER)
 
     if result is None:
-        return {"error": "Image could not be read"}
+        return {
+            "success": False,
+            "message": "Image could not be processed"
+        }
 
+    # Dummy AI Prediction
+    prediction = predict_defect(file_path)
+
+    # Save Inspection History into MongoDB
+    history_collection.insert_one({
+        "filename": file.filename,
+        "status": "Completed",
+        "width": result["width"],
+        "height": result["height"],
+        "channels": result["channels"],
+        "processed_size": "256 × 256",
+        "defect": prediction["defect"],
+        "confidence": prediction["confidence"],
+        "date": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+    })
+
+    # Response
     return {
-    "message": "Image uploaded and processed successfully",
-    "filename": file.filename,
-    "original_height": result["height"],
-    "original_width": result["width"],
-    "channels": result["channels"],
-    "processed_size": "256 x 256",
-    "preprocessing": [
-        "Image Resized",
-        "Converted to Grayscale",
-        "Noise Removed using Gaussian Blur"
-     ] 
-    } 
+        "success": True,
+        "message": "Image uploaded and processed successfully",
+
+        "filename": file.filename,
+
+        "original_width": result["width"],
+        "original_height": result["height"],
+
+        "channels": result["channels"],
+
+        "processed_size": "256 × 256",
+
+        "defect": prediction["defect"],
+        "confidence": prediction["confidence"],
+
+        "preprocessing": [
+            "Image Resized",
+            "Converted to Grayscale",
+            "Noise Removed using Gaussian Blur"
+        ]
+    }

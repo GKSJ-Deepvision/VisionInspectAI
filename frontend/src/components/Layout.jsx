@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 function Layout({ title, children }) {
   const navigate = useNavigate();
 
-  const role = localStorage.getItem("role") || "Admin";
+  const username = localStorage.getItem("username") || "User";
+  const role = localStorage.getItem("role") || "Quality Engineer";
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -21,17 +22,23 @@ function Layout({ title, children }) {
       {/* Main Content */}
       <div className="flex-1">
         {/* Top Navbar */}
-        <header className="h-20 border-b border-gray-700 px-8 flex items-center justify-between">
+        <header className="border-b border-gray-700 px-8 py-5 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">{title}</h1>
 
-            <p className="text-gray-400 mt-1">
-              Welcome back,
-              <span className="text-emerald-400 font-semibold ml-2">
-                {role}
-              </span>
-              👋
-            </p>
+            <div className="mt-2">
+              <p className="text-gray-400">
+                Welcome back,
+                <span className="text-emerald-400 font-semibold ml-2">
+                  {username}
+                </span>
+                👋
+              </p>
+
+              <p className="text-sm text-gray-500 mt-2">
+                Role: {role}
+              </p>
+            </div>
           </div>
 
           {/* Right Side */}
