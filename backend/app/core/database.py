@@ -1,22 +1,28 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Creating the   local  dbs
-SQLALCHEMY_DATABASE_URL = "sqlite:///./visioninspect.db"
-
-# Initialize the database engine to run my serevr
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Needed only for SQLite
+# Production PostgreSQL URI with SQLite fallback for instant local development setup
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "sqlite:///./visioninspect.db"  # Defaults to a local SQLite file in the backend folder
 )
 
-# Creating the  SessionLocal API request
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Handle SQLite specific threading requirements if fallback is used
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args=connect_args, 
+    pool_pre_ping=True, 
+    echo=False
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():
+    """Dependency injection for secure database session management."""
     db = SessionLocal()
     try:
         yield db

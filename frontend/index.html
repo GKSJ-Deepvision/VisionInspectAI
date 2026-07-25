@@ -2,11 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>VisionInspect AI // Command Center</title>
+
+    <!-- 🚀 INSTANT TAILWIND CSS OVERRIDE -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              industrial: {
+                dark: '#0f172a',
+                card: '#1e293b',
+                border: '#334155',
+                accent: '#38bdf8'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- 🚀 END OVERRIDE -->
+
   </head>
-  <body>
+  <body class="bg-[#0f172a] text-slate-100">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
