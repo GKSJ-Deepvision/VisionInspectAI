@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import Layout from '../components/Layout.jsx'
+import { getInspectionHistory } from '../services/api.js'
 import loginBg from '../assets/login-background.png'
 
 function StatCard({ label, value, color }) {
   return (
     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-5">
-      <p className="text-gray-400 text-sm">{label}</p>
-      <h3 className={`text-3xl font-bold mt-2 ${color}`}>{value}</h3>
+      <p className="text-gray-400 text-sm">
+        {label}
+      </p>
+
+      <h3 className={`text-3xl font-bold mt-2 ${color}`}>
+        {value}
+      </h3>
     </div>
   )
 }
@@ -19,35 +25,158 @@ function ActionCard({ title, desc, onClick }) {
       onClick={onClick}
       className="text-left bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-6 hover:border-blue-400 transition-all"
     >
-      <h3 className="text-xl font-semibold text-white">{title}</h3>
-      <p className="text-gray-400 mt-2">{desc}</p>
+      <h3 className="text-xl font-semibold text-white">
+        {title}
+      </h3>
+
+      <p className="text-gray-400 mt-2">
+        {desc}
+      </p>
     </button>
   )
 }
 
 export default function Dashboard() {
+
   const { user } = useAuth()
   const navigate = useNavigate()
-  const history = []
 
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+
+  // Load real inspection history from backend
+  useEffect(() => {
+
+    async function loadDashboardData() {
+
+      if (!user?.token) {
+        setError(
+          'Authentication token not found. Please login again.'
+        )
+
+        setLoading(false)
+        return
+      }
+
+      try {
+
+        setLoading(true)
+        setError('')
+
+        const data = await getInspectionHistory(user.token)
+
+        console.log(
+          'Dashboard History API response:',
+          data
+        )
+
+        // Backend may return:
+        // 1. An array
+        // 2. { history: [...] }
+        // 3. { results: [...] }
+        // 4. { inspections: [...] }
+
+        const records = Array.isArray(data)
+          ? data
+          : data.history ||
+            data.results ||
+            data.inspections ||
+            []
+
+        setHistory(records)
+
+      } catch (err) {
+
+        console.error(
+          'Dashboard history error:',
+          err
+        )
+
+        setError(
+          err.message ||
+          'Failed to load dashboard data.'
+        )
+
+      } finally {
+
+        setLoading(false)
+
+      }
+    }
+
+    loadDashboardData()
+
+  }, [user?.token])
+
+
+  // Total inspections
   const total = history.length
-  const failed = history.filter(h => h.result === 'FAIL').length
-  const passed = total - failed
-  const critical = history.filter(
-    h => h.severity?.level === 'Critical'
-  ).length
+
+
+  // Passed inspections
+  const passed = history.filter(item => {
+
+    const result =
+      item.result ||
+      item.status ||
+      ''
+
+    return (
+      result === 'PASS' ||
+      result === 'passed'
+    )
+
+  }).length
+
+
+  // Failed inspections
+  const failed = history.filter(item => {
+
+    const result =
+      item.result ||
+      item.status ||
+      ''
+
+    return (
+      result === 'FAIL' ||
+      result === 'failed'
+    )
+
+  }).length
+
+
+  // Critical defects
+  const critical = history.filter(item => {
+
+    const severity =
+      item.severity?.level ||
+      item.severity ||
+      item.severity_level ||
+      ''
+
+    return severity === 'Critical'
+
+  }).length
+
 
   return (
     <Layout>
+
       <div
         className="min-h-screen bg-cover bg-center"
         style={{
-          backgroundImage: `linear-gradient(rgba(5,10,25,.75),rgba(5,10,25,.82)),url(${loginBg})`
+          backgroundImage:
+            `linear-gradient(rgba(5,10,25,.75),rgba(5,10,25,.82)),url(${loginBg})`
         }}
       >
+
         <div className="max-w-7xl mx-auto px-8 pt-10 pb-8">
 
+
           {/* Hero Section */}
+
           <section className="rounded-3xl bg-black/35 backdrop-blur-md border border-white/10 p-8">
 
             <p className="text-blue-400 uppercase tracking-[0.3em] text-sm">
@@ -61,22 +190,27 @@ export default function Dashboard() {
             </h1>
 
             <p className="text-gray-300 mt-6 max-w-2xl text-lg">
-              Welcome {user?.name}. Perform AI-powered inspections, monitor
-              quality and review inspection history from one place.
+              Welcome {user?.name}.
+              Perform AI-powered inspections, monitor quality
+              and review inspection history from one place.
             </p>
 
             <div className="mt-8">
+
               <button
                 onClick={() => navigate('/inspection')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold"
               >
                 Start Inspection
               </button>
+
             </div>
 
           </section>
 
+
           {/* Quick Actions */}
+
           <section className="mt-8">
 
             <h2 className="text-white text-2xl font-semibold mb-5">
@@ -107,45 +241,87 @@ export default function Dashboard() {
 
           </section>
 
+
           {/* Inspection Overview */}
+
           <section className="mt-8">
 
             <h2 className="text-white text-2xl font-semibold mb-5">
               Inspection Overview
             </h2>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
 
-              <StatCard
-                label="Total Inspected"
-                value={total}
-                color="text-blue-400"
-              />
+            {/* Loading */}
 
-              <StatCard
-                label="Passed"
-                value={passed}
-                color="text-green-400"
-              />
+            {loading && (
 
-              <StatCard
-                label="Failed"
-                value={failed}
-                color="text-red-400"
-              />
+              <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-8 text-center">
 
-              <StatCard
-                label="Critical"
-                value={critical}
-                color="text-yellow-400"
-              />
+                <p className="text-blue-400">
+                  Loading inspection statistics...
+                </p>
 
-            </div>
+              </div>
+
+            )}
+
+
+            {/* Error */}
+
+            {!loading && error && (
+
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
+
+                <p className="text-red-400">
+                  {error}
+                </p>
+
+              </div>
+
+            )}
+
+
+            {/* Statistics */}
+
+            {!loading && !error && (
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <StatCard
+                  label="Total Inspected"
+                  value={total}
+                  color="text-blue-400"
+                />
+
+                <StatCard
+                  label="Passed"
+                  value={passed}
+                  color="text-green-400"
+                />
+
+                <StatCard
+                  label="Failed"
+                  value={failed}
+                  color="text-red-400"
+                />
+
+                <StatCard
+                  label="Critical"
+                  value={critical}
+                  color="text-yellow-400"
+                />
+
+              </div>
+
+            )}
 
           </section>
 
+
         </div>
+
       </div>
+
     </Layout>
   )
 }
