@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionInspectAI — Intelligent Quality Inspection Engine</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-logo">👁️</div>
+            <div>
+                <div class="brand-title">VisionInspectAI</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Industrial Anomaly & Defect Intelligence</div>
+            </div>
+            <span class="brand-tag">v3.0 Hybrid</span>
+        </div>
+        
+        <div class="nav-meta">
+            <div class="status-pill">
+                <span class="dot"></span>
+                <span id="device-pill">Device: CPU</span>
+            </div>
+            <div class="status-pill">
+                <span id="cat-pill">Category: bottle</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid Workspace -->
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">⚙️ Inspection Parameters</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Product Category</label>
+                    <select class="form-select" id="category-select">
+                        <option value="bottle">bottle</option>
+                        <option value="cable">cable</option>
+                        <option value="capsule">capsule</option>
+                        <option value="carpet">carpet</option>
+                        <option value="grid">grid</option>
+                        <option value="hazelnut">hazelnut</option>
+                        <option value="leather">leather</option>
+                        <option value="metal_nut">metal_nut</option>
+                        <option value="pill">pill</option>
+                        <option value="screw">screw</option>
+                        <option value="tile">tile</option>
+                        <option value="toothbrush">toothbrush</option>
+                        <option value="transistor">transistor</option>
+                        <option value="wood">wood</option>
+                        <option value="zipper">zipper</option>
+                    </select>
+                </div>
+                
+                <div class="toggle-row">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600;">Stage 1 YOLO Normalizer</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Auto-align & crop object</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="yolo-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Upload Product Image</label>
+                    <div class="upload-box" id="drop-zone">
+                        <div class="upload-icon">📥</div>
+                        <div style="font-weight: 600; font-size: 13px;">Drag image here or click browse</div>
+                        <div class="upload-hint">Supports PNG, JPG, JPEG, BMP</div>
+                        <button type="button" class="btn btn-outline" id="browse-btn" style="margin-top: 6px;">📁 Browse File</button>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" style="display:none;">
+                    
+                    <div class="preview-card" id="preview-card">
+                        <img src="" alt="Selected Product Preview" id="preview-img">
+                        <button class="btn-remove" id="remove-btn" title="Remove image">×</button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="inspect-btn" disabled>🔍 Inspect Product</button>
+            </div>
+            
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 8px;">ℹ️ Model Architecture</div>
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                    <div><strong>Stage 1 (YOLOv8):</strong> Localizes and normalizes product bounding boxes.</div>
+                    <div style="margin-top: 6px;"><strong>Stage 2 (SSIM Autoencoder):</strong> Calculates hybrid structural dissimilarity maps ($0.5 \cdot \text{MSE} + 0.5 \cdot \text{DSSIM}$).</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Viewer -->
+        <main class="main-content">
+            <!-- Tabs -->
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="single">🔍 Single Inspection</button>
+                <button class="tab-btn" data-tab="analytics">📈 Quality Analytics</button>
+                <button class="tab-btn" data-tab="history">📜 Inspection Log</button>
+            </nav>
+
+            <!-- Panel: Single Inspection -->
+            <section class="tab-panel active" id="panel-single">
+                <!-- Welcome Banner -->
+                <div class="card" id="single-welcome" style="text-align: center; padding: 48px 24px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">🔬</div>
+                    <h2 style="font-family: 'Outfit'; font-size: 22px; margin-bottom: 8px;">Ready for Product Inspection</h2>
+                    <p style="color: var(--text-muted); font-size: 13.5px; max-width: 500px; margin: 0 auto 20px;">
+                        Select a product category on the left, click <strong>Browse File</strong> to load an image, and run the inspection.
+                    </p>
+                </div>
+
+                <!-- Active Results Panel -->
+                <div id="single-results" style="display: none; flex-direction: column; gap: 20px;">
+                    <!-- Metrics Row -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">Inspection Status</span>
+                            <div><span id="metric-status" class="badge-pass">PASS</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Defect Type</span>
+                            <div class="metric-value" id="metric-defect" style="font-size: 18px;">Good</div>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Confidence</span>
+                            <div class="metric-value" id="metric-confidence">99.0%</div>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Severity Level</span>
+                            <div class="metric-value" id="metric-severity" style="font-size: 18px;">0.0 (None)</div>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Anomaly Score</span>
+                            <div class="metric-value" id="metric-anomaly" style="font-size: 16px; color: var(--primary);">0.085 / 0.125</div>
+                        </div>
+                    </div>
+
+                    <!-- Anomaly Score Gauge Bar -->
+                    <div class="card" style="padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">📊 Quality Anomaly Threshold Gauge</span>
+                            <span id="gauge-label" style="font-size: 12.5px; font-weight: 700; color: var(--success);">0.0820 / 0.1250 (SAFE PASS)</span>
+                        </div>
+                        <div style="width: 100%; height: 12px; background: rgba(0,0,0,0.5); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); position: relative;">
+                            <div id="gauge-bar" style="width: 65%; height: 100%; background: linear-gradient(90deg, #10b981, #00d2ff); transition: width 0.4s ease, background 0.4s ease;"></div>
+                            <div style="position: absolute; top: 0; left: 80%; width: 2px; height: 100%; background: #ef4444; box-shadow: 0 0 6px #ef4444;" title="Defect Threshold Cutoff"></div>
+                        </div>
+                    </div>
+
+                    <!-- 4-Column Inspection Viewport -->
+                    <div class="inspection-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="image-card">
+                            <div class="image-card-title">
+                                <span>📷 Original Input</span>
+                                <span style="font-size: 11px; color: var(--text-dim);">Raw Sensor</span>
+                            </div>
+                            <div class="image-viewport">
+                                <img id="img-original" src="" alt="Original">
+                            </div>
+                        </div>
+
+                        <div class="image-card">
+                            <div class="image-card-title">
+                                <span>📦 Product Crop</span>
+                                <span style="font-size: 11px; color: var(--primary);">YOLO Box</span>
+                            </div>
+                            <div class="image-viewport">
+                                <img id="img-yolo" src="" alt="YOLO Cropped">
+                            </div>
+                        </div>
+
+                        <div class="image-card">
+                            <div class="image-card-title">
+                                <span>🔥 SSIM Heatmap</span>
+                                <span style="font-size: 11px; color: var(--accent-pink);">Anomaly Map</span>
+                            </div>
+                            <div class="image-viewport">
+                                <img id="img-heatmap" src="" alt="Heatmap Overlay">
+                            </div>
+                        </div>
+
+                        <div class="image-card">
+                            <div class="image-card-title">
+                                <span>🎯 Defect Area Box</span>
+                                <span style="font-size: 11px; color: var(--danger);">Crack/Stain Zoom</span>
+                            </div>
+                            <div class="image-viewport">
+                                <img id="img-defect-box" src="" alt="Defect Box & Zoom">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel: Analytics -->
+            <section class="tab-panel" id="panel-analytics">
+                <div class="card">
+                    <h3 class="card-title">📈 Industrial Quality Trends</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 6px;">Real-time defect ratios and severity distributions across production lines.</p>
+                </div>
+            </section>
+
+            <!-- Panel: History Log -->
+            <section class="tab-panel" id="panel-history">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📜 Recent Inspection Records</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Category</th>
+                                    <th>Result</th>
+                                    <th>Defect Type</th>
+                                    <th>Confidence</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No inspection records yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loading-screen">
+        <div style="text-align: center; color: #fff;">
+            <div style="font-size: 40px; animation: pulse 1s infinite alternate;">🧠</div>
+            <div style="font-family: 'Outfit'; font-size: 18px; font-weight: 600; margin-top: 12px;">Evaluating AI Models...</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Running YOLOv8 Localization & SSIM Reconstruction</div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="modal-overlay" id="lightbox-modal">
+        <div class="modal-content">
+            <img id="lightbox-img" src="" alt="Zoomed View">
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

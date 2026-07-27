@@ -13,6 +13,9 @@ export default function Dashboard() {
   const [role, setRole] = useState(null);
   const [rows, setRows] = useState([]);
   const [file, setFile] = useState(null);
+
+  const [selectedCategory, setSelectedCategory] = useState('bottle');
+
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState('');
   const [latestResult, setLatestResult] = useState(null);
@@ -39,7 +42,7 @@ export default function Dashboard() {
     if (!file) return;
     setIsLoading(true);
     try {
-      const result = await runInspection(file);
+      const result = await runInspection(file, selectedCategory);
       setLatestResult(result);
       setRows((prev) => [{ fileName, ...result }, ...prev]);
 
@@ -124,10 +127,12 @@ export default function Dashboard() {
             </div>
 
             <UploadPanel
-              onFileChange={handleFileChange}
-              onRun={handleRun}
-              isLoading={isLoading}
-              hasFile={!!file}
+                onFileChange={handleFileChange}
+                onRun={handleRun}
+                onCategoryChange={setSelectedCategory}
+                selectedCategory={selectedCategory}
+                isLoading={isLoading}
+                hasFile={!!file}
             />
 
             <InspectionResult preview={preview} result={latestResult} isLoading={isLoading} />
