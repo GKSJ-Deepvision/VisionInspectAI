@@ -118,7 +118,7 @@ class TrainedAnomalyDetector:
             print(f"  [{idx}/{len(categories)}] Training '{category}': {len(image_paths)} good images... ", end="", flush=True)
 
             start = datetime.now()
-            raw_features = self.feature_extractor.extract_batch(image_paths, batch_size=16)
+            raw_features = [self.feature_extractor.extract(img_path) for img_path in image_paths]
             elapsed = (datetime.now() - start).total_seconds()
 
             if len(raw_features) == 0:
@@ -151,9 +151,8 @@ class TrainedAnomalyDetector:
             max_dist = float(np.max(loo_distances))
             p95_dist = float(np.percentile(loo_distances, 95))
 
-            stat_threshold = mean_dist + 2.0 * std_dist
-            pct_threshold = p95_dist + 1.0 * std_dist
-            threshold = max(stat_threshold, pct_threshold)
+
+            threshold = mean_dist + 0.5 * std_dist
             threshold = max(threshold, 0.05)
 
             self.category_thresholds[category] = threshold
@@ -260,7 +259,7 @@ class TrainedAnomalyDetector:
                 "distance_ratio": round(self._clean_float(best_knn_distance / best_threshold), 4),
                 "is_unknown": True,
             }
-        margin = 1.15
+        margin = 1.0
         is_defective = best_knn_distance > (best_threshold * margin)
         ratio = best_knn_distance / best_threshold
 

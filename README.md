@@ -1,188 +1,27 @@
-# VisionInspectAI
+# VisionInspect AI - Backend & Model Overview
 
-VisionInspectAI is an AI-powered industrial visual inspection system that automates defect detection and product quality assessment using Computer Vision and Deep Learning.
+## Modified Files in This Update
 
----
+If you already have the codebase set up and only need the latest backend changes, you can pull or checkout these specific files:
 
-# Project Structure
+* **`backend/app/ml_engine/anomaly_detector.py`**  
+  Updated threshold calculations and KNN prediction logic for anomaly detection.
 
-```
-VisionInspectAI/
-│
-├── backend/
-│   ├── app/                     # FastAPI backend
-│   ├── inspection_plots/        # Generated reports & visualizations
-│   └── visualization/
-│       ├── main.py
-│       └── src/
-│           ├── config.py
-│           ├── dataset_loader.py
-│           ├── preprocessing.py
-│           ├── image_quality.py
-│           ├── feature_extraction.py
-│           ├── visualization.py
-│           ├── pipeline.py
-│           └── ...
-│
-├── dataset/                     # MVTec AD Dataset
-│
-├── frontend/                    # React Frontend
-│
-└── docs/
-```
+* **`backend/app/ml_engine/feature_extractor.py`**  
+  Updated multi-scale ResNet feature extractor setup.
+
+* **`backend/train_model.py`**  
+  Updated model training and evaluation script.
+
+* **`backend/models/trained/`** *(Directory)*  
+  Contains the updated `.npy` feature bank weights and `metadata.json`.
 
 ---
 
-# Inspection Pipeline
+## Commands to Pull/Checkout Only Modified Files
 
-```
-MVTec AD Dataset
-        │
-        ▼
-Dataset Loader
-        │
-        ▼
-Image Quality Analysis
-        │
-        ▼
-Image Preprocessing
-        │
-        ▼
-Feature Extraction
-        │
-        ▼
-Model Inference
-(Classification + Defect Detection)
-        │
-        ▼
-Inspection Report
-        │
-        ▼
-FastAPI Backend
-        │
-        ▼
-React Frontend
-```
+If you want to update **only** these specific files in your local workspace without pulling everything else:
 
----
-
-# Current Modules
-
-## Dataset Loader
-
-Loads images directly from the MVTec AD dataset.
-
-Features:
-
-- Automatic category discovery
-- Train/Test image loading
-- Defect type loading
-- Ground truth mask loading
-
----
-
-## Image Preprocessing
-
-Prepares images before model inference.
-
-Current preprocessing steps:
-
-- Image Loading
-- RGB Conversion
-- Image Resizing
-- CLAHE Contrast Enhancement
-- Optional Noise Removal
-- Image Normalization
-
----
-
-## Image Quality Analysis
-
-Evaluates image quality before inference.
-
-Metrics:
-
-- Brightness
-- Contrast
-- Blur Score (Variance of Laplacian)
-- Noise Estimation
-
----
-
-## Feature Extraction
-
-Extracts handcrafted Computer Vision features.
-
-Features:
-
-- RGB Color Histogram
-- Local Binary Pattern (LBP)
-- Edge Density
-- Contour Statistics
-
----
-
-## Visualization
-
-Automatically generates:
-
-- Original Image
-- Preprocessed Image
-- Comparison View
-- RGB Histogram
-- Grayscale Histogram
-- Edge Detection
-
----
-
-## Pipeline
-
-The pipeline integrates all preprocessing modules into a single workflow.
-
-```
-Load Image
-      │
-      ▼
-Preprocess
-      │
-      ▼
-Quality Analysis
-      │
-      ▼
-Feature Extraction
-      │
-      ▼
-Visualization
-      │
-      ▼
-Generate Reports
-```
-
----
-
-# Generated Outputs
-
-Running the inspection pipeline generates:
-
-- Quality Report (JSON)
-- Feature Summary (CSV)
-- Comparison Images
-- Histograms
-- Edge Detection Results
-
-These outputs are generated automatically and are excluded from version control.
-
----
-
-# Future Work
-
-- Deep Learning Model Integration
-- Product Classification
-- Defect Detection
-- Defect Localization
-- Inspection Report Generation
-- FastAPI Integration
-- React Dashboard
-- Database Integration
-
----
+```bash
+git fetch origin
+git checkout origin/leela-sowmya -- backend/app/ml_engine/anomaly_detector.py backend/app/ml_engine/feature_extractor.py backend/train_model.py backend/models/trained/

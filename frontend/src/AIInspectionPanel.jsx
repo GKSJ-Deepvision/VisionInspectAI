@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, ShieldCheck, AlertTriangle, CheckCircle2, Cpu, Activity, Zap, Layers, RefreshCw, ZoomIn, Search } from 'lucide-react';
+import { Upload, ShieldCheck, AlertTriangle, CheckCircle2, Cpu, Activity, Zap, RefreshCw, ZoomIn, Search } from 'lucide-react';
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -35,9 +35,14 @@ export default function AIInspectionPanel({ addToast }) {
     formData.append("product_sku", "MVI-PROD-2026");
 
     try {
-      // Simulate steps for UI
+      // Simulate pipeline steps for UI
       setTimeout(() => setStep(3), 800);
-      const res = await axios.post(`${API_BASE}/api/inspect`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      
+      // Fixed endpoint route with /api prefix
+      const res = await axios.post(`${API_BASE}/api/inspect`, formData, { 
+        headers: { "Content-Type": "multipart/form-data" } 
+      });
+      
       setResult(res.data);
       setStep(4);
       addToast?.('Inspection completed successfully', 'success');
@@ -54,6 +59,23 @@ export default function AIInspectionPanel({ addToast }) {
     if (score < 30) return 'text-emerald-400 stroke-emerald-400';
     if (score < 70) return 'text-amber-400 stroke-amber-400';
     return 'text-rose-400 stroke-rose-400';
+  };
+
+  // Safe classification resolver (avoids returning "None")
+  const getClassificationLabel = (res) => {
+    if (!res) return "None";
+    const rawCategory = res.defect_category || res.classification || res.defect_type;
+    if (rawCategory && rawCategory !== "None" && rawCategory !== "Defective") {
+      return rawCategory;
+    }
+    return (res.pass_fail_decision === "FAIL" || res.is_defective) ? "Surface Defect" : "Normal";
+  };
+
+  // Confidence resolver calculation
+  const getConfidenceValue = (res) => {
+    if (!res) return 98.0;
+    const rawConf = res.confidence_score ?? res.confidence ?? 0.98;
+    return rawConf > 1 ? rawConf : rawConf * 100;
   };
 
   return (
@@ -148,7 +170,7 @@ export default function AIInspectionPanel({ addToast }) {
                       <div>
                         <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 mb-1">SYSTEM VERDICT</div>
                         <div className={`text-5xl font-black tracking-wide font-mono ${result.pass_fail_decision === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}`}>{result.pass_fail_decision}</div>
-                        <div className="text-xs font-semibold mt-2 text-slate-300">{result.recommendation}</div>
+                        <div className="text-xs font-semibold mt-2 text-slate-300">{result.recommendation || (result.pass_fail_decision === 'PASS' ? 'Component meets quality thresholds.' : 'Defect detected. Quarantine item for secondary review.')}</div>
                       </div>
                     </div>
 
@@ -176,7 +198,11 @@ export default function AIInspectionPanel({ addToast }) {
                     </div>
                     <div className="bg-slate-950 rounded-2xl overflow-hidden h-64 flex items-center justify-center relative group cursor-crosshair">
                       {result.heatmap_image_path ? (
-                        <img src={`${API_BASE}/${result.heatmap_image_path}`} alt="Heatmap" className="w-full h-full object-contain transform group-hover:scale-150 transition-transform duration-700 ease-in-out" />
+                        <img 
+                          src={result.heatmap_image_path.startsWith('http') ? result.heatmap_image_path : `${API_BASE}/${result.heatmap_image_path.replace(/^\//,'')}`} 
+                          alt="Heatmap" 
+                          className="w-full h-full object-contain transform group-hover:scale-150 transition-transform duration-700 ease-in-out" 
+                        />
                       ) : (
                         <div className="text-xs text-slate-600 font-mono">No Heatmap Data</div>
                       )}
@@ -193,7 +219,9 @@ export default function AIInspectionPanel({ addToast }) {
                       <div className="space-y-4 font-mono text-xs">
                         <div>
                           <div className="text-slate-500 mb-1">Classification</div>
-                          <div className="font-bold text-white bg-slate-800/50 border border-slate-700 px-3 py-2 rounded-lg inline-block">{result.defect_type || "None"}</div>
+                          <div className="font-bold text-white bg-slate-800/50 border border-slate-700 px-3 py-2 rounded-lg inline-block">
+                            {getClassificationLabel(result)}
+                          </div>
                         </div>
                         <div>
                           <div className="text-slate-500 mb-1">Matched Category</div>
@@ -204,10 +232,12 @@ export default function AIInspectionPanel({ addToast }) {
                         <div>
                           <div className="flex justify-between text-slate-500 mb-1">
                             <span>Confidence</span>
-                            <span className="text-sky-400 font-bold">{((result.confidence_score || 0.98) * 100).toFixed(1)}%</span>
+                            <span className="text-sky-400 font-bold">
+                              {getConfidenceValue(result).toFixed(1)}%
+                            </span>  
                           </div>
                           <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${(result.confidence_score || 0.98) * 100}%` }} transition={{ duration: 1, delay: 0.5 }} className="h-full bg-gradient-to-r from-sky-500 to-blue-500"></motion.div>
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${getConfidenceValue(result)}%` }} transition={{ duration: 1, delay: 0.5 }} className="h-full bg-gradient-to-r from-sky-500 to-blue-500"/>
                           </div>
                         </div>
 
@@ -218,7 +248,9 @@ export default function AIInspectionPanel({ addToast }) {
                           </div>
                           <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
                             <div className="text-slate-500 mb-1">Log ID</div>
-                            <div className="font-bold text-slate-300 text-sm truncate" title={result.inspection_id}>{result.inspection_id?.substring(0,8) || "AUTO"}</div>
+                            <div className="font-bold text-slate-300 text-sm truncate" title={String(result.id || result.inspection_id || "AUTO")}>
+                              {String(result.id || result.inspection_id || "AUTO").substring(0,8)}
+                            </div>
                           </div>
                         </div>
                       </div>

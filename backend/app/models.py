@@ -1,4 +1,5 @@
 import enum
+import uuid
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -48,7 +49,14 @@ class Product(Base):
 class InspectionRecord(Base):
     __tablename__ = "inspection_records"
     
-    inspection_id = Column(String, primary_key=True, index=True)
+    # Generate UUID automatically if not passed!
+    inspection_id = Column(
+        String, 
+        primary_key=True, 
+        index=True, 
+        default=lambda: f"INS-{uuid.uuid4().hex[:8].upper()}"
+    )
+    
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
     product_sku = Column(String, nullable=True, default="MVI-PROD-2026")
     inspector_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -73,7 +81,7 @@ class InspectionRecord(Base):
     status = Column(String, nullable=True, default="COMPLETED")
     notes = Column(String, nullable=True)
     
-    pass_fail_decision = Column(String, nullable=False)
+    pass_fail_decision = Column(String, nullable=False, default="PASS")
     is_defective = Column(Boolean, default=False)
     defect_type = Column(String, nullable=True, default="None")
     confidence_score = Column(Float, nullable=True, default=0.0)
@@ -99,8 +107,12 @@ class InspectionRecord(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     
-    # 🚀 UNIVERSAL SANITIZER
+    #  UNIVERSAL SANITIZER
     def __init__(self, **kwargs):
+        # Auto-set inspection_id if missing
+        if "inspection_id" not in kwargs or not kwargs["inspection_id"]:
+            kwargs["inspection_id"] = f"INS-{uuid.uuid4().hex[:8].upper()}"
+            
         for key, value in kwargs.items():
             if hasattr(value, 'value'):
                 value = value.value

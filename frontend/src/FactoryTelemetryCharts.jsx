@@ -1,18 +1,25 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
-import { Activity, TrendingUp, AlertTriangle, CheckCircle2, BarChart3, Clock, Zap } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Activity, TrendingUp, AlertTriangle, CheckCircle2, BarChart3, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API_BASE = "http://127.0.0.1:8000";
 
 export default function FactoryTelemetryCharts() {
-  const [liveMetrics, setLiveMetrics] = useState({ total_inspections: 0, defects_detected: 0, automated_pass_rate_percent: 100.0, system_status: "CONNECTING..." });
+  const [liveMetrics, setLiveMetrics] = useState({ 
+    total_inspections: 0, 
+    defects_detected: 0, 
+    pass_rate: 100.0, 
+    system_status: "CONNECTING..." 
+  });
+
   const [trendData, setTrendData] = useState([
     { time: '08:00', passed: 142, failed: 3 }, { time: '09:00', passed: 185, failed: 5 }, { time: '10:00', passed: 210, failed: 2 },
     { time: '11:00', passed: 195, failed: 8 }, { time: '12:00', passed: 160, failed: 4 }, { time: '13:00', passed: 220, failed: 6 },
     { time: '14:00', passed: 190, failed: 3 }
   ]);
+
   const [defectBreakdown, setDefectBreakdown] = useState([
     { name: 'Surface Crack', count: 14 }, { name: 'Scratch', count: 22 }, { name: 'Misalignment', count: 8 }, { name: 'Debris', count: 11 }
   ]);
@@ -22,17 +29,30 @@ export default function FactoryTelemetryCharts() {
       try {
         const res = await axios.get(`${API_BASE}/api/analytics`);
         setLiveMetrics(res.data);
+        
+        if (res.data.defect_breakdown) {
+          setDefectBreakdown(res.data.defect_breakdown);
+        }
+        
         setTrendData(prev => {
           const updated = [...prev];
           const latest = updated.length - 1;
-          const fails = res.data.defects_detected;
-          if (res.data.total_inspections > 0) {
-            updated[latest] = { ...updated[latest], passed: (updated[latest].passed + (res.data.total_inspections - fails)), failed: (updated[latest].failed + fails) };
+          const fails = res.data.failed_inspections ?? res.data.defects_detected ?? 0;
+          const total = res.data.total_inspections ?? 0;
+          if (total > 0) {
+            updated[latest] = { 
+              ...updated[latest], 
+              passed: updated[latest].passed + (total - fails), 
+              failed: updated[latest].failed + fails 
+            };
           }
           return updated;
         });
-      } catch (err) {}
+      } catch (err) {
+        console.error("Telemetry fetch error:", err);
+      }
     };
+
     fetchLiveTelemetry();
     const interval = setInterval(fetchLiveTelemetry, 4000);
     return () => clearInterval(interval);
@@ -43,19 +63,26 @@ export default function FactoryTelemetryCharts() {
       return (
         <div className="glass-card p-3 rounded-xl text-xs font-mono border-slate-700 shadow-2xl">
           <p className="text-slate-300 font-bold mb-2 pb-1 border-b border-slate-700">Time: {label}</p>
-          <p className="text-emerald-400 flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>Passed: {payload[0].value}</p>
-          <p className="text-rose-400 flex items-center mt-1"><span className="w-2 h-2 rounded-full bg-rose-400 mr-2"></span>Failed: {payload[1].value}</p>
+          <p className="text-emerald-400 flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>Passed: {payload[0]?.value}</p>
+          <p className="text-rose-400 flex items-center mt-1"><span className="w-2 h-2 rounded-full bg-rose-400 mr-2"></span>Failed: {payload[1]?.value}</p>
         </div>
       );
     }
     return null;
   };
 
+  // Safe formatting for pass rate to avoid duplicate '%' symbol
+  const rawPassRate = liveMetrics?.pass_rate ?? liveMetrics?.automated_pass_rate_percent ?? 0;
+  const passRateDisplay = typeof rawPassRate === 'number' ? `${rawPassRate}%` : (String(rawPassRate).endsWith('%') ? rawPassRate : `${rawPassRate}%`);
+  
+  const rejectionsValue = liveMetrics?.failed_inspections ?? liveMetrics?.defects_detected ?? 0;
+  const latencyValue = liveMetrics?.avg_latency_ms ? `${Math.round(liveMetrics.avg_latency_ms)}ms` : '138ms';
+
   const kpis = [
-    { title: 'Shift Throughput', val: liveMetrics.total_inspections, icon: Activity, color: 'sky', subtitle: 'Active ingestion' },
-    { title: 'Pass Rate', val: `${liveMetrics.automated_pass_rate_percent}%`, icon: CheckCircle2, color: 'emerald', subtitle: 'Target: >98.5%' },
-    { title: 'Rejection Rate', val: liveMetrics.defects_detected, icon: AlertTriangle, color: 'rose', subtitle: 'Flagged for QA' },
-    { title: 'Avg Latency', val: '138ms', icon: Clock, color: 'amber', subtitle: 'WideResNet-50' }
+    { title: 'Shift Throughput', val: liveMetrics.total_inspections ?? 0, icon: Activity, color: 'sky', subtitle: 'Active ingestion' },
+    { title: 'Pass Rate', val: passRateDisplay, icon: CheckCircle2, color: 'emerald', subtitle: 'Target: >98.5%' },
+    { title: 'Rejection Rate', val: rejectionsValue, icon: AlertTriangle, color: 'rose', subtitle: 'Flagged for QA' },
+    { title: 'Avg Latency', val: latencyValue, icon: Clock, color: 'amber', subtitle: 'WideResNet-50' }
   ];
 
   return (

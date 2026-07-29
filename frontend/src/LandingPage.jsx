@@ -1,163 +1,417 @@
 import React, { useState, useEffect } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { Cpu, Users, Building2, ArrowRight, ShieldCheck, Zap, Eye, Activity, Database, Server, Workflow } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowRight, 
+  Scan, 
+  Layers, 
+  Activity, 
+  Database, 
+  CheckCircle2, 
+  Settings2, 
+  BarChart3, 
+  Terminal, 
+  ShieldCheck, 
+  ChevronRight,
+  Eye
+} from 'lucide-react';
 
 export default function LandingPage({ onNavigateToAuth }) {
-  const { scrollYProgress } = useScroll();
-  const yBg = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
-  const [typedText, setTypedText] = useState('');
-  const fullText = "Conveyor Quality Control. Reimagined in AI.";
+  const [scannedFrame, setScannedFrame] = useState(0);
 
+  // Auto-cycle live scanner demonstration
   useEffect(() => {
-    let i = 0;
-    const intervalId = setInterval(() => {
-      setTypedText(fullText.substring(0, i));
-      i++;
-      if (i > fullText.length) clearInterval(intervalId);
-    }, 50);
-    return () => clearInterval(intervalId);
+    const timer = setInterval(() => {
+      setScannedFrame((prev) => (prev + 1) % 3);
+    }, 3500);
+    return () => clearInterval(timer);
   }, []);
 
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
-  };
-  const staggerContainer = {
+  const sampleInspections = [
+    { id: "INS-2026-0891", status: "PASS", defect: "None", confidence: "98.4%", severity: "NONE" },
+    { id: "INS-2026-0892", status: "FAIL", defect: "Surface Scratch", confidence: "94.2%", severity: "HIGH" },
+    { id: "INS-2026-0893", status: "REVIEW", defect: "Pitting / Discoloration", confidence: "62.1%", severity: "MEDIUM" }
+  ];
+
+  // Animation Variants
+  const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 25 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } 
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-x-hidden">
-      <div className="particle-bg"></div>
+    <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans relative overflow-x-hidden selection:bg-emerald-500 selection:text-black">
       
-      {/* Background Orbs */}
-      <motion.div style={{ y: yBg }} className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-sky-600/10 blur-[150px] rounded-full pointer-events-none" />
-      <motion.div style={{ y: useTransform(scrollYProgress, [0, 1], ['0%', '-50%']) }} className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 blur-[130px] rounded-full pointer-events-none" />
+      {/* Dynamic Animated Grid Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
-      {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center space-x-3 group cursor-pointer">
-          <Cpu className="h-8 w-8 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
-          <span className="text-xl font-black tracking-wider gradient-text-animated font-mono">VISIONINSPECT AI</span>
+      {/* Atmospheric Ambient Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[40%] right-0 w-[500px] h-[500px] bg-sky-500/5 blur-[140px] rounded-full pointer-events-none" />
+
+      {/* --- HEADER --- */}
+      <header className="border-b border-slate-800/80 bg-[#07090e]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center space-x-3 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:border-emerald-400 group-hover:scale-105 transition-all">
+              <Scan className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-mono font-bold tracking-wider text-white text-base flex items-center gap-2">
+                VISIONINSPECT <span className="text-[10px] text-emerald-400 font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">AI CORE</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono tracking-tight">INDUSTRIAL DEFECT ENGINE</span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center space-x-4"
+          >
+            <button
+              onClick={() => onNavigateToAuth('CLIENT')}
+              className="hidden sm:block text-xs font-mono text-slate-300 hover:text-white px-4 py-2 rounded transition-colors"
+            >
+              System Docs
+            </button>
+
+            <button
+              onClick={() => onNavigateToAuth('ENGINEER')}
+              className="text-xs font-mono bg-emerald-500 hover:bg-emerald-400 text-black px-5 py-2.5 rounded-lg font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] flex items-center gap-2"
+            >
+              <span>ACCESS SYSTEM</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </motion.div>
+
         </div>
-        <button
-          onClick={() => onNavigateToAuth('ENGINEER')}
-          className="text-xs font-mono bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/50 px-5 py-2.5 rounded-xl transition-all font-bold tracking-wider hover:shadow-[0_0_15px_rgba(56,189,248,0.4)]"
-        >
-          ACCESS PORTAL →
-        </button>
       </header>
 
-      {/* Hero Section */}
-      <motion.section initial="hidden" animate="visible" variants={staggerContainer} className="max-w-6xl mx-auto px-6 pt-32 pb-24 text-center relative z-10 min-h-[80vh] flex flex-col justify-center">
-        <motion.div variants={fadeInUp} className="inline-flex items-center space-x-2 bg-slate-900/80 border border-slate-700 px-4 py-2 rounded-full text-xs font-mono text-sky-400 mb-8 shadow-xl backdrop-blur-md hover:border-sky-500/50 transition-colors">
-          <Zap className="h-4 w-4 text-amber-400 animate-pulse" />
-          <span>ADVANCED MVTec ANOMALY DETECTION ENGINE</span>
-        </motion.div>
-
-        <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-black tracking-tight max-w-5xl mx-auto leading-tight mb-8 min-h-[160px] md:min-h-[100px]">
-          {typedText}<span className="animate-pulse">_</span>
-        </motion.h1>
-
-        <motion.p variants={fadeInUp} className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
-          Experience real-time PyTorch inference directly on your manufacturing edge. Detect surface abrasions and structural defects with zero-latency visual heatmaps.
-        </motion.p>
-
-        <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(56, 189, 248, 0.5)" }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onNavigateToAuth('ENGINEER')}
-            className="py-4 px-8 rounded-2xl font-black tracking-wider text-sm bg-gradient-to-r from-sky-500 to-blue-600 text-white flex items-center space-x-3 w-full sm:w-auto justify-center"
-          >
-            <span>INITIALIZE SYSTEM GATEWAY</span>
-            <ArrowRight className="h-5 w-5" />
-          </motion.button>
+      {/* --- HERO SECTION --- */}
+      <motion.section 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto px-6 pt-20 pb-28 relative z-10"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
-          <div className="flex gap-2 text-xs font-mono text-slate-500">
-            <span className="flex items-center bg-slate-900/50 border border-slate-800 px-3 py-2 rounded-lg backdrop-blur-sm"><ShieldCheck className="w-4 h-4 mr-1 text-emerald-400"/> 99.7% Accuracy</span>
-            <span className="flex items-center bg-slate-900/50 border border-slate-800 px-3 py-2 rounded-lg backdrop-blur-sm"><Zap className="w-4 h-4 mr-1 text-amber-400"/> &lt;15ms Latency</span>
-          </div>
-        </motion.div>
-      </motion.section>
+          {/* Left Column: Headlines & Action */}
+          <div className="lg:col-span-7 space-y-8">
+            
+            <motion.div variants={itemVariants} className="inline-flex items-center space-x-2.5 border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 rounded-full text-xs font-mono text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>HYBRID VISION & DEEP LEARNING ARCHITECTURE</span>
+            </motion.div>
 
-      {/* Architecture Diagram Section */}
-      <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="max-w-6xl mx-auto px-6 py-24 z-10 relative">
-        <div className="text-center mb-16">
-          <h2 className="text-xs font-mono text-sky-400 uppercase tracking-widest mb-2">NEURAL PIPELINE</h2>
-          <h3 className="text-3xl md:text-4xl font-bold text-white">End-to-End Processing Architecture</h3>
-        </div>
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-           <motion.div variants={fadeInUp} className="glass-card p-6 rounded-2xl text-center w-full md:w-64 hover:border-sky-500/50 transition-colors group">
-             <Workflow className="w-10 h-10 mx-auto mb-4 text-sky-400 group-hover:scale-110 transition-transform" />
-             <h4 className="font-bold text-lg mb-2">1. Ingestion</h4>
-             <p className="text-xs text-slate-400">High-speed conveyor frame capture</p>
-           </motion.div>
-           <motion.div variants={fadeInUp} className="hidden md:block text-slate-600"><ArrowRight className="w-8 h-8"/></motion.div>
-           <motion.div variants={fadeInUp} className="glass-card p-6 rounded-2xl text-center w-full md:w-64 hover:border-blue-500/50 transition-colors group">
-             <Cpu className="w-10 h-10 mx-auto mb-4 text-blue-400 group-hover:scale-110 transition-transform" />
-             <h4 className="font-bold text-lg mb-2">2. Inference</h4>
-             <p className="text-xs text-slate-400">WideResNet-50 anomaly detection</p>
-           </motion.div>
-           <motion.div variants={fadeInUp} className="hidden md:block text-slate-600"><ArrowRight className="w-8 h-8"/></motion.div>
-           <motion.div variants={fadeInUp} className="glass-card p-6 rounded-2xl text-center w-full md:w-64 hover:border-indigo-500/50 transition-colors group">
-             <Database className="w-10 h-10 mx-auto mb-4 text-indigo-400 group-hover:scale-110 transition-transform" />
-             <h4 className="font-bold text-lg mb-2">3. Logging</h4>
-             <p className="text-xs text-slate-400">ACID SQLite Audit Trail</p>
-           </motion.div>
-        </div>
-      </motion.section>
+            <motion.h1 variants={itemVariants} className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.08]">
+              Automated Visual Quality Control. <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
+                Built for Edge Speed.
+              </span>
+            </motion.h1>
 
-      {/* Role Selection Matrix */}
-      <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="max-w-6xl mx-auto px-6 py-24 z-10 relative">
-        <motion.div variants={fadeInUp} className="text-center mb-16">
-          <h2 className="text-xs font-mono text-slate-400 uppercase tracking-widest mb-2">CHOOSE YOUR WORKSPACE ROLE</h2>
-          <h3 className="text-3xl md:text-4xl font-bold text-white">Tailored Portals for Every Stakeholder</h3>
-        </motion.div>
+            <motion.p variants={itemVariants} className="text-slate-400 text-lg sm:text-xl max-w-2xl leading-relaxed font-normal">
+              Detect surface cracks, abrasions, and structural defects in real-time. Combines classical feature extraction with WideResNet-50 deep anomaly scoring and localized heatmaps.
+            </motion.p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[{ role: 'CLIENT', title: 'Line Operator', icon: Users, color: 'sky', desc: 'High-speed conveyor station interface. Upload frames for instant PASS/FAIL decisions.', label: 'ENTER OPERATOR PORTAL' },
-            { role: 'ENGINEER', title: 'Quality Engineer', icon: Cpu, color: 'blue', desc: 'Diagnostic command center. Inspect heatmaps, adjust contrast, verify severity math.', label: 'LAUNCH COMMAND CENTER' },
-            { role: 'OWNER', title: 'Factory Owner', icon: Building2, color: 'indigo', desc: 'Executive dashboard. Monitor shift OEE efficiency, ROI, and live database logs.', label: 'OPEN EXECUTIVE DASHBOARD' }
-          ].map((item, idx) => (
-            <motion.div 
-              key={idx} variants={fadeInUp}
-              whileHover={{ y: -10, scale: 1.02, rotateX: 5, rotateY: 5 }}
-              style={{ transformStyle: 'preserve-3d', perspective: 1000 }}
-              onClick={() => onNavigateToAuth(item.role)}
-              className={`glass-card p-8 rounded-3xl cursor-pointer flex flex-col justify-between group relative overflow-hidden transition-all duration-300 border-slate-800 hover:border-${item.color}-500/50 hover:shadow-[0_0_30px_rgba(0,0,0,0.5)]`}
-            >
-              <div className={`absolute top-0 right-0 w-32 h-32 bg-${item.color}-500/10 rounded-full blur-2xl -mr-16 -mt-16 transition-opacity group-hover:opacity-100 opacity-0`}></div>
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onNavigateToAuth('CLIENT')}
+                className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm rounded-xl transition-colors flex items-center justify-center space-x-3 shadow-lg shadow-emerald-500/20"
+              >
+                <span>Launch Line Inspector</span>
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onNavigateToAuth('ENGINEER')}
+                className="px-8 py-4 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-mono text-xs rounded-xl transition-colors flex items-center justify-center space-x-2"
+              >
+                <span>Quality Command Center</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </motion.button>
+            </motion.div>
+
+            {/* Live Stats Bar */}
+            <motion.div variants={itemVariants} className="pt-8 border-t border-slate-800/80 grid grid-cols-3 gap-6 text-xs font-mono text-slate-400">
               <div>
-                <div className={`h-16 w-16 rounded-2xl bg-${item.color}-500/10 border border-${item.color}-500/30 flex items-center justify-center mb-6 text-${item.color}-400 group-hover:scale-110 transition-transform duration-500`}>
-                  <item.icon className="h-8 w-8" />
-                </div>
-                <h4 className={`text-2xl font-bold mb-3 text-white group-hover:text-${item.color}-400 transition-colors`}>{item.title}</h4>
-                <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
+                <span className="block text-slate-500 mb-1">FEATURE ENGINE</span>
+                <span className="text-slate-200 font-bold text-sm">LBP + Sobel Edge</span>
               </div>
-              <div className={`mt-8 flex items-center text-xs font-mono text-${item.color}-400 font-bold group-hover:translate-x-2 transition-transform`}>
-                <span>{item.label} →</span>
+              <div>
+                <span className="block text-slate-500 mb-1">ANOMALY DETECTOR</span>
+                <span className="text-slate-200 font-bold text-sm">WideResNet-50</span>
+              </div>
+              <div>
+                <span className="block text-slate-500 mb-1">AUDIT TRAIL</span>
+                <span className="text-slate-200 font-bold text-sm">SQLite Local Store</span>
               </div>
             </motion.div>
-          ))}
+
+          </div>
+
+          {/* Right Column: Live Inspection Visualizer */}
+          <motion.div variants={itemVariants} className="lg:col-span-5 relative">
+            <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+              
+              {/* Card Top Strip */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800 text-xs font-mono text-slate-400">
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span className="text-slate-200 font-bold">LIVE_INSPECTION_FEED</span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
+                  SKU: MVI-PROD-2026
+                </span>
+              </div>
+
+              {/* Simulated Optical Inspection Screen */}
+              <div className="my-6 relative h-64 bg-slate-950 border border-slate-800/80 rounded-xl overflow-hidden flex items-center justify-center group">
+                
+                {/* Laser Scanning Line Animation */}
+                <motion.div 
+                  animate={{ y: [-130, 130, -130] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                  className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#10b981] z-20 pointer-events-none"
+                />
+
+                {/* Simulated Heatmap Box */}
+                <div className="relative w-48 h-48 border border-slate-700/60 rounded-lg flex items-center justify-center bg-slate-900/40">
+                  <Eye className="w-12 h-12 text-slate-600 animate-pulse" />
+                  
+                  {/* Localized Defect Highlight Box */}
+                  {sampleInspections[scannedFrame].status !== "PASS" && (
+                    <motion.div 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute top-8 right-8 w-16 h-16 border-2 border-amber-400 bg-amber-500/20 rounded flex items-center justify-center text-[9px] font-mono font-bold text-amber-300"
+                    >
+                      ANOMALY
+                    </motion.div>
+                  )}
+                </div>
+
+                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur border border-slate-800 px-2.5 py-1 rounded text-[10px] font-mono text-slate-300 z-10">
+                  Frame Capture: Active
+                </div>
+              </div>
+
+              {/* Animated Live Status Switcher */}
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={scannedFrame}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl font-mono text-xs space-y-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">RECORD ID:</span>
+                    <span className="text-white font-bold">{sampleInspections[scannedFrame].id}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">DECISION:</span>
+                    <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                      sampleInspections[scannedFrame].status === 'PASS' 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : sampleInspections[scannedFrame].status === 'FAIL' 
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}>
+                      {sampleInspections[scannedFrame].status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-400">DEFECT TYPE:</span>
+                    <span className="text-slate-200">{sampleInspections[scannedFrame].defect}</span>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+            </div>
+          </motion.div>
+
         </div>
       </motion.section>
 
-      {/* Tech Stack Footer */}
-      <footer className="border-t border-slate-900 py-12 relative z-10 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <div className="flex flex-wrap justify-center gap-4 mb-8">
-            {['React 19', 'Vite', 'Tailwind CSS', 'Framer Motion', 'Recharts', 'FastAPI', 'PyTorch'].map((tech, i) => (
-              <span key={i} className="px-3 py-1 bg-slate-900/50 border border-slate-800 rounded-full text-xs font-mono text-slate-400">{tech}</span>
-            ))}
+      {/* --- FEATURE HIGHLIGHT MATRIX --- */}
+      <section className="border-t border-slate-800/80 bg-[#090d16] py-24 relative">
+        <div className="max-w-7xl mx-auto px-6">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest block">PIPELINE INTEGRITY</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">Engineered for Industrial Reliability</h2>
+            <p className="text-slate-400 text-sm font-sans">
+              Designed to process raw conveyor feeds, run feature analysis, render heatmaps, and maintain an immutable inspection audit trail.
+            </p>
           </div>
-          <div className="text-xs text-slate-600 font-mono flex flex-col items-center">
-            <span>VISIONINSPECT AI // SCROLL-WORLD ANIMATION ARCHITECTURE</span>
-            <div className="w-px h-12 bg-gradient-to-b from-slate-600 to-transparent mt-4"></div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {[
+              {
+                icon: Layers,
+                title: "Dual Feature Engine",
+                desc: "Combines LBP texture parameters and Sobel edge density with deep spatial features for robust defect identification."
+              },
+              {
+                icon: Activity,
+                title: "Visual Heatmaps",
+                desc: "Instant spatial anomaly map generation highlighting localized surface abrasions for clear operator verification."
+              },
+              {
+                icon: Database,
+                title: "ACID Audit Trail",
+                desc: "Automated local SQLite logging records every inspection frame, decision score, and timestamp for shift reporting."
+              }
+            ].map((feature, idx) => (
+              <motion.div 
+                key={idx}
+                whileHover={{ y: -6 }}
+                transition={{ duration: 0.2 }}
+                className="bg-[#0f1420] border border-slate-800 p-8 rounded-2xl hover:border-slate-700 transition-colors relative group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 mb-6 group-hover:border-emerald-500/40 transition-colors">
+                  <feature.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed font-sans">
+                  {feature.desc}
+                </p>
+              </motion.div>
+            ))}
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* --- WORKSPACE PORTAL SELECTOR --- */}
+      <section className="py-24 max-w-7xl mx-auto px-6">
+        
+        <div className="mb-16 text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest block">WORKSPACE ACCESS</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white">Select Operational Workspace</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          {/* Operator Portal */}
+          <motion.div 
+            whileHover={{ y: -8 }}
+            onClick={() => onNavigateToAuth('CLIENT')}
+            className="bg-[#0b0f19] border border-slate-800 hover:border-emerald-500/50 p-8 rounded-2xl cursor-pointer transition-all flex flex-col justify-between group shadow-xl hover:shadow-emerald-500/5"
+          >
+            <div>
+              <div className="flex justify-between items-start mb-8">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-bold">OPERATOR</span>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">Line Operator</h3>
+              <p className="text-sm text-slate-400 font-sans leading-relaxed">
+                Streamlined inspection station for uploading frames, conducting batch reviews, and getting instant PASS/FAIL decisions.
+              </p>
+            </div>
+            <div className="mt-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-emerald-400 font-bold">
+              <span>ENTER OPERATOR PORTAL</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.div>
+
+          {/* Engineer Portal */}
+          <motion.div 
+            whileHover={{ y: -8 }}
+            onClick={() => onNavigateToAuth('ENGINEER')}
+            className="bg-[#0b0f19] border border-slate-800 hover:border-emerald-500/50 p-8 rounded-2xl cursor-pointer transition-all flex flex-col justify-between group shadow-xl hover:shadow-emerald-500/5"
+          >
+            <div>
+              <div className="flex justify-between items-start mb-8">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Settings2 className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-bold">ENGINEERING</span>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">Quality Engineer</h3>
+              <p className="text-sm text-slate-400 font-sans leading-relaxed">
+                Diagnostic command center. Deep inspect heatmaps, adjust threshold parameters, and analyze texture feature distributions.
+              </p>
+            </div>
+            <div className="mt-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-emerald-400 font-bold">
+              <span>OPEN COMMAND CENTER</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.div>
+
+          {/* Owner / Executive Portal */}
+          <motion.div 
+            whileHover={{ y: -8 }}
+            onClick={() => onNavigateToAuth('OWNER')}
+            className="bg-[#0b0f19] border border-slate-800 hover:border-emerald-500/50 p-8 rounded-2xl cursor-pointer transition-all flex flex-col justify-between group shadow-xl hover:shadow-emerald-500/5"
+          >
+            <div>
+              <div className="flex justify-between items-start mb-8">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <BarChart3 className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-bold">EXECUTIVE</span>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">Plant Operations</h3>
+              <p className="text-sm text-slate-400 font-sans leading-relaxed">
+                Executive analytics dashboard. Monitor line throughput, defect trends over time, and shift performance metrics.
+              </p>
+            </div>
+            <div className="mt-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-emerald-400 font-bold">
+              <span>VIEW EXECUTIVE DASHBOARD</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.div>
+
+        </div>
+
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="border-t border-slate-800/80 bg-[#07090e] py-12 font-mono text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-slate-400 font-bold">VISIONINSPECT AI ENGINE</span>
+          </div>
+          <div className="flex space-x-6 text-slate-400">
+            <span>FastAPI Core</span>
+            <span>•</span>
+            <span>PyTorch ML</span>
+            <span>•</span>
+            <span>React Industrial UI</span>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
