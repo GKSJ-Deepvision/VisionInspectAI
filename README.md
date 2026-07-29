@@ -249,3 +249,27 @@ In future project milestones, the system will be expanded with the following enh
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Frontend
+
+The project also includes a modern Next.js frontend developed for the Quality Engineer and Factory Supervisor workflows.
+
+Features include:
+
+- Login page with role selection
+- Quality Engineer dashboard
+- Factory Supervisor dashboard
+- Inspection history
+- Confidence visualization
+- Heatmap visualization
+- Upload interface
+- Responsive UI using Tailwind CSS
+
+Frontend setup:
+
+```bash
+cd frontend
+npm install
+npm run dev
