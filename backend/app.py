@@ -1,3 +1,4 @@
+from backend.routes.inspection import router as inspection_router
 from fastapi import FastAPI
 
 from backend.routes.upload import router as upload_router
@@ -12,7 +13,7 @@ app = FastAPI(
     version="1.0.0",
     description="Manufacturing Defect Detection Backend"
 )
-
+app.include_router(inspection_router)
 app.include_router(upload_router)
 app.include_router(dataset_router)
 app.include_router(preprocess_router)
