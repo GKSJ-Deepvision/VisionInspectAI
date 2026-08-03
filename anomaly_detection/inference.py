@@ -1,3 +1,4 @@
+from backend.services.statistics import update_statistics
 import io
 import base64
 from pathlib import Path
@@ -285,27 +286,29 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
     reconstructed_pil = tensor_to_pil(reconstructed_tensor)
     reconstructed_pil = reconstructed_pil.resize(cropped_img.size)
 
-    # ── 10. Return ───────────────────────────────────────────────────────────
+        # ── 10. Update Statistics ───────────────────────────────────────────────
+
+    if defect_result == "PASS":
+        update_statistics("Good")
+    elif defect_result == "REJECT":
+        update_statistics("Defective")
+
+    # ── 11. Return Result ───────────────────────────────────────────────────
+
     return {
-        "category":          category,
-        "is_anomaly":        is_anomaly,
-        "defect_result":     defect_result,
-        "defect_class":      predicted_class,
-        "confidence_score":  class_confidence,
-        "anomaly_score":     round(anomaly_score, 6),
-        "threshold":         round(threshold, 6),
-        "severity_score":    round(severity_dict["severity_score"], 2),
-        "severity_level":    severity_dict["severity_level"],
-        "recommended_action":severity_dict["recommended_action"],
-        "yolo_status":       yolo_status,
-        "bbox":              bbox,
+        "category": category,
+        "is_anomaly": is_anomaly,
+        "defect_result": defect_result,
+        "defect_class": predicted_class,
+        "confidence_score": class_confidence,
+        "anomaly_score": round(anomaly_score, 6),
+        "threshold": round(threshold, 6),
+        "severity_score": round(severity_dict["severity_score"], 2),
+        "severity_level": severity_dict["severity_level"],
+        "recommended_action": severity_dict["recommended_action"],
+        "yolo_status": yolo_status,
+        "bbox": bbox,
         "class_probabilities": class_probs,
-        "quality_report":    quality_report,
-        "severity_breakdown": severity_dict["breakdown"],
-        # Base64 image URIs
-        "original_image":      pil_to_base64_uri(pil_img),
-        "cropped_image":       pil_to_base64_uri(cropped_img),
-        "reconstructed_image": pil_to_base64_uri(reconstructed_pil),
-        "heatmap_image":       pil_to_base64_uri(heatmap_pil),
-        "overlay_image":       pil_to_base64_uri(overlay_pil),
+        "quality_report": quality_report,
+        "severity_breakdown": severity_dict["breakdown"]
     }
