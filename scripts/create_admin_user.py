@@ -9,7 +9,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.db.init_beanie import init_database  # noqa: E402
-from app.db.mongodb import close_database, get_client  # noqa: E402
+from app.db.mongodb import client  # noqa: E402
 from app.models.user_model import User  # noqa: E402
 from app.security import hash_password  # noqa: E402
 
@@ -19,7 +19,6 @@ async def main() -> None:
     password = os.getenv("ADMIN_PASSWORD", "Admin@12345")
     name = os.getenv("ADMIN_NAME", "VisionInspect Admin")
 
-    client = get_client()
     await client.admin.command("ping")
     await init_database()
 
@@ -30,6 +29,8 @@ async def main() -> None:
             email=email,
             hashed_password=hash_password(password),
             role="admin",
+            requested_role="admin",
+            approval_status="approved",
             is_active=True,
         )
         await user.insert()
@@ -37,13 +38,14 @@ async def main() -> None:
     else:
         user.name = name
         user.role = "admin"
+        user.requested_role = "admin"
         user.approval_status = "approved"
         user.is_active = True
         await user.save()
         print(f"Admin user already exists; updated role/status: {email}")
 
     print("Admin password is configured from ADMIN_PASSWORD or the documented local default.")
-    await close_database()
+    await client.close()
 
 
 if __name__ == "__main__":
