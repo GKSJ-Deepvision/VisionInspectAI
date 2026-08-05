@@ -74,9 +74,11 @@ backend/processed_dataset/
 backend/augmented_dataset/
 
 # ============================================
-# Outputs
+# Outputs & Temporary Scratch Scripts
 # ============================================
 outputs/
+scratch/
+
 
 # ============================================
 # Exported Models
