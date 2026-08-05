@@ -1,53 +1,86 @@
 import { useEffect, useState } from 'react';
 import { downloadCSV } from '../lib/csv';
 
-// TODO: Once the factory-supervisor backend integration is confirmed (check with
-// team lead which branch has it), replace this mock fetch simulation with a real
-// call, e.g.:
-//   const res = await fetch('/api/supervisor/overview');
-//   const data = await res.json();
-// and set stats/lines/escalations/trend from the response instead of the
-// hardcoded values below.
-
-const MOCK_ESCALATIONS = [
-  { id: 1, product: 'Automotive Panel', defect: 'Surface Crack', severity: 88, line: 'Line 3' },
-  { id: 2, product: 'PCB Board', defect: 'Missing Component', severity: 91, line: 'Line 1' },
-  { id: 3, product: 'Metal Bracket', defect: 'Surface Crack', severity: 76, line: 'Line 2' },
-];
-
-const TREND = [40, 55, 48, 62, 58, 70, 65];
-
-const LINES = [
-  { name: 'Line 1', status: 'Attention', pass: 88 },
-  { name: 'Line 2', status: 'Operational', pass: 95 },
-  { name: 'Line 3', status: 'Attention', pass: 84 },
-];
-
-const DEFECT_DISTRIBUTION = [
-  { name: 'Surface Crack', count: 34 },
-  { name: 'Missing Component', count: 19 },
-  { name: 'Surface Scratch', count: 41 },
-  { name: 'Discoloration', count: 12 },
-];
-
-function SkeletonBlock({ className = '' }) {
-  return <div className={`bg-gridline/40 animate-pulse ${className}`} />;
-}
 
 export default function SupervisorOverview() {
-  const [isLoading, setIsLoading] = useState(true);
   const [queue, setQueue] = useState([]);
-  const maxDefect = Math.max(...DEFECT_DISTRIBUTION.map((d) => d.count));
+const [trend, setTrend] = useState([]);
+const [defects, setDefects] = useState([]);
+const [production, setProduction] = useState(null);
+const [risk, setRisk] = useState({});
 
-  useEffect(() => {
-    // Simulated load delay — swap for the real fetch above, keep this pattern
-    // (isLoading true -> false once data arrives) either way.
-    const timer = setTimeout(() => {
-      setQueue(MOCK_ESCALATIONS);
-      setIsLoading(false);
-    }, 700);
-    return () => clearTimeout(timer);
-  }, []);
+useEffect(() => {
+  async function loadData() {
+    try {
+      const BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+      const [
+        productionRes,
+        trendRes,
+        riskRes,
+        historyRes
+      ] = await Promise.all([
+        fetch(`${BASE}/reports/production`),
+        fetch(`${BASE}/analytics/trends`),
+        fetch(`${BASE}/analytics/risk-assessment`),
+        fetch(`${BASE}/history`)
+      ]);
+
+      const productionData = await productionRes.json();
+      const trendData = await trendRes.json();
+      const riskData = await riskRes.json();
+      const historyData = await historyRes.json();
+
+      setProduction(productionData);
+      setRisk(riskData);
+
+      // Trend chart
+      setTrend(
+        trendData.time_series.map((x) => ({
+          score: x.severity_score
+        }))
+      );
+
+      // Defect distribution
+      const severity = productionData.severity_distribution || {};
+
+      setDefects(
+        Object.entries(severity).map(([name, count]) => ({
+          name,
+          count
+        }))
+      );
+
+      // Escalation Queue
+      const critical = historyData.filter(
+        (item) =>
+          item.severity_level === "Critical" ||
+          item.severity_level === "High"
+      );
+
+      setQueue(
+        critical.map((item, index) => ({
+          id: index,
+          product: item.category,
+          defect: item.inferred_defect_type,
+          severity: item.severity_score,
+          line: "Production Line"
+        }))
+      );
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  loadData();
+}, []);
+
+const maxDefect =
+  defects.length > 0
+    ? Math.max(...defects.map((d) => d.count))
+    : 1;
 
   function resolve(id) {
     setQueue((prev) => prev.filter((item) => item.id !== id));
@@ -65,69 +98,71 @@ export default function SupervisorOverview() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {['Inspected Today', 'Pass Rate', 'Critical Defects', 'Active Lines'].map((label, i) => (
-          <div key={label} className="bg-panel border border-gridline p-4">
-            <p className="text-xs font-mono text-muted uppercase">{label}</p>
-            {isLoading ? (
-              <SkeletonBlock className="h-7 w-14 mt-2" />
-            ) : (
-              <p
-                className={`font-display text-2xl mt-1 ${
-                  i === 1 ? 'text-ok' : i === 2 ? 'text-signal' : 'text-ink'
-                }`}
-              >
-                {i === 0 ? '312' : i === 1 ? '91.4%' : i === 2 ? queue.length : '3'}
-              </p>
-            )}
-          </div>
-        ))}
+        <div className="bg-panel border border-gridline p-4">
+          <p className="text-xs font-mono text-muted uppercase">Inspected Today</p>
+          <p className="font-display text-2xl text-ink mt-1">{production?.total_units_inspected ?? 0}</p>
+        </div>
+        <div className="bg-panel border border-gridline p-4">
+          <p className="text-xs font-mono text-muted uppercase">Pass Rate</p>
+          <p className="font-display text-2xl text-ok mt-1">{production?.yield_pass_rate_pct ?? 0}%</p>
+        </div>
+        <div className="bg-panel border border-gridline p-4">
+          <p className="text-xs font-mono text-muted uppercase">Critical Defects</p>
+          <p className="font-display text-2xl text-signal mt-1">{queue.length}</p>
+        </div>
+        <div className="bg-panel border border-gridline p-4">
+          <p className="text-xs font-mono text-muted uppercase">Active Lines</p>
+          <p className="font-display text-2xl text-ink mt-1">{Object.keys(risk.category_risk_levels || {}).length}</p>
+        </div>
       </div>
 
       <div className="bg-panel border border-gridline p-4 sm:p-6">
         <h2 className="font-display text-lg text-ink mb-4">Production Line Health</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {LINES.map((line) => (
-            <div key={line.name} className="bg-graphite border border-gridline p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-ink font-body">{line.name}</span>
-                {isLoading ? (
-                  <SkeletonBlock className="h-4 w-16" />
-                ) : (
-                  <span
-                    className={`text-xs font-mono px-2 py-0.5 border ${
-                      line.status === 'Attention' ? 'border-warn text-warn' : 'border-ok text-ok'
-                    }`}
-                  >
-                    {line.status}
-                  </span>
-                )}
-              </div>
-              {isLoading ? (
-                <SkeletonBlock className="h-1.5 w-full" />
-              ) : (
-                <>
-                  <div className="w-full h-1.5 bg-gridline">
-                    <div className="h-full bg-signal" style={{ width: `${line.pass}%` }} />
-                  </div>
-                  <p className="text-xs font-mono text-muted mt-1">{line.pass}% pass rate</p>
-                </>
-              )}
-            </div>
-          ))}
+          {Object.entries(risk.category_risk_levels || {}).map(([name, line]) => (
+  <div key={name} className="bg-graphite border border-gridline p-4">
+
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-sm text-ink">{name}</span>
+
+      <span
+        className={`text-xs font-mono px-2 py-1 border ${
+          line.risk_level === "HIGH RISK"
+            ? "border-signal text-signal"
+            : line.risk_level === "MEDIUM RISK"
+            ? "border-warn text-warn"
+            : "border-ok text-ok"
+        }`}
+      >
+        {line.risk_level}
+      </span>
+    </div>
+
+    <div className="w-full h-2 bg-gridline">
+      <div
+        className="h-full bg-signal"
+        style={{
+          width: `${100 - line.defect_rate_pct}%`,
+        }}
+      />
+    </div>
+
+    <p className="text-xs font-mono text-muted mt-2">
+      {100 - line.defect_rate_pct}% pass rate
+    </p>
+
+  </div>
+))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-panel border border-gridline p-4 sm:p-6">
           <h2 className="font-display text-lg text-ink mb-4">7-Day Pass Rate Trend</h2>
-          <div className="flex items-end gap-2 sm:gap-3 h-32">
-            {TREND.map((val, i) => (
+          <div className="flex items-end gap-3 h-32">
+            {trend.map((val, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                {isLoading ? (
-                  <SkeletonBlock className="w-full h-full" />
-                ) : (
-                  <div className="w-full bg-signal/40" style={{ height: `${val}%` }} title={`${val}%`} />
-                )}
+                <div className="w-full bg-signal/40" style={{ height:`${Math.max(val.score * 100, 5)}%` }} title={`${val.score}%`} />
                 <span className="text-[10px] font-mono text-muted">D{i + 1}</span>
               </div>
             ))}
@@ -137,7 +172,7 @@ export default function SupervisorOverview() {
         <div className="bg-panel border border-gridline p-4 sm:p-6">
           <h2 className="font-display text-lg text-ink mb-4">Plant-Wide Defect Distribution</h2>
           <div className="space-y-3">
-            {DEFECT_DISTRIBUTION.map((d) => (
+            {defects.map((d) => (
               <div key={d.name}>
                 <div className="flex items-center justify-between text-xs font-mono text-muted mb-1">
                   <span>{d.name}</span>
