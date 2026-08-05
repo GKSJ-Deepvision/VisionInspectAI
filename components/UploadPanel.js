@@ -45,13 +45,9 @@ export default function UploadPanel({
   }
 
   return (
-    <div className="bg-panel border border-gridline p-6">
-
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display text-lg text-ink">
-          Product Image Upload
-        </h2>
-
+    <div className="bg-panel border border-gridline p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h2 className="font-display text-lg text-ink">Product Image Upload</h2>
         <span className="text-xs font-mono text-muted uppercase">
           Batch / Manual Upload
         </span>
@@ -65,7 +61,7 @@ export default function UploadPanel({
         <select
           value={selectedCategory}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="w-full bg-graphite border border-gridline p-2 text-ink"
+          className="w-full bg-graphite border border-gridline p-2 text-ink text-sm focus:outline-none focus:border-signal"
         >
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
@@ -83,10 +79,8 @@ export default function UploadPanel({
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`cursor-pointer border border-dashed h-32 flex items-center justify-center transition-colors ${
-          isDragging
-            ? 'border-signal bg-signal/5'
-            : 'border-gridline'
+        className={`cursor-pointer border border-dashed h-28 sm:h-32 flex items-center justify-center transition-colors ${
+          isDragging ? 'border-signal bg-signal/5' : 'border-gridline'
         }`}
       >
         <input
@@ -97,8 +91,8 @@ export default function UploadPanel({
           onChange={(e) => handleFiles(e.target.files)}
         />
 
-        <div className="text-center px-6">
-          <p className="text-sm text-ink">
+        <div className="text-center px-4 sm:px-6">
+          <p className="text-sm text-ink break-all">
             {fileName || 'Drag a product image here, or click to browse'}
           </p>
 
@@ -109,17 +103,16 @@ export default function UploadPanel({
       </div>
 
       {hasFile && (
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-center sm:justify-end mt-4">
           <button
             onClick={onRun}
             disabled={isLoading}
-            className="bg-signal text-graphite text-sm font-display font-semibold px-4 py-2 disabled:opacity-50"
+            className="w-full sm:w-auto bg-signal text-graphite text-sm font-display font-semibold px-4 py-2.5 sm:py-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-signal/90 transition-colors"
           >
             {isLoading ? 'Inspecting…' : 'Run Inspection'}
           </button>
         </div>
       )}
-
     </div>
   );
 }

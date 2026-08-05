@@ -10,8 +10,8 @@ export default function InspectionTable({ rows }) {
     return rows.filter((row) => {
       const matchesQuery =
         !query ||
-        row.productCategory.toLowerCase().includes(query.toLowerCase()) ||
-        row.prediction.toLowerCase().includes(query.toLowerCase());
+        row.productCategory?.toLowerCase().includes(query.toLowerCase()) ||
+        row.prediction?.toLowerCase().includes(query.toLowerCase());
       const matchesDecision = decisionFilter === 'all' || row.decision === decisionFilter;
       return matchesQuery && matchesDecision;
     });
@@ -31,32 +31,36 @@ export default function InspectionTable({ rows }) {
 
   return (
     <div className="bg-panel border border-gridline">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-6 py-4 border-b border-gridline">
-        <h2 className="font-display text-lg text-ink">Inspection Log</h2>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3 px-4 sm:px-6 py-4 border-b border-gridline">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg text-ink">Inspection Log</h2>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search category or defect…"
-            className="bg-graphite border border-gridline px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-signal"
+            className="w-full sm:w-auto bg-graphite border border-gridline px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-signal"
           />
-          <select
-            value={decisionFilter}
-            onChange={(e) => setDecisionFilter(e.target.value)}
-            className="bg-graphite border border-gridline px-2 py-1.5 text-xs text-muted focus:outline-none focus:border-signal"
-          >
-            <option value="all">All</option>
-            <option value="Pass">Pass</option>
-            <option value="Reject">Reject</option>
-          </select>
-          <button
-            onClick={handleExport}
-            disabled={!filtered.length}
-            className="text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Export CSV
-          </button>
+          <div className="flex gap-2">
+            <select
+              value={decisionFilter}
+              onChange={(e) => setDecisionFilter(e.target.value)}
+              className="flex-1 sm:flex-none bg-graphite border border-gridline px-2 py-1.5 text-xs text-muted focus:outline-none focus:border-signal"
+            >
+              <option value="all">All</option>
+              <option value="Pass">Pass</option>
+              <option value="Reject">Reject</option>
+            </select>
+            <button
+              onClick={handleExport}
+              disabled={!filtered.length}
+              className="flex-1 sm:flex-none text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
@@ -67,42 +71,44 @@ export default function InspectionTable({ rows }) {
             : 'No records match your search/filter.'}
         </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs font-mono uppercase text-muted border-b border-gridline">
-              <th className="px-6 py-3 font-normal">Product Image</th>
-              <th className="px-6 py-3 font-normal">Category</th>
-              <th className="px-6 py-3 font-normal">Prediction</th>
-              <th className="px-6 py-3 font-normal">Confidence</th>
-              <th className="px-6 py-3 font-normal">Severity</th>
-              <th className="px-6 py-3 font-normal">Decision</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((row, i) => (
-              <tr key={i} className="border-b border-gridline last:border-0">
-                <td className="px-6 py-3 font-mono text-ink truncate max-w-[160px]">
-                  {row.fileName}
-                </td>
-                <td className="px-6 py-3 text-muted">{row.productCategory}</td>
-                <td className="px-6 py-3 text-ink">{row.prediction}</td>
-                <td className="px-6 py-3 text-muted font-mono">{row.confidence}%</td>
-                <td className="px-6 py-3">
-                  <SeverityBadge level={row.severityLevel} score={row.severityScore} />
-                </td>
-                <td className="px-6 py-3">
-                  <span
-                    className={
-                      row.decision === 'Reject' ? 'text-signal font-mono' : 'text-ok font-mono'
-                    }
-                  >
-                    {row.decision === 'Reject' ? '✕ Reject' : '✓ Pass'}
-                  </span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="text-left text-xs font-mono uppercase text-muted border-b border-gridline">
+                <th className="px-4 sm:px-6 py-3 font-normal">Product Image</th>
+                <th className="px-4 sm:px-6 py-3 font-normal">Category</th>
+                <th className="px-4 sm:px-6 py-3 font-normal">Prediction</th>
+                <th className="px-4 sm:px-6 py-3 font-normal">Confidence</th>
+                <th className="px-4 sm:px-6 py-3 font-normal">Severity</th>
+                <th className="px-4 sm:px-6 py-3 font-normal">Decision</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((row, i) => (
+                <tr key={i} className="border-b border-gridline last:border-0">
+                  <td className="px-4 sm:px-6 py-3 font-mono text-ink truncate max-w-[160px]">
+                    {row.fileName}
+                  </td>
+                  <td className="px-4 sm:px-6 py-3 text-muted">{row.productCategory}</td>
+                  <td className="px-4 sm:px-6 py-3 text-ink">{row.prediction}</td>
+                  <td className="px-4 sm:px-6 py-3 text-muted font-mono">{row.confidence}%</td>
+                  <td className="px-4 sm:px-6 py-3">
+                    <SeverityBadge level={row.severityLevel} score={row.severityScore} />
+                  </td>
+                  <td className="px-4 sm:px-6 py-3">
+                    <span
+                      className={
+                        row.decision === 'Reject' ? 'text-signal font-mono' : 'text-ok font-mono'
+                      }
+                    >
+                      {row.decision === 'Reject' ? '✕ Reject' : '✓ Pass'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
