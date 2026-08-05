@@ -48,44 +48,20 @@ class ConvBlock(nn.Module):
         out += residual
         return self.relu(out)
 
-class DefectClassifier(nn.Module):
+from torchvision import models
+
+class ResNet18Classifier(nn.Module):
     """
-    Deep ConvNet Classifier for Multi-Class Manufacturing Defect Categorization.
-    Outputs logits and softmax class confidence scores.
+    Fine-Tuned ResNet18 Deep Classifier for Multi-Class Manufacturing Defect Categorization.
     """
     def __init__(self, num_classes=4):
-        super(DefectClassifier, self).__init__()
+        super(ResNet18Classifier, self).__init__()
         self.num_classes = num_classes
-        
-        self.prep = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=7, stride=2, padding=3, bias=False), # 64x64
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1) # 32x32
-        )
-        
-        self.layer1 = ConvBlock(32, 64, stride=1)
-        self.layer2 = ConvBlock(64, 128, stride=2) # 16x16
-        self.layer3 = ConvBlock(128, 256, stride=2) # 8x8
-        
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Sequential(
-            nn.Dropout(0.3),
-            nn.Linear(256, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            nn.Linear(128, num_classes)
-        )
+        self.resnet = models.resnet18(weights=None)
+        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
 
     def forward(self, x):
-        x = self.prep(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        logits = self.fc(x)
-        return logits
+        return self.resnet(x)
 
     def predict_class(self, x, class_list=None, exclude_good=False):
         """
@@ -118,6 +94,9 @@ class DefectClassifier(nn.Module):
                         
             return predicted_class, confidence_pct, probs_dict
 
+# Backward compatibility alias
+DefectClassifier = ResNet18Classifier
+
 _classifier_cache = {}
 
 def load_classifier(category: str):
@@ -126,17 +105,27 @@ def load_classifier(category: str):
         return _classifier_cache[category]
         
     classes = CATEGORY_DEFECT_CLASSES.get(category, ["good", "defective"])
-    model = DefectClassifier(num_classes=len(classes))
+    model = ResNet18Classifier(num_classes=len(classes))
     model_path = os.path.join("models", f"classifier_{category}.pth")
     if os.path.exists(model_path):
         try:
-            model.load_state_dict(torch.load(model_path, map_location="cpu"))
+            state_dict = torch.load(model_path, map_location="cpu")
+            if any(k.startswith("resnet.") for k in state_dict.keys()):
+                model.load_state_dict(state_dict, strict=False)
+            else:
+                model.resnet.load_state_dict(state_dict, strict=False)
             model.eval()
+            print(f"[+] Loaded fine-tuned ResNet18 classifier for '{category}' ({len(classes)} classes)")
         except Exception as e:
             print(f"Error loading classifier for {category}: {e}")
+
+    else:
+        print(f"Warning: Classifier weights not found at {model_path}. Using base model.")
             
     _classifier_cache[category] = (model, classes)
     return model, classes
+
+
 
 def predict_defect_class(img_tensor, category: str, exclude_good: bool = False):
     """
@@ -169,6 +158,8 @@ _CATEGORY_PROFILES = {
 
 _PRODUCT_MODEL = None
 
+_PRODUCT_MODEL = None
+
 def get_product_detector():
     global _PRODUCT_MODEL
     if _PRODUCT_MODEL is None:
@@ -179,7 +170,7 @@ def get_product_detector():
             resnet.eval()
             
             tf = transforms.Compose([
-                transforms.Resize((128, 128)),
+                transforms.Resize((224, 224)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -195,29 +186,40 @@ def detect_product_category(pil_img) -> tuple[str, float]:
     Returns:
         (category_name, confidence_percent)
     """
+    if hasattr(pil_img, "convert") and pil_img.mode != "RGB":
+        pil_img = pil_img.convert("RGB")
+
     detector = get_product_detector()
-    if detector:
+    if detector and _CATEGORY_EMBEDDING_CENTROIDS:
         try:
             resnet, tf = detector
             t = tf(pil_img).unsqueeze(0)
             with torch.no_grad():
                 emb = resnet(t).squeeze(0).numpy()
+                emb = emb / (np.linalg.norm(emb) + 1e-8)
                 
             scores = {}
             for cat, cent in _CATEGORY_EMBEDDING_CENTROIDS.items():
                 cos_sim = np.dot(emb, cent) / (np.linalg.norm(emb) * np.linalg.norm(cent) + 1e-8)
                 scores[cat] = float(cos_sim)
                 
-            best_cat = max(scores, key=scores.get)
-            best_sim = scores[best_cat]
-            conf = round(min(99.9, max(75.0, best_sim * 100.0)), 1)
-            return best_cat, conf
+            if scores:
+                best_cat = max(scores, key=scores.get)
+                best_sim = scores[best_cat]
+                conf = round(min(99.9, max(75.0, best_sim * 100.0)), 1)
+                return best_cat, conf
         except Exception as e:
             print(f"ResNet product classification error: {e}. Using feature profiling fallback.")
             
     # Fallback to feature profiling
     try:
+        if hasattr(pil_img, "convert") and pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+
         img_np = np.array(pil_img.resize((128, 128)))
+        if img_np.ndim == 2:
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_GRAY2RGB)
+            
         hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
         
@@ -245,5 +247,6 @@ if os.path.exists(_centroids_file):
         _CATEGORY_EMBEDDING_CENTROIDS = dict(_loaded)
     except Exception as _e:
         print(f"Warning loading category_centroids.npy: {_e}")
+
 
 

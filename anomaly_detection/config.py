@@ -15,40 +15,44 @@ DATASET_DIR = Path(os.getenv("MVTEC_DATASET_DIR", str(DEFAULT_DATASET_DIR)))
 CATEGORY = os.getenv("MVTEC_CATEGORY", "bottle")  # default category
 
 # ── Model Configurations ────────────────────────────────────────────────────
-# Autoencoder expects 128x128 RGB input
-IMAGE_SIZE = (128, 128)   # (Height, Width)
+# PaDiM uses ResNet18 pretrained backbone (224x224 RGB input)
+IMAGE_SIZE = (224, 224)   # (Height, Width)
 BATCH_SIZE = 16
-LEARNING_RATE = 1e-3
-NUM_EPOCHS = 15
 DEVICE = "cuda" if (torch.cuda.is_available() and os.getenv("USE_CUDA", "True") == "True") else "cpu"
+
+# PaDiM Architecture Settings
+PADIM_BACKBONE = "resnet18"
+PADIM_LAYERS = ["layer1", "layer2", "layer3"]
+PADIM_DIM = 100           # Subsampled feature channels for memory efficiency
+PADIM_SIGMA = 4.0          # Gaussian smoothing sigma for per-pixel anomaly maps
+PADIM_EPSILON = 0.01       # Covariance matrix regularization constant
 
 # Directory to save trained models
 MODEL_DIR = BASE_DIR / "models"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
-MODEL_PATH = MODEL_DIR / f"autoencoder_{CATEGORY}.pth"
+MODEL_PATH = MODEL_DIR / f"padim_{CATEGORY}.pth"
 
 # Logging / Output directories
 OUTPUT_DIR = BASE_DIR / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── Hybrid Anomaly Thresholds (calibrated for 0.4 Mean MAE + 0.6 Top-1.5% Peak MAE) ──
-# Calibrated on normal good images to guarantee high specificity (>95%) while accurately flagging defects.
+# ── Hybrid Anomaly Thresholds ──
 CATEGORY_THRESHOLDS = {
-    "bottle":     0.22000,
-    "cable":      0.25000,
-    "capsule":    0.23000,
-    "carpet":     0.13000,
-    "grid":       0.15000,
-    "hazelnut":   0.09500,
-    "leather":    0.04500,
-    "metal_nut":  0.35000,
-    "pill":       0.22000,
-    "screw":      0.20000,
-    "tile":       0.13500,
-    "toothbrush": 0.22000,
-    "transistor": 0.19000,
-    "wood":       0.05500,
-    "zipper":     0.24000,
+    "bottle":     15.0,
+    "cable":      18.0,
+    "capsule":    16.0,
+    "carpet":     12.0,
+    "grid":       14.0,
+    "hazelnut":   15.0,
+    "leather":    12.0,
+    "metal_nut":  16.0,
+    "pill":       15.0,
+    "screw":      14.0,
+    "tile":       13.0,
+    "toothbrush": 16.0,
+    "transistor": 15.0,
+    "wood":       12.0,
+    "zipper":     15.0,
 }
 
 # Dynamically load calibrated thresholds from thresholds.json if present
@@ -64,13 +68,12 @@ if THRESHOLDS_JSON_PATH.exists():
         print(f"Warning loading thresholds.json: {e}")
 
 # ── YOLO Configuration ──────────────────────────────────────────────────────
-# Only use YOLO for categories where product is a discrete centered object
-# Skip YOLO for textures (fills entire frame) or small/thin objects YOLO misidentifies
 YOLO_SKIP_CATEGORIES = {
     "cable", "capsule", "carpet", "grid", "leather",
     "metal_nut", "pill", "tile", "toothbrush",
     "transistor", "wood", "zipper"
 }
 
-# Default threshold (fallback if category not in dict above)
-ANOMALY_THRESHOLD = 0.050
+# Default threshold (fallback)
+ANOMALY_THRESHOLD = 15.0
+

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 const CATEGORIES = [
+  { label: '✨ Auto-Detect Product', value: 'auto' },
   { label: 'Bottle', value: 'bottle' },
   { label: 'Cable', value: 'cable' },
   { label: 'Capsule', value: 'capsule' },
@@ -17,6 +18,7 @@ const CATEGORIES = [
   { label: 'Wood', value: 'wood' },
   { label: 'Zipper', value: 'zipper' },
 ];
+
 
 export default function UploadPanel({
   onFileChange,

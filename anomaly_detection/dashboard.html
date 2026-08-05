@@ -130,11 +130,11 @@
         <!-- Loading Overlay with Multi-stage Steps -->
         <div id="loading-overlay" class="loading-overlay hidden">
             <div class="spinner-ring"></div>
-            <p class="loading-main">Running AI Inspection Pipeline…</p>
+            <p class="loading-main">Running PaDiM Inspection Pipeline…</p>
             <div class="pipeline-steps">
-                <div class="step-item active" id="step-1">Stage 1: YOLO Product Detection & Crop</div>
-                <div class="step-item" id="step-2">Stage 2: Autoencoder Reconstruction</div>
-                <div class="step-item" id="step-3">Stage 3: SSIM Anomaly Scoring & Classification</div>
+                <div class="step-item active" id="step-1">Stage 1: Preprocessing & Object Crop</div>
+                <div class="step-item" id="step-2">Stage 2: PaDiM Feature Extraction & Mahalanobis Map</div>
+                <div class="step-item" id="step-3">Stage 3: Defect Localization & Bounding Box Extraction</div>
             </div>
         </div>
 
@@ -176,30 +176,31 @@
                     </div>
                 </div>
                 <div class="img-card">
-                    <div class="img-label">2. YOLO Crop</div>
+                    <div class="img-label">2. Object Crop</div>
                     <div class="img-frame">
-                        <img id="img-cropped" src="" alt="YOLO Crop">
+                        <img id="img-cropped" src="" alt="Object Crop">
                     </div>
                 </div>
                 <div class="img-card">
-                    <div class="img-label">3. AE Reconstruction</div>
+                    <div class="img-label">3. Segmentation Mask</div>
                     <div class="img-frame">
-                        <img id="img-reconstructed" src="" alt="AE Reconstruction">
+                        <img id="img-reconstructed" src="" alt="Segmentation Mask">
                     </div>
                 </div>
                 <div class="img-card">
-                    <div class="img-label">4. Defect Heatmap</div>
+                    <div class="img-label">4. High-Res Heatmap</div>
                     <div class="img-frame">
-                        <img id="img-heatmap" src="" alt="Defect Heatmap">
+                        <img id="img-heatmap" src="" alt="High-Res Heatmap">
                     </div>
                 </div>
                 <div class="img-card featured">
-                    <div class="img-label highlight">5. Defect Localization</div>
+                    <div class="img-label highlight">5. Defect Localization & Bounding Box</div>
                     <div class="img-frame">
                         <img id="img-overlay" src="" alt="Defect Overlay Localization">
                     </div>
                 </div>
             </div>
+
 
             <!-- ── Reconstruction Error & Threshold Progress ── -->
             <div class="score-section glass">

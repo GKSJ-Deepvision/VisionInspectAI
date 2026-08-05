@@ -71,36 +71,16 @@ THRESHOLDS = config.CATEGORY_THRESHOLDS
 HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
 
 def load_model_for_category(category: str):
-    """Dynamically loads category-specific model weights if not already loaded."""
-    global model, current_category
+    """Dynamically loads category-specific PaDiM model statistics if not already loaded."""
     category = category.lower()
-    
-    if model is None or current_category != category:
-        model = AnomalyAutoencoder().to(device)
-        model_path = config.MODEL_DIR / f"autoencoder_{category}.pth"
-        if model_path.exists():
-            try:
-                # Load weight file
-                model.load_state_dict(torch.load(model_path, map_location=device))
-                model.eval()
-                current_category = category
-                print(f"Loaded trained model weights for category '{category}' from {model_path}")
-            except Exception as e:
-                print(f"Error loading model weights for '{category}': {e}. Model running with random weights.")
-                model.eval()
-                current_category = category
-        else:
-            print(f"No trained model weights found for '{category}' at {model_path}. Running in baseline mode.")
-            model.eval()
-            current_category = category
-            
-    return model
+    from .inference import load_padim
+    return load_padim(category)
 
 @app.on_event("startup")
 async def startup_event():
-    # Pre-load autoencoder for default category at startup
-    from anomaly_detection.inference import load_autoencoder
-    load_autoencoder("bottle")
+    # Pre-load PaDiM for default category at startup
+    from anomaly_detection.inference import load_padim
+    load_padim("bottle")
 
 @app.get("/", response_class=HTMLResponse)
 def get_dashboard():
@@ -119,18 +99,18 @@ def get_dashboard():
 def get_status(category: str = "bottle"):
     """Returns the current server status and configuration."""
     category = category.lower()
-    model_path = config.MODEL_DIR / f"autoencoder_{category}.pth"
+    model_path = config.MODEL_DIR / f"padim_{category}.pth"
     return {
         "status": "online",
         "category": category,
         "device": str(device),
         "model_loaded": model_path.exists(),
-        "anomaly_threshold": THRESHOLDS.get(category, 0.05)
+        "architecture": "PaDiM (ResNet18)",
+        "anomaly_threshold": THRESHOLDS.get(category, config.ANOMALY_THRESHOLD)
     }
 
 def image_to_base64(img_np):
     """Converts a numpy RGB image (0-255) to a base64 encoded JPEG data URI string."""
-    # Convert RGB to BGR for OpenCV encoding
     img_bgr = cv2.cvtColor(img_np.astype(np.uint8), cv2.COLOR_RGB2BGR)
     _, buffer = cv2.imencode('.jpg', img_bgr)
     b64_str = base64.b64encode(buffer).decode('utf-8')
@@ -148,7 +128,7 @@ def predict_image_internal(
     from anomaly_detection.inference import predict_defect
     result = predict_defect(pil_img, category=category, enable_yolo=enable_yolo)
     proc_time_ms = round((time.time() - t0) * 1000.0, 2)
-    
+
     inspection_id = inspection_log.add_entry(
         category=category,
         is_anomaly=result["is_anomaly"],
@@ -170,14 +150,20 @@ def predict_image_internal(
         "defect_result": result["defect_result"],
         "defect_class": result["defect_class"],
         "confidence_score": result["confidence_score"] / 100.0 if result["confidence_score"] > 1.0 else result["confidence_score"],
+        "confidence_pct": result["confidence_score"],
         "anomaly_score": result["anomaly_score"],
         "threshold": result["threshold"],
+        "normalized_score": result.get("normalized_score", round(result["anomaly_score"] / max(1e-6, result["threshold"]), 4)),
+        "reason_for_prediction": result.get("reason_for_prediction", ""),
         "severity_score": result["severity_score"],
         "severity_level": result["severity_level"],
         "recommended_action": result["recommended_action"],
         "processing_time_ms": proc_time_ms,
         "yolo_status": result["yolo_status"],
         "bbox": result["bbox"],
+        "bounding_boxes": result.get("bounding_boxes", [result["bbox"]]),
+        "defect_count": result.get("defect_count", 1 if result["is_anomaly"] else 0),
+        "total_defect_area": result.get("total_defect_area", 0),
         "class_probabilities": result["class_probabilities"],
         "quality_report": result["quality_report"],
         "severity_breakdown": result["severity_breakdown"],
@@ -186,6 +172,7 @@ def predict_image_internal(
         "reconstructed_image": result["reconstructed_image"],
         "heatmap_image":       result["heatmap_image"],
         "overlay_image":       result["overlay_image"],
+        "mask_image":          result.get("mask_image", result["overlay_image"]),
         "images": {
             "original":      result["original_image"],
             "cropped":       result["cropped_image"],
@@ -193,33 +180,60 @@ def predict_image_internal(
             "heatmap":       result["heatmap_image"],
             "overlay":       result["overlay_image"],
             "defect_overlay":result["overlay_image"],
-            "defect_crop":   result["cropped_image"]
+            "defect_crop":   result["cropped_image"],
+            "mask":          result.get("mask_image", result["overlay_image"])
         }
     }
 
+
+from typing import Optional
+from fastapi import Request
+
 @app.post("/predict")
 async def predict(
+    request: Request,
     file: UploadFile = File(...), 
-    category: str = "bottle",
-    enable_yolo: bool = True
+    category: Optional[str] = None,
+    enable_yolo: Optional[bool] = None
 ):
+
     """
     Primary quality inspection endpoint. 
-    Accepts image file, runs Stage 1 (YOLO) crop, Stage 2 (Autoencoder) reconstruction, 
-    and returns Pass/Fail result and visual base64 image steps.
+    Accepts image file, resolves target product category from Query parameters or Form Data,
+    runs Stage 1 preprocessing, Stage 2 PaDiM feature extraction & Mahalanobis distance scoring,
+    and returns Pass/Fail result, defect localization, and visual base64 image steps.
     """
     try:
         contents = await file.read()
         pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
-        
+
+    # Robust category resolution across Query String and Form Data Body
+    req_category = category
+    req_yolo = enable_yolo
+
+    if request is not None and hasattr(request, "query_params"):
+        req_category = req_category or request.query_params.get("category")
+        try:
+            form_data = await request.form()
+            req_category = req_category or form_data.get("category")
+            if req_yolo is None:
+                req_yolo = request.query_params.get("enable_yolo") or form_data.get("enable_yolo")
+        except Exception:
+            pass
+
+    resolved_category = (req_category or "bottle").strip().lower()
+    resolved_enable_yolo = str(req_yolo).lower() not in ("false", "0", "no") if req_yolo is not None else True
+
     return predict_image_internal(
         pil_img=pil_img,
         filename=file.filename,
-        category=category,
-        enable_yolo=enable_yolo
+        category=resolved_category,
+        enable_yolo=resolved_enable_yolo
     )
+
+
 
 @app.post("/quality-check")
 async def quality_check(file: UploadFile = File(...)):

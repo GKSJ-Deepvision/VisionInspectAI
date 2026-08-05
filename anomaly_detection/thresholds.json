@@ -1,17 +1,19 @@
 {
-    "bottle": 0.42665,
-    "cable": 0.30108,
-    "capsule": 0.25855,
-    "carpet": 0.13699,
-    "grid": 0.14551,
-    "hazelnut": 0.09936,
-    "leather": 0.0472,
-    "metal_nut": 0.37531,
-    "pill": 0.25225,
-    "screw": 0.21961,
-    "tile": 0.14341,
-    "toothbrush": 0.27537,
-    "transistor": 0.22459,
-    "wood": 0.05976,
-    "zipper": 0.17734
+    "bottle": 10.4899,
+    "cable": 14.2000,
+    "capsule": 12.9186,
+    "carpet": 7.6869,
+    "grid": 7.8377,
+    "hazelnut": 14.5000,
+    "leather": 8.2297,
+    "metal_nut": 11.5822,
+    "pill": 10.2000,
+    "screw": 11.0000,
+
+    "tile": 9.6489,
+    "toothbrush": 14.1588,
+    "transistor": 13.5542,
+    "wood": 11.3001,
+    "zipper": 9.9356
 }
+

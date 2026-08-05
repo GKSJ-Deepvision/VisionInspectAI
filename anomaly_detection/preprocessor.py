@@ -95,8 +95,15 @@ def get_category_transforms(
 
     # 4. Pixel Scaling & Tensor Conversion [0, 255] uint8 → [0.0, 1.0] float32 (C, H, W)
     transform_list.append(transforms.ToTensor())
+    transform_list.append(
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )
+    )
 
     return transforms.Compose(transform_list)
+
 
 
 def validate_and_preprocess_image(

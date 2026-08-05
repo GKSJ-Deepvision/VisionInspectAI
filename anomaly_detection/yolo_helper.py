@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 from PIL import Image
 import numpy as np
+from anomaly_detection import config
+
 
 # Set up logging
 logger = logging.getLogger("anomaly_detection.yolo_helper")
@@ -35,10 +37,11 @@ def crop_product(pil_img: Image.Image, category: str = "bottle", enable_yolo: bo
     """
     category = category.lower()
     
-    # 1. Texture Category Bypass: textures cover the entire frame, so object cropping is not applicable
-    texture_categories = {"carpet", "grid", "leather", "tile", "wood"}
-    if category in texture_categories:
-        return pil_img, None, f"YOLO: Bypassed for texture category '{category}'"
+    # Bypass YOLO for categories where full frame is needed or YOLO cropping breaks aspect ratio
+    yolo_skip = getattr(config, "YOLO_SKIP_CATEGORIES", {"carpet", "grid", "leather", "tile", "wood", "cable", "capsule", "metal_nut", "pill", "toothbrush", "transistor", "zipper"})
+    if category in yolo_skip:
+        return pil_img, [0, 0, pil_img.width, pil_img.height], f"YOLO: Bypassed for category '{category}'"
+
 
     if not enable_yolo:
         return pil_img, None, "YOLO preprocessing disabled (Bypass mode)"

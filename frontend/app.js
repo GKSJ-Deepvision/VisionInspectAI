@@ -176,7 +176,8 @@
         const startTime = performance.now();
 
         try {
-            const resp = await fetch('/predict', { method: 'POST', body: formData });
+            const url = `/predict?category=${encodeURIComponent(category)}&enable_yolo=${enableYolo}`;
+            const resp = await fetch(url, { method: 'POST', body: formData });
             const data = await resp.json();
             const elapsed = Math.round(performance.now() - startTime);
 
