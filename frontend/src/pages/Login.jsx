@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import loginBg from '../assets/login-background.png'
@@ -82,16 +83,12 @@ export default function Login() {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
 
-  // Temporary role selection for frontend testing.
-  // Later the backend will provide the real role.
-  const [role, setRole] = useState('quality_engineer')
-
   const [error, setError] = useState('')
   const [iconRect, setIconRect] = useState(null)
 
   const iconBoxRef = useRef(null)
 
-  const { loginUser, logoutUser } = useAuth()
+  const { loginUser } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -117,46 +114,29 @@ export default function Login() {
   }, [])
 
   async function handleSubmit(e) {
-  e.preventDefault()
+    e.preventDefault()
 
-  if (!name.trim() || !password.trim()) {
-    setError('Enter your username and password to continue.')
-    return
-  }
-
-  try {
-    setError('')
-
-    const loggedInUser = await loginUser({
-      username: name.trim(),
-      password: password.trim(),
-    })
-
-    // Compare selected role with the actual role returned by backend
-    if (loggedInUser.role !== role) {
-      logoutUser()
-
-      const roleNames = {
-        quality_inspector: 'Quality Inspector',
-        quality_engineer: 'Quality Engineer',
-        admin: 'Admin',
-      }
-
-      setError(
-        `Role mismatch. This account is registered as ${
-          roleNames[loggedInUser.role] || loggedInUser.role
-        }. Please select the correct role.`
-      )
-
+    if (!name.trim() || !password.trim()) {
+      setError('Enter your username and password to continue.')
       return
     }
 
-    navigate('/dashboard')
-  } catch (err) {
-    console.error(err)
-    setError('Login failed — check your username and password.')
+    try {
+      setError('')
+
+      // Backend determines the user's actual role.
+      // No role is selected manually on the frontend.
+      await loginUser({
+        username: name.trim(),
+        password: password.trim(),
+      })
+
+      navigate('/dashboard')
+    } catch (err) {
+      console.error(err)
+      setError('Login failed — check your username and password.')
+    }
   }
-}
 
   const size = 36
 
@@ -346,50 +326,15 @@ export default function Login() {
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:bg-white/10 outline-none transition"
               />
 
-              {/* Role */}
-              <label className="block text-xs uppercase tracking-wider text-gray-400 mb-2 mt-5">
-                Select Role
-              </label>
-
-              <div className="grid grid-cols-1 gap-2 mb-6">
-                {[
-                  {
-                    value: 'quality_inspector',
-                    label: 'Quality Inspector',
-                  },
-                  {
-                    value: 'quality_engineer',
-                    label: 'Quality Engineer',
-                  },
-                  {
-                    value: 'admin',
-                    label: 'Admin',
-                  },
-                ].map((r) => (
-                  <button
-                    type="button"
-                    key={r.value}
-                    onClick={() => setRole(r.value)}
-                    className={`text-sm py-3 rounded-lg border transition-all duration-300 ${
-                      role === r.value
-                        ? 'border-blue-400 bg-blue-500/20 text-blue-300'
-                        : 'border-white/10 bg-white/5 text-gray-300 hover:border-blue-400/50'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-
               {error && (
-                <p className="text-red-400 text-xs mb-4">
+                <p className="text-red-400 text-xs mt-4 mb-4">
                   {error}
                 </p>
               )}
 
               <button
                 type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30 text-white font-medium py-3 rounded-lg transition-all duration-300"
+                className="w-full bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30 text-white font-medium py-3 rounded-lg transition-all duration-300 mt-6"
               >
                 Enter Inspection Console
               </button>

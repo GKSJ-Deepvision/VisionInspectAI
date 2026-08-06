@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import Layout from '../components/Layout.jsx'
-import { getInspectionHistory } from '../services/api.js'
+import { getAnalytics } from '../services/api.js'
 import loginBg from '../assets/login-background.png'
+
 
 function StatCard({ label, value, color }) {
   return (
     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-5">
+
       <p className="text-gray-400 text-sm">
         {label}
       </p>
@@ -15,9 +17,11 @@ function StatCard({ label, value, color }) {
       <h3 className={`text-3xl font-bold mt-2 ${color}`}>
         {value}
       </h3>
+
     </div>
   )
 }
+
 
 function ActionCard({ title, desc, onClick }) {
   return (
@@ -25,6 +29,7 @@ function ActionCard({ title, desc, onClick }) {
       onClick={onClick}
       className="text-left bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-6 hover:border-blue-400 transition-all"
     >
+
       <h3 className="text-xl font-semibold text-white">
         {title}
       </h3>
@@ -32,26 +37,34 @@ function ActionCard({ title, desc, onClick }) {
       <p className="text-gray-400 mt-2">
         {desc}
       </p>
+
     </button>
   )
 }
+
 
 export default function Dashboard() {
 
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [history, setHistory] = useState([])
+  const [analytics, setAnalytics] = useState(null)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
 
-  // Load real inspection history from backend
+  const isFactorySupervisor =
+    user?.role === 'factory_supervisor'
+
+
+
   useEffect(() => {
 
     async function loadDashboardData() {
 
       if (!user?.token) {
+
         setError(
           'Authentication token not found. Please login again.'
         )
@@ -60,43 +73,38 @@ export default function Dashboard() {
         return
       }
 
+
       try {
 
         setLoading(true)
         setError('')
 
-        const data = await getInspectionHistory(user.token)
+
+        const response =
+          await getAnalytics(user.token)
+
 
         console.log(
-          'Dashboard History API response:',
-          data
+          "Dashboard Analytics:",
+          response
         )
 
-        // Backend may return:
-        // 1. An array
-        // 2. { history: [...] }
-        // 3. { results: [...] }
-        // 4. { inspections: [...] }
 
-        const records = Array.isArray(data)
-          ? data
-          : data.history ||
-            data.results ||
-            data.inspections ||
-            []
+        setAnalytics(
+          response.data?.summary
+        )
 
-        setHistory(records)
 
       } catch (err) {
 
         console.error(
-          'Dashboard history error:',
+          "Dashboard error:",
           err
         )
 
         setError(
           err.message ||
-          'Failed to load dashboard data.'
+          "Failed to load dashboard data."
         )
 
       } finally {
@@ -104,64 +112,32 @@ export default function Dashboard() {
         setLoading(false)
 
       }
+
     }
+
 
     loadDashboardData()
 
   }, [user?.token])
 
 
-  // Total inspections
-  const total = history.length
 
+  const formatScore = (score) => {
 
-  // Passed inspections
-  const passed = history.filter(item => {
-
-    const result =
-      item.result ||
-      item.status ||
-      ''
-
-    return (
-      result === 'PASS' ||
-      result === 'passed'
+    if (
+      score === undefined ||
+      score === null
     )
+      return '-'
 
-  }).length
+    return `${Math.round(score * 100)}%`
 
+  }
 
-  // Failed inspections
-  const failed = history.filter(item => {
-
-    const result =
-      item.result ||
-      item.status ||
-      ''
-
-    return (
-      result === 'FAIL' ||
-      result === 'failed'
-    )
-
-  }).length
-
-
-  // Critical defects
-  const critical = history.filter(item => {
-
-    const severity =
-      item.severity?.level ||
-      item.severity ||
-      item.severity_level ||
-      ''
-
-    return severity === 'Critical'
-
-  }).length
 
 
   return (
+
     <Layout>
 
       <div
@@ -172,41 +148,64 @@ export default function Dashboard() {
         }}
       >
 
+
         <div className="max-w-7xl mx-auto px-8 pt-10 pb-8">
 
 
-          {/* Hero Section */}
+          {/* Hero */}
 
           <section className="rounded-3xl bg-black/35 backdrop-blur-md border border-white/10 p-8">
+
 
             <p className="text-blue-400 uppercase tracking-[0.3em] text-sm">
               VisionInspect AI
             </p>
 
-            <h1 className="text-4xl font-bold text-white mt-4 leading-tight">
+
+            <h1 className="text-4xl font-bold text-white mt-4">
+
               Manufacturing Defect Detection
               <br />
               & Quality Inspection System
+
             </h1>
 
+
             <p className="text-gray-300 mt-6 max-w-2xl text-lg">
+
               Welcome {user?.name}.
               Perform AI-powered inspections, monitor quality
               and review inspection history from one place.
+
             </p>
+
 
             <div className="mt-8">
 
               <button
-                onClick={() => navigate('/inspection')}
+                onClick={() =>
+                  navigate(
+                    isFactorySupervisor
+                    ? '/analytics'
+                    : '/inspection'
+                  )
+                }
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold"
               >
-                Start Inspection
+
+                {
+                  isFactorySupervisor
+                  ? "View Quality Overview"
+                  : "Start Inspection"
+                }
+
               </button>
 
             </div>
 
+
           </section>
+
 
 
           {/* Quick Actions */}
@@ -217,32 +216,76 @@ export default function Dashboard() {
               Quick Actions
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-6">
 
-              <ActionCard
-                title="New Inspection"
-                desc="Upload a component image and start inspection."
-                onClick={() => navigate('/inspection')}
-              />
+            <div
+              className={`grid gap-6 ${
+                isFactorySupervisor
+                ? "md:grid-cols-3"
+                : "md:grid-cols-2"
+              }`}
+            >
 
-              <ActionCard
-                title="Inspection History"
-                desc="Review previous inspection records."
-                onClick={() => navigate('/history')}
-              />
 
-              <ActionCard
-                title="Analytics"
-                desc="View inspection statistics and trends."
-                onClick={() => navigate('/analytics')}
-              />
+              {!isFactorySupervisor && (
+
+                <>
+
+                  <ActionCard
+                    title="New Inspection"
+                    desc="Upload a component image and start inspection."
+                    onClick={() => navigate('/inspection')}
+                  />
+
+
+                  <ActionCard
+                    title="Inspection History"
+                    desc="Review previous inspection records."
+                    onClick={() => navigate('/history')}
+                  />
+
+                </>
+
+              )}
+
+
+
+              {isFactorySupervisor && (
+
+                <>
+
+                  <ActionCard
+                    title="Inspection History"
+                    desc="Review inspection records from all quality inspectors."
+                    onClick={() => navigate('/history')}
+                  />
+
+
+                  <ActionCard
+                    title="Analytics"
+                    desc="View inspection statistics and quality trends."
+                    onClick={() => navigate('/analytics')}
+                  />
+
+
+                  <ActionCard
+                    title="Reports"
+                    desc="View and manage inspection reports."
+                    onClick={() => navigate('/reports')}
+                  />
+
+                </>
+
+              )}
+
 
             </div>
 
           </section>
 
 
-          {/* Inspection Overview */}
+
+
+          {/* Statistics */}
 
           <section className="mt-8">
 
@@ -251,14 +294,13 @@ export default function Dashboard() {
             </h2>
 
 
-            {/* Loading */}
 
             {loading && (
 
-              <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-8 text-center">
+              <div className="bg-black/40 rounded-xl p-8 text-center">
 
                 <p className="text-blue-400">
-                  Loading inspection statistics...
+                  Loading dashboard data...
                 </p>
 
               </div>
@@ -266,7 +308,6 @@ export default function Dashboard() {
             )}
 
 
-            {/* Error */}
 
             {!loading && error && (
 
@@ -281,47 +322,57 @@ export default function Dashboard() {
             )}
 
 
-            {/* Statistics */}
 
-            {!loading && !error && (
+
+            {!loading && !error && analytics && (
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
 
+
                 <StatCard
-                  label="Total Inspected"
-                  value={total}
+                  label="Total Inspections"
+                  value={analytics.total_inspections}
                   color="text-blue-400"
                 />
 
+
                 <StatCard
-                  label="Passed"
-                  value={passed}
+                  label="Average Score"
+                  value={formatScore(analytics.average_score)}
                   color="text-green-400"
                 />
 
+
                 <StatCard
-                  label="Failed"
-                  value={failed}
+                  label="Maximum Score"
+                  value={formatScore(analytics.max_score)}
+                  color="text-yellow-400"
+                />
+
+
+                <StatCard
+                  label="Minimum Score"
+                  value={formatScore(analytics.min_score)}
                   color="text-red-400"
                 />
 
-                <StatCard
-                  label="Critical"
-                  value={critical}
-                  color="text-yellow-400"
-                />
 
               </div>
 
             )}
 
+
           </section>
+
 
 
         </div>
 
       </div>
 
+
     </Layout>
+
   )
+
 }

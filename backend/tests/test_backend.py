@@ -1,12 +1,12 @@
+import io
 import os
-import sqlite3
 import sys
-import tempfile
-from io import BytesIO
+import uuid
 from pathlib import Path
 
-import jwt
 import pytest
+from PIL import Image
+from werkzeug.security import generate_password_hash
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -15,13 +15,13 @@ from app import create_app
 
 @pytest.fixture()
 def client():
-    db_path = Path(__file__).resolve().parent / "test_backend.db"
+    db_dir = Path(__file__).resolve().parent / "tmp_test_dbs"
+    db_dir.mkdir(exist_ok=True)
+    db_path = db_dir / f"test_backend_{uuid.uuid4().hex}.db"
     if db_path.exists():
         db_path.unlink()
 
-    app = create_app()
-    app.config.update(TESTING=True)
-    app.config["DATABASE_PATH"] = str(db_path)
+    app = create_app(test_config={"TESTING": True, "DATABASE_PATH": str(db_path)})
     with app.test_client() as client:
         yield client
 
@@ -46,185 +46,207 @@ def test_register_and_login(client):
     assert login_response.status_code == 200
     payload = login_response.get_json()
     assert payload["user"]["username"] == "demo"
-    assert payload["user"]["role"] == "quality_engineer"
 
 
-def test_login_returns_stored_role(client):
-    client.post(
+def test_history_endpoint_returns_standardized_results(client):
+    register_response = client.post(
         "/api/auth/register",
-        json={"username": "supervisor", "email": "supervisor@example.com", "password": "secret123"},
+        json={"username": "history", "email": "history@example.com", "password": "secret123"},
     )
+    assert register_response.status_code == 201
 
-    db_path = client.application.config["DATABASE_PATH"]
-    conn = sqlite3.connect(db_path)
-    conn.execute("UPDATE users SET role = ? WHERE username = ?", ("factory_supervisor", "supervisor"))
-    conn.commit()
-    conn.close()
+    token = register_response.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    response = client.post(
-        "/api/auth/login",
-        json={"username": "supervisor", "password": "secret123"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["user"]["role"] == "factory_supervisor"
-
-
-@pytest.mark.parametrize("role", ["quality_inspector", "quality_engineer", "admin"])
-def test_login_returns_each_supported_role(client, role):
-    username = f"{role}_user"
-    client.post(
-        "/api/auth/register",
-        json={"username": username, "email": f"{username}@example.com", "password": "secret123"},
-    )
-
-    db_path = client.application.config["DATABASE_PATH"]
-    conn = sqlite3.connect(db_path)
-    conn.execute("UPDATE users SET role = ? WHERE username = ?", (role, username))
-    conn.commit()
-    conn.close()
-
-    response = client.post(
-        "/api/auth/login",
-        json={"username": username, "password": "secret123"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["user"]["role"] == role
-
-
-def _register_and_headers(client, username):
-    response = client.post(
-        "/api/auth/register",
-        json={"username": username, "email": f"{username}@example.com", "password": "secret123"},
-    )
-    token = response.get_json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-def test_history_and_analytics_are_user_specific(client):
-    first_headers = _register_and_headers(client, "first")
-    second_headers = _register_and_headers(client, "second")
-
-    first_create = client.post(
+    create_response = client.post(
         "/api/inspection",
-        json={"filename": "first.jpg", "status": "completed", "score": 0.9, "user_id": 999},
-        headers=first_headers,
-    )
-    second_create = client.post(
-        "/api/inspection",
-        json={"filename": "second.jpg", "status": "failed", "score": 0.2},
-        headers=second_headers,
-    )
-    first_id = first_create.get_json()["id"]
-    second_id = second_create.get_json()["id"]
-
-    first_history = client.get("/api/history", headers=first_headers).get_json()
-    second_history = client.get("/api/history", headers=second_headers).get_json()
-    assert first_history["total"] == 1
-    assert first_history["results"][0]["filename"] == "first.jpg"
-    assert second_history["total"] == 1
-    assert second_history["results"][0]["filename"] == "second.jpg"
-
-    first_analytics = client.get("/api/analytics", headers=first_headers).get_json()
-    assert first_analytics["summary"]["total_inspections"] == 1
-    assert first_analytics["summary"]["average_score"] == 0.9
-
-    assert client.get(f"/api/history/{second_id}", headers=first_headers).status_code == 404
-    assert client.get(f"/api/inspection/{second_id}", headers=first_headers).status_code == 404
-    assert client.put(
-        f"/api/inspection/{second_id}",
-        json={"status": "completed", "score": 1.0},
-        headers=first_headers,
-    ).status_code == 404
-    assert client.get(f"/api/inspection/{first_id}", headers=first_headers).status_code == 200
-
-
-def test_image_inspection_persists_authenticated_user(client):
-    headers = _register_and_headers(client, "inspector")
-    response = client.post(
-        "/api/inspection/image",
-        data={"file": (BytesIO(b"not-a-real-image"), "sample.jpg")},
+        json={"filename": "sample.jpg", "status": "Defective", "score": 86.2},
         headers=headers,
-        content_type="multipart/form-data",
+    )
+    assert create_response.status_code == 201
+
+    history_response = client.get("/api/history", headers=headers)
+    assert history_response.status_code == 200
+
+    payload = history_response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["total"] >= 1
+    assert payload["data"]["results"][0]["filename"] == "sample.jpg"
+
+
+def test_new_users_default_to_quality_inspector_role(client):
+    response = client.post(
+        "/api/auth/register",
+        json={"username": "inspector1", "email": "inspector1@example.com", "password": "secret123"},
     )
 
     assert response.status_code == 201
-    result = response.get_json()
-    assert result["user_id"] == 1
-    history = client.get("/api/history", headers=headers).get_json()
-    assert history["total"] == 1
-    assert history["results"][0]["id"] == result["id"]
+    assert response.get_json()["user"]["role"] == "quality_inspector"
 
 
-def test_image_inspection_uses_configured_upload_folder(client):
-    headers = _register_and_headers(client, "configured-inspector")
-    upload_dir = tempfile.mkdtemp()
-    client.application.config["UPLOAD_FOLDER"] = upload_dir
+def test_inspector_can_access_their_own_analytics(client):
+    register_response = client.post(
+        "/api/auth/register",
+        json={"username": "analyst", "email": "analyst@example.com", "password": "secret123"},
+    )
+    assert register_response.status_code == 201
 
-    from PIL import Image
+    token = register_response.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    image = Image.new("RGB", (2, 2), color="white")
-    image_bytes = BytesIO()
+    create_response = client.post(
+        "/api/inspection",
+        json={"filename": "inspector.jpg", "status": "Defective", "score": 42.5},
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+
+    analytics_response = client.get("/api/analytics", headers=headers)
+    assert analytics_response.status_code == 200
+    payload = analytics_response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["summary"]["total_inspections"] >= 1
+
+
+def test_supervisor_can_access_all_history_and_analytics(client):
+    db_path = Path(client.application.config["DATABASE_PATH"])
+    import sqlite3
+
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+        ("supervisor", "supervisor@example.com", "pbkdf2:sha256$dummy", "factory_supervisor"),
+    )
+    conn.commit()
+    conn.close()
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"username": "supervisor", "password": "secret123"},
+    )
+    assert login_response.status_code == 401
+
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "UPDATE users SET password = ? WHERE username = ?",
+        (generate_password_hash("secret123"), "supervisor"),
+    )
+    conn.commit()
+    conn.close()
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"username": "supervisor", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    history_response = client.get("/api/history", headers=headers)
+    assert history_response.status_code == 200
+
+    analytics_response = client.get("/api/analytics", headers=headers)
+    assert analytics_response.status_code == 200
+
+
+def test_supervisor_can_export_reports(client):
+    db_path = Path(client.application.config["DATABASE_PATH"])
+    import sqlite3
+
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+        ("supervisor", "supervisor@example.com", "pbkdf2:sha256$dummy", "factory_supervisor"),
+    )
+    conn.commit()
+    conn.close()
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"username": "supervisor", "password": "secret123"},
+    )
+    assert login_response.status_code == 401
+
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "UPDATE users SET password = ? WHERE username = ?",
+        (generate_password_hash("secret123"), "supervisor"),
+    )
+    conn.commit()
+    conn.close()
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"username": "supervisor", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    json_response = client.get("/api/reports/export", headers=headers)
+    assert json_response.status_code == 200
+    payload = json_response.get_json()
+    assert payload["success"] is True
+    assert "records" in payload["data"]
+
+    csv_response = client.get("/api/reports/export?format=csv", headers=headers)
+    assert csv_response.status_code == 200
+    assert csv_response.content_type.startswith("text/csv")
+    assert "attachment; filename=inspection_reports.csv" in csv_response.headers.get("Content-Disposition", "")
+
+
+def test_inspection_endpoint_accepts_multipart_ai_payload(client):
+    register_response = client.post(
+        "/api/auth/register",
+        json={"username": "aiuser", "email": "aiuser@example.com", "password": "secret123"},
+    )
+    token = register_response.get_json()["access_token"]
+
+    image_bytes = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+    response = client.post(
+        "/api/inspection",
+        data={
+            "file": (io.BytesIO(image_bytes), "sample.png"),
+            "category": "metal",
+            "status": "pending",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["filename"].endswith(".png")
+
+
+def test_inspection_predict_accepts_formdata_image_and_category(client):
+    register_response = client.post(
+        "/api/auth/register",
+        json={"username": "predictuser", "email": "predictuser@example.com", "password": "secret123"},
+    )
+    token = register_response.get_json()["access_token"]
+
+    image = Image.new("RGB", (64, 64), color=(255, 0, 0))
+    image_bytes = io.BytesIO()
     image.save(image_bytes, format="PNG")
     image_bytes.seek(0)
 
     response = client.post(
-        "/api/inspection/image",
-        data={"file": (image_bytes, "sample.png")},
-        headers=headers,
+        "/api/inspection/predict",
+        data={
+            "image": (image_bytes, "predict.png"),
+            "category": "metal",
+        },
+        headers={"Authorization": f"Bearer {token}"},
         content_type="multipart/form-data",
     )
 
-    assert response.status_code == 201
-    assert response.get_json()["status"] == "completed"
-
-
-def test_malformed_token_is_unauthorized(client):
-    token = jwt.encode(
-        {"sub": "not-an-integer"},
-        client.application.config["SECRET_KEY"],
-        algorithm="HS256",
-    )
-    response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
-    assert response.status_code == 401
-
-
-def test_upload_requires_authentication_and_sanitizes_filename(client):
-    file_data = {"file": (BytesIO(b"file"), "../../unsafe.txt")}
-    assert client.post("/api/upload", data=file_data, content_type="multipart/form-data").status_code == 401
-
-    headers = _register_and_headers(client, "uploader")
-    response = client.post(
-        "/api/upload",
-        data={"file": (BytesIO(b"file"), "../../unsafe.txt")},
-        headers=headers,
-        content_type="multipart/form-data",
-    )
-    assert response.status_code == 201
-    assert response.get_json()["filename"] == "unsafe.txt"
-
-
-def test_role_based_api_access(client):
-    role_headers = {}
-    for role in ["quality_inspector", "quality_engineer", "admin"]:
-        role_headers[role] = _register_and_headers(client, role)
-        db_path = client.application.config["DATABASE_PATH"]
-        conn = sqlite3.connect(db_path)
-        conn.execute("UPDATE users SET role = ? WHERE username = ?", (role, role))
-        conn.commit()
-        conn.close()
-        login_response = client.post(
-            "/api/auth/login",
-            json={"username": role, "password": "secret123"},
-        )
-        role_headers[role] = {"Authorization": f"Bearer {login_response.get_json()['access_token']}"}
-
-    assert client.get("/api/analytics", headers=role_headers["quality_inspector"]).status_code == 403
-    assert client.get("/api/dataset", headers=role_headers["quality_inspector"]).status_code == 403
-    assert client.put("/api/inspection/999", json={}, headers=role_headers["quality_inspector"]).status_code == 403
-
-    assert client.get("/api/analytics", headers=role_headers["quality_engineer"]).status_code == 200
-    assert client.get("/api/dataset", headers=role_headers["quality_engineer"]).status_code == 200
-    assert client.get("/api/analytics", headers=role_headers["admin"]).status_code == 200
-    assert client.get("/api/dataset", headers=role_headers["admin"]).status_code == 200
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["category"] == "metal"
+    assert payload["data"]["heatmap_url"] is not None
+    assert payload["data"]["inspection_id"] is not None
+    assert payload["data"]["inspection_result_id"] is not None

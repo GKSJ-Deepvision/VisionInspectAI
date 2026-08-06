@@ -4,7 +4,6 @@ from pathlib import Path
 from flask import Blueprint, current_app, jsonify, request
 
 from services.dataset import list_categories, list_split_files
-from routes.auth import role_required, ROLE_ADMIN, ROLE_QUALITY_ENGINEER
 
 
 dataset_bp = Blueprint("dataset", __name__)
@@ -18,7 +17,6 @@ def get_dataset_root() -> Path:
 
 
 @dataset_bp.route("", methods=["GET"])
-@role_required(ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def categories():
     root = get_dataset_root()
     categories = list_categories(root)
@@ -26,7 +24,6 @@ def categories():
 
 
 @dataset_bp.route("/<category>/files", methods=["GET"])
-@role_required(ROLE_QUALITY_ENGINEER, ROLE_ADMIN)
 def category_files(category):
     split = request.args.get("split", "train")
     root = get_dataset_root()

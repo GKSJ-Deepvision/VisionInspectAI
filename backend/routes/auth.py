@@ -1,32 +1,24 @@
 import os
 import sqlite3
-from functools import wraps
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import jwt
 from flask import Blueprint, current_app, jsonify, request
+from werkzeug.security import check_password_hash, generate_password_hash
+
+try:
+    from ..config import SECRET_KEY
+    from ..database_utils import get_db_connection
+except ImportError:  # pragma: no cover - pytest imports routes as top-level modules
+    from config import SECRET_KEY
+    from database_utils import get_db_connection
 
 auth_bp = Blueprint("auth", __name__)
 
-ROLE_QUALITY_INSPECTOR = "quality_inspector"
-ROLE_QUALITY_ENGINEER = "quality_engineer"
-ROLE_ADMIN = "admin"
-VALID_ROLES = {ROLE_QUALITY_INSPECTOR, ROLE_QUALITY_ENGINEER, ROLE_ADMIN}
 
-
-def get_db_connection():
-    db_path = current_app.config.get("DATABASE_PATH") or os.environ.get("DATABASE_PATH") or os.path.join(Path(__file__).resolve().parents[1], "..", "instance", "backend.db")
-    from app import init_db
-
-    init_db(db_path)
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def create_access_token(user_id: int, username: str, role: str = "quality_engineer") -> str:
-    secret_key = current_app.config.get("SECRET_KEY") or os.environ.get("SECRET_KEY", "visioninspect_dev_secret_key_2026")
+def create_access_token(user_id: int, username: str, role: str) -> str:
+    secret_key = current_app.config.get("SECRET_KEY") or SECRET_KEY
     payload = {
         "sub": str(user_id),
         "username": username,
@@ -34,7 +26,21 @@ def create_access_token(user_id: int, username: str, role: str = "quality_engine
         "iat": int(datetime.now(timezone.utc).timestamp()),
         "exp": int((datetime.now(timezone.utc) + timedelta(hours=24)).timestamp()),
     }
-    return jwt.encode(payload, secret_key, algorithm="HS256")
+    token = jwt.encode(payload, secret_key, algorithm="HS256")
+    return token if isinstance(token, str) else token.decode("utf-8")
+
+
+def verify_password(stored_password: str, password: str) -> bool:
+    if not stored_password or not password:
+        return False
+
+    try:
+        if check_password_hash(stored_password, password):
+            return True
+    except (ValueError, TypeError):
+        pass
+
+    return stored_password == password
 
 
 def get_token_from_header():
@@ -49,80 +55,80 @@ def get_current_user():
     if not token:
         return None
 
-    secret_key = current_app.config.get("SECRET_KEY") or os.environ.get("SECRET_KEY", "visioninspect_dev_secret_key_2026")
+    secret_key = current_app.config.get("SECRET_KEY") or SECRET_KEY
     try:
         payload = jwt.decode(token, secret_key, algorithms=["HS256"])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None
 
-    try:
-        user_id = int(payload.get("sub"))
-    except (TypeError, ValueError):
-        return None
-
     conn = get_db_connection()
     try:
         user = conn.execute(
-            "SELECT id, username, email, role FROM users WHERE id = ?",
-            (user_id,),
+            "SELECT id, COALESCE(username, name, email) AS username, email, role, password_hash, password FROM users WHERE id = ?",
+            (int(payload.get("sub")),),
         ).fetchone()
     finally:
         conn.close()
 
     return user
 
+def require_role(*allowed_roles):
+    user = get_current_user()
 
-def role_required(*allowed_roles):
-    """Require authentication and one of the supplied application roles."""
-    invalid_roles = set(allowed_roles) - VALID_ROLES
-    if invalid_roles:
-        raise ValueError(f"Unknown role(s): {', '.join(sorted(invalid_roles))}")
+    if not user:
+        return None, jsonify({"success": False, "error": "unauthorized"}), 401
 
-    def decorator(view):
-        @wraps(view)
-        def wrapped(*args, **kwargs):
-            user = get_current_user()
-            if not user:
-                return jsonify({"error": "unauthorized"}), 401
-            if user["role"] not in allowed_roles:
-                return jsonify({"error": "forbidden", "role": user["role"]}), 403
-            return view(*args, **kwargs)
+    if user["role"] not in allowed_roles:
+        return None, jsonify({"success": False, "error": "forbidden"}), 403
 
-        return wrapped
-
-    return decorator
+    return user, None, None
 
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
     payload = request.get_json(silent=True) or {}
-    username = (payload.get("username") or "").strip()
+    username = (payload.get("username") or payload.get("name") or "").strip()
     email = (payload.get("email") or "").strip()
     password = (payload.get("password") or "").strip()
+    role = (payload.get("role") or "quality_inspector").strip() or "quality_inspector"
+
+    if role not in {"quality_inspector", "factory_supervisor"}:
+        role = "quality_inspector"
 
     if not username or not email or not password:
-        return jsonify({"error": "username, email, and password are required"}), 400
+        return jsonify({"success": False, "error": "username, email, and password are required"}), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
+
+        password_hash = generate_password_hash(password)
+
         cur.execute(
-            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-            (username, email, password),
+            "INSERT INTO users (name, email, password_hash, role, username, password) VALUES (?, ?, ?, ?, ?, ?)",
+            (username, email, password_hash, role, username, password_hash),
         )
+        
         conn.commit()
         user_id = cur.lastrowid
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "user already exists"}), 409
+    except sqlite3.IntegrityError as exc:
+      print("REGISTRATION DATABASE ERROR:", exc)
+      return jsonify({"success": False, "error": str(exc)}), 409
     finally:
         conn.close()
 
-    token = create_access_token(user_id, username, "quality_engineer")
+    token = create_access_token(user_id, username, role)
     return jsonify({
+        "success": True,
         "message": "registered",
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": user_id, "username": username, "email": email, "role": "quality_engineer"},
+        "user": {
+            "id": user_id,
+            "username": username,
+            "email": email,
+            "role": role,
+        },
     }), 201
 
 
@@ -133,33 +139,56 @@ def login():
     password = (payload.get("password") or "").strip()
 
     if not username or not password:
-        return jsonify({"error": "username and password are required"}), 400
+        return jsonify({"success": False, "error": "username and password are required"}), 400
 
     conn = get_db_connection()
     try:
         user = conn.execute(
-            "SELECT id, username, email, role FROM users WHERE username = ? AND password = ?",
-            (username, password),
+            "SELECT id, COALESCE(username, name, email) AS username, name, email, password_hash, password, role FROM users WHERE email = ? OR username = ? OR name = ?",
+            (username, username, username),
         ).fetchone()
     finally:
         conn.close()
 
-    if not user:
-        return jsonify({"error": "invalid credentials"}), 401
-
-    token = create_access_token(user["id"], user["username"], user["role"])
+    stored_password = user["password_hash"] or user["password"] if user else None
+    if not user or not verify_password(stored_password or "", password):
+        return jsonify({"success": False, "error": "invalid credentials"}), 401
+    token = create_access_token(
+    user["id"],
+    user["username"],
+    user["role"],
+)
     return jsonify({
+        "success": True,
         "message": "logged in",
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]},
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+        },
     }), 200
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    return jsonify({"success": True, "message": "logged out"}), 200
 
 
 @auth_bp.route("/me", methods=["GET"])
 def me():
     user = get_current_user()
     if not user:
-        return jsonify({"error": "unauthorized"}), 401
+        return jsonify({"success": False, "error": "unauthorized"}), 401
 
-    return jsonify({"user": {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]}}), 200
+    return jsonify({
+        "success": True,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+        }
+    }), 200
