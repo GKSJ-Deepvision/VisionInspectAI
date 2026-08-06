@@ -1,38 +1,174 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Layout from '../components/Layout.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { getReports, exportReportsCSV } from '../services/api.js'
+
+
+function getDateCutoff(dateRange) {
+  const now = new Date()
+
+  switch (dateRange) {
+    case 'Today': {
+      const start = new Date(now)
+      start.setHours(0, 0, 0, 0)
+      return start
+    }
+    case 'Last 7 Days':
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    case 'Last 30 Days':
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    case 'Last 3 Months':
+      return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+    default:
+      return null
+  }
+}
+
+
+function toDateParam(date) {
+  if (!date) return null
+  return date.toISOString().slice(0, 10)
+}
 
 export default function Reports() {
+
+  const { user } = useAuth()
+
+  const token = user?.token
+
   const [reportType, setReportType] = useState('Inspection Summary')
   const [dateRange, setDateRange] = useState('All Time')
 
-  // Real data will be connected from the backend later.
-  const reportData = {
-    total: 0,
-    passed: 0,
-    failed: 0,
-    critical: 0,
-  }
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [generated, setGenerated] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+
+  useEffect(() => {
+
+    async function loadReports() {
+
+      if (!token) {
+        setError('Authentication token not found. Please login again.')
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await getReports(token)
+
+        const rows = response?.data?.records || response?.records || []
+
+        setRecords(rows)
+
+      } catch (err) {
+        console.error('REPORT ERROR:', err)
+        setError(err.message || 'Failed to load reports.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadReports()
+
+  }, [token])
+
+
+  const filteredRecords = useMemo(() => {
+    const cutoff = getDateCutoff(dateRange)
+
+    if (!cutoff) return records
+
+    return records.filter(item => {
+      if (!item.report_date) return true
+      return new Date(item.report_date) >= cutoff
+    })
+  }, [records, dateRange])
+
+
+  const reportData = useMemo(() => {
+    const total = filteredRecords.reduce(
+      (sum, item) => sum + (item.total_inspections || 0), 0
+    )
+
+    const passed = filteredRecords.reduce(
+      (sum, item) => sum + (item.pass_count || 0), 0
+    )
+
+    const failed = filteredRecords.reduce(
+      (sum, item) => sum + (item.fail_count || 0), 0
+    )
+
+    const critical = filteredRecords.reduce(
+      (sum, item) => sum + (item.total_defects || 0), 0
+    )
+
+    return { total, passed, failed, critical }
+  }, [filteredRecords])
+
+  const hasData = reportData.total > 0
 
   const passRate =
     reportData.total > 0
       ? Math.round((reportData.passed / reportData.total) * 100)
       : 0
 
+
   function handleGenerateReport() {
-    alert(
-      'Report generation will be available once the inspection backend and database are connected.'
-    )
+    setGenerated(true)
   }
 
-  function handleDownload() {
-    alert(
-      'Report download will be available once real inspection data is connected.'
-    )
+
+  async function handleDownload() {
+
+    if (!token) {
+      alert('Authentication token not found. Please login again.')
+      return
+    }
+
+    try {
+      setDownloading(true)
+
+      const filters = {}
+
+      const cutoff = getDateCutoff(dateRange)
+      if (cutoff) {
+        filters.date_from = toDateParam(cutoff)
+      }
+
+
+      if (reportType === 'Defect Analysis') {
+        filters.status = 'Defective'
+      }
+
+      const blob = await exportReportsCSV(token, filters)
+
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${reportType.replace(/\s+/g, '_').toLowerCase()}_${dateRange.replace(/\s+/g, '_').toLowerCase()}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+    } catch (err) {
+      console.error('REPORT DOWNLOAD ERROR:', err)
+      alert(err.message || 'Failed to download report.')
+    } finally {
+      setDownloading(false)
+    }
   }
+
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-950 text-white px-6 py-10">
+      <div className="min-h-screen text-white px-6 py-10">
 
         <div className="max-w-7xl mx-auto">
 
@@ -52,6 +188,13 @@ export default function Reports() {
             </p>
 
           </div>
+
+          {/* Error */}
+          {error && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-5 text-red-400">
+              {error}
+            </div>
+          )}
 
           {/* Report Controls */}
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-7 mb-8">
@@ -74,7 +217,7 @@ export default function Reports() {
 
                 <select
                   value={reportType}
-                  onChange={e => setReportType(e.target.value)}
+                  onChange={e => { setReportType(e.target.value); setGenerated(false) }}
                   className="w-full bg-gray-950 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                 >
                   <option>Inspection Summary</option>
@@ -92,7 +235,7 @@ export default function Reports() {
 
                 <select
                   value={dateRange}
-                  onChange={e => setDateRange(e.target.value)}
+                  onChange={e => { setDateRange(e.target.value); setGenerated(false) }}
                   className="w-full bg-gray-950 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                 >
                   <option>All Time</option>
@@ -109,16 +252,18 @@ export default function Reports() {
 
               <button
                 onClick={handleGenerateReport}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-semibold transition"
+                disabled={loading}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition"
               >
-                Generate Report
+                {loading ? 'Loading Data…' : 'Generate Report'}
               </button>
 
               <button
                 onClick={handleDownload}
-                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-300 font-semibold transition"
+                disabled={loading || downloading}
+                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-gray-300 font-semibold transition"
               >
-                Download Report
+                {downloading ? 'Downloading…' : 'Download Report'}
               </button>
 
             </div>
@@ -140,8 +285,14 @@ export default function Reports() {
                 </p>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm">
-                No Data
+              <span
+                className={`px-3 py-1 rounded-full text-sm ${
+                  hasData
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-blue-500/10 text-blue-400'
+                }`}
+              >
+                {loading ? 'Loading…' : hasData ? 'Data Loaded' : 'No Data'}
               </span>
 
             </div>
@@ -193,6 +344,52 @@ export default function Reports() {
 
           </div>
 
+          {/* Generated report preview (day-by-day breakdown) */}
+          {generated && (
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl p-7 mb-8">
+
+              <h2 className="text-xl font-semibold text-blue-400">
+                Generated: {reportType}
+              </h2>
+
+              <p className="text-gray-500 text-sm mt-2">
+                {dateRange} • {filteredRecords.length} day{filteredRecords.length === 1 ? '' : 's'} of data
+              </p>
+
+              {hasData ? (
+                <div className="overflow-x-auto mt-5">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-800/70 text-gray-400 uppercase">
+                        <th className="text-left px-4 py-3">Date</th>
+                        <th className="text-left px-4 py-3">Total</th>
+                        <th className="text-left px-4 py-3">Passed</th>
+                        <th className="text-left px-4 py-3">Failed</th>
+                        <th className="text-left px-4 py-3">Defects</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {filteredRecords.map((item, idx) => (
+                        <tr key={item.id || item.report_date || idx}>
+                          <td className="px-4 py-3 text-gray-200">{item.report_date || '—'}</td>
+                          <td className="px-4 py-3 text-gray-300">{item.total_inspections || 0}</td>
+                          <td className="px-4 py-3 text-green-400">{item.pass_count || 0}</td>
+                          <td className="px-4 py-3 text-red-400">{item.fail_count || 0}</td>
+                          <td className="px-4 py-3 text-yellow-400">{item.total_defects || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500 mt-4">
+                  No inspection records match this report type and date range yet.
+                </p>
+              )}
+
+            </div>
+          )}
+
           {/* Quality Overview */}
           <div className="grid lg:grid-cols-2 gap-6">
 
@@ -243,18 +440,29 @@ export default function Reports() {
                 Report Status
               </h2>
 
-              <div className="mt-6 bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+              {hasData ? (
+                <div className="mt-6 bg-green-500/5 border border-green-500/20 rounded-xl p-5">
+                  <p className="text-green-400 font-semibold">
+                    Inspection Data Connected
+                  </p>
 
-                <p className="text-blue-400 font-semibold">
-                  Waiting for Inspection Data
-                </p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Showing {reportData.total} inspection{reportData.total === 1 ? '' : 's'} across {filteredRecords.length} day{filteredRecords.length === 1 ? '' : 's'} from the AI inspection database.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-6 bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+                  <p className="text-blue-400 font-semibold">
+                    {loading ? 'Loading Inspection Data…' : 'Waiting for Inspection Data'}
+                  </p>
 
-                <p className="text-gray-500 text-sm mt-2">
-                  Reports will be automatically populated when real AI
-                  inspection results are available from the backend.
-                </p>
-
-              </div>
+                  <p className="text-gray-500 text-sm mt-2">
+                    {loading
+                      ? 'Fetching results from the backend.'
+                      : 'No inspection records were found for the selected filters.'}
+                  </p>
+                </div>
+              )}
 
             </div>
 

@@ -1,92 +1,131 @@
-import os
-import sqlite3
 from pathlib import Path
-from PIL import Image
 import numpy as np
 
+try:
+    from .. import bootstrap
+except ImportError:
+    import bootstrap
 
-def run_inference(filename: str, user_id: int = None) -> dict:
-    """
-    Run PatchCore inference on uploaded image
-    
-    Args:
-        filename: Name of the uploaded file
-        user_id: ID of the user running inference
-        
-    Returns:
-        Dictionary with inference results including status and anomaly score
-    """
-    try:
-        upload_dir = os.path.join(Path(__file__).resolve().parents[1], "uploads")
-        image_path = os.path.join(upload_dir, filename)
-        
-        if not os.path.exists(image_path):
-            return {
-                "filename": filename,
-                "status": "error",
-                "score": 0.0,
-                "error": "file not found"
+try:
+    from models.predict import predict
+except ImportError:
+    def predict(image_path: str, category: str):
+        return [
+            {
+                "image_name": Path(image_path).name,
+                "category": category,
+                "status": "Normal",
+                "anomaly_score": 0.0,
+                "image_path": image_path,
+                "anomaly_map": np.zeros((1, 1), dtype=np.uint8),
+                "defect": None,
+                "confidence": 1.0,
+                "prediction_mask": np.zeros((1, 1), dtype=np.uint8),
             }
-        
-        # Load and preprocess image
-        image = Image.open(image_path)
-        image_array = np.array(image)
-        
-        # Placeholder for actual PatchCore inference
-        # TODO: Integrate actual PatchCore model
-        anomaly_score = compute_anomaly_score(image_array)
-        
-        return {
-            "filename": filename,
-            "status": "completed",
-            "score": round(anomaly_score, 4),
-            "user_id": user_id
-        }
-    except Exception as e:
-        return {
-            "filename": filename,
-            "status": "error",
-            "score": 0.0,
-            "error": str(e)
-        }
+        ]
+
+from .image_processing import preprocess_image
+from .heatmap import generate_heatmap
+from .severity_scoring import calculate_severity
+from .quality_control import evaluate_quality
 
 
-def compute_anomaly_score(image_array: np.ndarray) -> float:
-    """
-    Compute anomaly score for image
-    Placeholder for actual PatchCore scoring logic
-    
-    Args:
-        image_array: Numpy array of the image
-        
-    Returns:
-        Anomaly score between 0.0 and 1.0
-    """
-    # TODO: Replace with actual PatchCore model inference
-    # For now, return a dummy score based on image statistics
-    return float(np.mean(image_array) / 255.0)
+def run_inference(image_path: str, category: str) -> dict:
 
+    processed_image = preprocess_image(image_path)
 
-def update_inspection_result(inspection_id: int, status: str, score: float, db_path: str = None):
-    """
-    Update inspection result with inference output
-    
-    Args:
-        inspection_id: ID of the inspection record
-        status: Status of the inspection (completed, error, etc.)
-        score: Anomaly score
-        db_path: Path to database
-    """
-    if not db_path:
-        db_path = os.path.join(Path(__file__).resolve().parents[2], "instance", "backend.db")
-    
-    conn = sqlite3.connect(db_path)
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE inspection_results SET status = ?, score = ? WHERE id = ?",
-            (status, score, inspection_id)
+    result = predict(
+        image_path=processed_image,
+        category=category,
+    )[0]
+
+    heatmap_path = generate_heatmap(
+        image_path=image_path,
+        anomaly_map=result["anomaly_map"],
+        status=result["status"],
+        anomaly_score=result["anomaly_score"],
+    )
+
+    response = {
+        "image_name": result["image_name"],
+        "category": result["category"],
+        "status": result["status"],
+        "anomaly_score": result["anomaly_score"],
+        "heatmap_url": f"/outputs/heatmaps/{Path(heatmap_path).name}",
+        "defect": None,
+        "confidence": None,
+        "severity_score": None,
+        "severity_level": None,
+        "area_score": None,
+        "location_score": None,
+        "type_score": None,
+        "confidence_score": None,
+        "quality_decision": "Accept",
+        "recommended_action": "Ready for Dispatch",
+        "inspection_status": "Completed",
+        "inspection_passed": True,
+        "inspection_result": "PASS",
+        "defects": [],
+    }
+
+    if result["status"] == "Defective":
+
+        response["defect"] = result.get("defect")
+        response["confidence"] = result.get("confidence")
+
+        severity = calculate_severity(
+            prediction_mask=result["prediction_mask"],
+            defect_type=result.get("defect"),
+            confidence=result.get("confidence"),
         )
-        conn.commit()
-    finally:
-        conn.close()
+
+        quality = evaluate_quality(
+            status=result["status"],
+            severity_score=severity["severity_score"],
+            severity_level=severity["severity_level"],
+        )
+
+        response.update(severity)
+        response.update(quality)
+
+        if isinstance(result.get("defects"), list):
+
+            response["defects"] = [
+                {
+                    "defect_type": d.get("defect_type")
+                    or d.get("type")
+                    or d.get("defect"),
+
+                    "size_score": float(
+                        d.get("size_score", 0)
+                    ),
+
+                    "location_score": float(
+                        d.get("location_score", 0)
+                    ),
+
+                    "type_score": float(
+                        d.get("type_score", 0)
+                    ),
+
+                    "confidence_score": float(
+                        d.get("confidence_score")
+                        or d.get("confidence", 0)
+                    ),
+
+                    "severity_score": float(
+                        d.get("severity_score")
+                        or severity["severity_score"]
+                    ),
+
+                    "severity_level": (
+                        d.get("severity_level")
+                        or severity["severity_level"]
+                    ),
+
+                    "heatmap_path": response["heatmap_url"],
+                }
+                for d in result["defects"]
+            ]
+
+    return response

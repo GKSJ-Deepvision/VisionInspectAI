@@ -65,53 +65,40 @@ export async function registerRequest(username, password, email) {
 
   return res.json()
 }
-const DEFECT_TYPES = [
-  { type: 'Surface Scratch', typeScore: 35 },
-  { type: 'Surface Crack', typeScore: 95 },
-  { type: 'Missing Component', typeScore: 90 },
-  { type: 'Discoloration', typeScore: 25 },
-  { type: 'Dent', typeScore: 60 },
-]
 
-function computeSeverity({ size, location, defectType, confidence }) {
-  const score = size * 0.3 + location * 0.25 + defectType * 0.25 + confidence * 0.2
-  let level = 'Low'
-  if (score >= 80) level = 'Critical'
-  else if (score >= 60) level = 'High'
-  else if (score >= 40) level = 'Medium'
-  return { score: Math.round(score), level }
-}
-
-function randomBetween(min, max) {
-  return Math.round(min + Math.random() * (max - min))
-}
 
 // Pretends to call the backend's /api/inspect endpoint
-export async function inspectImage(file, token) {
-  const formData = new FormData()
-  formData.append('file', file)
+export async function inspectImage(file, category, token) {
+  const formData = new FormData();
 
-  const res = await fetch(`${BASE_URL}/api/inspection/image`, {
-    method: 'POST',
+  formData.append("image", file);
+  formData.append("category", category);
+
+  const res = await fetch(`${BASE_URL}/api/inspection/predict`, {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
-  })
+  });
 
-  const data = await res.json()
+  const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(
-      data.message || data.error || 'Inspection failed'
-    )
+    throw new Error(data.message || data.error || "Inspection failed");
   }
 
-  return data
+  return data.data ?? data;
 }
-export async function getInspectionHistory(token) {
+export async function getInspectionHistory(token, params = {}) {
+  const query = new URLSearchParams({
+    limit: 50,
+    offset: 0,
+    ...params,
+  })
+
   const res = await fetch(
-    `${BASE_URL}/api/history?limit=50&offset=0`,
+    `${BASE_URL}/api/history?${query.toString()}`,
     {
       method: 'GET',
       headers: {
@@ -131,4 +118,36 @@ export async function saveInspection(record) {
   const updated = [record, ...existing].slice(0, 50)
   localStorage.setItem('vi_inspections', JSON.stringify(updated))
   return updated
+}
+export async function getReports(token) {
+  const res = await fetch(`${BASE_URL}/api/reports`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to load reports");
+  }
+
+  return res.json();
+}
+
+
+export async function exportReportsCSV(token, filters = {}) {
+  const params = new URLSearchParams({ format: "csv", ...filters })
+
+  const res = await fetch(`${BASE_URL}/api/reports/export?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error("Failed to export report")
+  }
+
+  return res.blob()
 }

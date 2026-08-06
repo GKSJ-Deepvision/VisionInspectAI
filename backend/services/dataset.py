@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 from typing import List
-
-
 def list_categories(dataset_root: Path) -> List[str]:
     """List all product categories in the dataset"""
     if not dataset_root.exists() or not dataset_root.is_dir():
