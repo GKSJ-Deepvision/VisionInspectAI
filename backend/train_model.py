@@ -83,7 +83,7 @@ Examples:
                 break
         
         if not found:
-            print(f"❌ Error: MVTec AD dataset not found!")
+            print(f"[ERROR] MVTec AD dataset not found!")
             print(f"   Searched: {dataset_path}")
             for alt in alt_paths:
                 print(f"   Searched: {os.path.abspath(alt)}")
@@ -122,7 +122,7 @@ Examples:
         print(f"  Total training time: {minutes}m {seconds}s")
     else:
         if not detector.is_trained:
-            print("❌ No trained model found! Run without --eval-only first.")
+            print("[ERROR] No trained model found! Run without --eval-only first.")
             sys.exit(1)
         print(f"  Loaded existing model with {len(detector.category_features)} categories")
 

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import shutil
 import traceback
 from typing import List
@@ -30,7 +30,7 @@ except ImportError:
         try:
             from ml_engine import DefectDetectionEngine
         except ImportError as err:
-            print(f"⚠ ML Engine import notice (using failsafe engine): {err}")
+            print(f"âš  ML Engine import notice (using failsafe engine): {err}")
             class DefectDetectionEngine:
                 def inspect_image(self, image_path, output_dir="storage/heatmaps"):
                     return {
@@ -43,7 +43,7 @@ except ImportError:
                         "overall_severity_score": 0.0,
                         "severity_level": "NONE",
                         "recommendation": "ML Engine unavailable. Manual review required.",
-                        "pass_fail_decision": "REVIEW"
+                        "pass_fail_decision": "FAIL"
                     }
 
 # Instantiate Engine & Router
@@ -51,13 +51,13 @@ ai_engine = DefectDetectionEngine()
 router = APIRouter()
 
 
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  ANALYTICS ENDPOINTS
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.get("/analytics")
 def get_manufacturing_analytics(db: Session = Depends(get_db)):
-    """Legacy analytics endpoint — returns summary + recent inspections."""
+    """Legacy analytics endpoint â€” returns summary + recent inspections."""
     try:
         total = db.query(db_models.InspectionRecord).count()
         failed = db.query(db_models.InspectionRecord).filter(
@@ -67,7 +67,7 @@ def get_manufacturing_analytics(db: Session = Depends(get_db)):
             db_models.InspectionRecord.pass_fail_decision == "PASS"
         ).count()
         reviewed = db.query(db_models.InspectionRecord).filter(
-            db_models.InspectionRecord.pass_fail_decision == "REVIEW"
+            db_models.InspectionRecord.pass_fail_decision == "FAIL"
         ).count()
         pass_rate = round((passed / total * 100), 2) if total > 0 else 0.0
 
@@ -91,7 +91,7 @@ def get_manufacturing_analytics(db: Session = Depends(get_db)):
                 {
                     "inspection_id": r.inspection_id,
                     "product_sku": r.product_sku or "MVI-PROD-2026",
-                    "pass_fail_decision": r.pass_fail_decision or "REVIEW",
+                    "pass_fail_decision": r.pass_fail_decision or "FAIL",
                     "severity_level": r.severity_level or "NONE",
                     "overall_severity_score": r.overall_severity_score or 0.0,
                     "confidence_score": r.confidence_score or 0.0,
@@ -103,7 +103,7 @@ def get_manufacturing_analytics(db: Session = Depends(get_db)):
             ]
         }
     except Exception as e:
-        print(f"⚠ Analytics DB notice: {e}")
+        print(f"âš  Analytics DB notice: {e}")
         return {
             "status": "SUCCESS",
             "total_inspections": 0, "passed_inspections": 0,
@@ -125,7 +125,7 @@ def get_analytics_summary(db: Session = Depends(get_db)):
             db_models.InspectionRecord.pass_fail_decision == "FAIL"
         ).count()
         reviewed = db.query(db_models.InspectionRecord).filter(
-            db_models.InspectionRecord.pass_fail_decision == "REVIEW"
+            db_models.InspectionRecord.pass_fail_decision == "FAIL"
         ).count()
 
         avg_conf = db.query(func.avg(db_models.InspectionRecord.confidence_score)).scalar()
@@ -143,7 +143,7 @@ def get_analytics_summary(db: Session = Depends(get_db)):
             "avg_latency_ms": round(float(avg_lat or 0), 2),
         }
     except Exception as e:
-        print(f"⚠ Analytics summary error: {e}")
+        print(f"âš  Analytics summary error: {e}")
         return {
             "status": "SUCCESS",
             "total_inspections": 0, "passed_inspections": 0,
@@ -179,7 +179,7 @@ def get_defect_trends(db: Session = Depends(get_db)):
         trends = sorted(daily.values(), key=lambda x: x["date"])
         return {"status": "SUCCESS", "trends": trends}
     except Exception as e:
-        print(f"⚠ Defect trends error: {e}")
+        print(f"âš  Defect trends error: {e}")
         return {"status": "SUCCESS", "trends": []}
 
 
@@ -196,7 +196,7 @@ def get_severity_distribution(db: Session = Depends(get_db)):
             dist.append({"severity_level": level, "count": count})
         return {"status": "SUCCESS", "distribution": dist}
     except Exception as e:
-        print(f"⚠ Severity distribution error: {e}")
+        print(f"âš  Severity distribution error: {e}")
         return {"status": "SUCCESS", "distribution": []}
 
 
@@ -217,7 +217,7 @@ def get_defect_types(db: Session = Depends(get_db)):
                   sorted(type_counts.items(), key=lambda x: x[1], reverse=True)]
         return {"status": "SUCCESS", "defect_types": result}
     except Exception as e:
-        print(f"⚠ Defect types error: {e}")
+        print(f"âš  Defect types error: {e}")
         return {"status": "SUCCESS", "defect_types": []}
 
 
@@ -248,7 +248,7 @@ def get_production_quality(db: Session = Depends(get_db)):
         quality = sorted(daily.values(), key=lambda x: x["date"])
         return {"status": "SUCCESS", "production_quality": quality}
     except Exception as e:
-        print(f"⚠ Production quality error: {e}")
+        print(f"âš  Production quality error: {e}")
         return {"status": "SUCCESS", "production_quality": []}
 
 
@@ -266,7 +266,7 @@ def get_recent_inspections(db: Session = Depends(get_db)):
                 {
                     "inspection_id": r.inspection_id,
                     "product_sku": r.product_sku or "MVI-PROD-2026",
-                    "pass_fail_decision": r.pass_fail_decision or "REVIEW",
+                    "pass_fail_decision": r.pass_fail_decision or "FAIL",
                     "is_defective": r.is_defective,
                     "severity_level": r.severity_level or "NONE",
                     "overall_severity_score": r.overall_severity_score or 0.0,
@@ -282,13 +282,13 @@ def get_recent_inspections(db: Session = Depends(get_db)):
             ]
         }
     except Exception as e:
-        print(f"⚠ Recent inspections error: {e}")
+        print(f"âš  Recent inspections error: {e}")
         return {"status": "SUCCESS", "inspections": []}
 
 
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  INSPECTION ENDPOINTS
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.get("/inspections")
 def get_all_inspections(db: Session = Depends(get_db)):
@@ -303,7 +303,7 @@ def get_all_inspections(db: Session = Depends(get_db)):
                 {
                     "inspection_id": r.inspection_id,
                     "product_sku": r.product_sku,
-                    "pass_fail_decision": r.pass_fail_decision or "REVIEW",
+                    "pass_fail_decision": r.pass_fail_decision or "FAIL",
                     "severity_level": r.severity_level,
                     "overall_severity_score": r.overall_severity_score or 0.0,
                     "confidence_score": r.confidence_score or 0.0,
@@ -377,9 +377,9 @@ def get_all_products(db: Session = Depends(get_db)):
         return {"status": "SUCCESS", "products": []}
 
 
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  SINGLE IMAGE INSPECTION
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post("/inspect")
 async def inspect_component(
@@ -396,7 +396,7 @@ async def inspect_component(
     record_id = f"INS-{timestamp_str[:15]}"
     clean_sku = product_sku.strip()
 
-    # ── SAFE NEUTRAL DEFAULTS ──
+    # â”€â”€ SAFE NEUTRAL DEFAULTS â”€â”€
     # These are overridden by ml_results.update(res) when the engine runs successfully.
     # Using REVIEW instead of FAIL prevents false rejections if the engine errors out.
     ml_results = {
@@ -409,7 +409,7 @@ async def inspect_component(
         "overall_severity_score": 0.0,
         "severity_level": "NONE",
         "recommendation": "Processing...",
-        "pass_fail_decision": "REVIEW",
+        "pass_fail_decision": "FAIL",
         "defect_regions": "[]",
         "texture_score": 0.0,
         "edge_density_score": 0.0,
@@ -434,11 +434,11 @@ async def inspect_component(
             if res and isinstance(res, dict):
                 ml_results.update(res)
         except Exception as ml_err:
-            print(f"⚠ ML Engine execution notice: {ml_err}\n{traceback.format_exc()}")
+            print(f"âš  ML Engine execution notice: {ml_err}\n{traceback.format_exc()}")
             ml_results["recommendation"] = "ML Engine error. Manual review required."
-            ml_results["pass_fail_decision"] = "REVIEW"
+            ml_results["pass_fail_decision"] = "FAIL"
 
-        # ── Save to database ──
+        # â”€â”€ Save to database â”€â”€
         try:
             product = db.query(db_models.Product).filter(
                 db_models.Product.sku == clean_sku
@@ -459,7 +459,7 @@ async def inspect_component(
                 product_sku=product.sku,
                 raw_image_path=raw_path,
                 heatmap_image_path=ml_results.get("heatmap_image_path"),
-                pass_fail_decision=ml_results.get("pass_fail_decision", "REVIEW"),
+                pass_fail_decision=ml_results.get("pass_fail_decision", "FAIL"),
                 is_defective=ml_results.get("is_defective", False),
                 defect_type=ml_results.get("defect_type", "None"),
                 confidence_score=ml_results.get("confidence_score", 0.5),
@@ -484,18 +484,21 @@ async def inspect_component(
             db.commit()
         except Exception as db_err:
             db.rollback()
-            print(f"⚠ Database logging notice: {db_err}")
+            print(f"âš  Database logging notice: {db_err}")
 
         return {
             "status": "SUCCESS",
             "inspection_id": record_id,
             "product_sku": clean_sku,
-            "pass_fail_decision": ml_results.get("pass_fail_decision", "REVIEW"),
+            "result": ml_results.get("pass_fail_decision", "FAIL"),
+            "pass_fail_decision": ml_results.get("pass_fail_decision", "FAIL"),
             "is_defective": ml_results.get("is_defective", False),
+            "classification": ml_results.get("classification", "Unknown"),
             "severity_level": ml_results.get("severity_level", "NONE"),
             "overall_severity_score": ml_results.get("overall_severity_score", 0.0),
             "severity_score": ml_results.get("overall_severity_score", 0.0),
             "recommendation": ml_results.get("recommendation", ""),
+            "confidence": ml_results.get("confidence_score", 0.5),
             "confidence_score": ml_results.get("confidence_score", 0.5),
             "latency_ms": ml_results.get("processing_latency_ms", 0.0),
             "processing_latency_ms": ml_results.get("processing_latency_ms", 0.0),
@@ -504,12 +507,12 @@ async def inspect_component(
             "matched_category": ml_results.get("matched_category", "unknown"),
         }
     except Exception as fatal_err:
-        print(f"⚠ Fatal inspect error: {fatal_err}\n{traceback.format_exc()}")
+        print(f"âš  Fatal inspect error: {fatal_err}\n{traceback.format_exc()}")
         return {
             "status": "SUCCESS",
             "inspection_id": record_id,
             "product_sku": clean_sku,
-            "pass_fail_decision": "REVIEW",
+            "pass_fail_decision": "FAIL",
             "is_defective": False,
             "severity_level": "NONE",
             "overall_severity_score": 0.0,
@@ -524,9 +527,9 @@ async def inspect_component(
         }
 
 
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  BATCH INSPECTION
-# ═══════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post("/batch-inspect")
 async def batch_inspect(
@@ -557,7 +560,7 @@ async def batch_inspect(
                     total_defects += 1
                 results.append({
                     "filename": file.filename,
-                    "pass_fail_decision": res.get("pass_fail_decision", "REVIEW"),
+                    "pass_fail_decision": res.get("pass_fail_decision", "FAIL"),
                     "defect_type": res.get("defect_type", "None"),
                     "confidence_score": res.get("confidence_score", 0.5),
                     "severity_level": res.get("severity_level", "NONE"),
@@ -568,7 +571,7 @@ async def batch_inspect(
             else:
                 results.append({
                     "filename": file.filename,
-                    "pass_fail_decision": "REVIEW",
+                    "pass_fail_decision": "FAIL",
                     "defect_type": "None",
                     "confidence_score": 0.5,
                     "severity_level": "NONE",
@@ -577,10 +580,10 @@ async def batch_inspect(
                     "heatmap_image_path": None,
                 })
         except Exception as e:
-            print(f"⚠ Batch item {idx} error: {e}")
+            print(f"âš  Batch item {idx} error: {e}")
             results.append({
                 "filename": file.filename if file else f"file_{idx}",
-                "pass_fail_decision": "REVIEW",
+                "pass_fail_decision": "FAIL",
                 "error": str(e),
             })
 

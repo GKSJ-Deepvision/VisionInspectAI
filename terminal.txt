@@ -1,0 +1,32 @@
+# VisionInspect AI - Terminal Commands
+# =====================================
+# Run these commands manually in order.
+# Estimated time: ~20-30 minutes for full training
+
+# Step 1: Activate the virtual environment (if not already active)
+cd c:\Users\KANNA\OneDrive\Desktop\visioninspect-ai\backend
+# Windows: .\env\Scripts\activate  OR  conda activate visioninspect
+
+# Step 2: Train the PatchCore model on all 15 MVTec AD categories
+# This takes ~20-30 minutes (extracts 196 patches per image using WRN-50-2)
+python train_model.py --evaluate
+
+# Step 3: Start the backend server
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Step 4: In a NEW terminal, start the frontend
+cd c:\Users\KANNA\OneDrive\Desktop\visioninspect-ai\frontend
+npm run dev
+
+# Step 5: Open browser to http://localhost:5173
+# The app should show the animated intro splash, then the landing page
+
+# ==========================================
+# QUICK TEST (after training completes):
+# ==========================================
+# 1. Open http://localhost:5173
+# 2. Click "START INSPECTING" -> Register as ENGINEER
+# 3. Upload any image from data/mvtec_ad/<category>/test/good/ -> Should show PASS
+# 4. Upload any image from data/mvtec_ad/<category>/test/<defect_type>/ -> Should show FAIL
+# 5. Switch role to OWNER -> Should see Power BI-style dashboard
+# 6. Switch role to CLIENT -> Should see Conveyor #1 operator view

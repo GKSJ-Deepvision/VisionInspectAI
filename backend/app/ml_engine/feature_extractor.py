@@ -1,58 +1,56 @@
 """
-VisionInspect AI - Deep Feature Extractor (Multi-Scale)
+VisionInspect AI - Deep Feature Extractor (WideResNet-50-2 + PatchCore)
 
-Uses pretrained ResNet-18 to extract MULTI-SCALE deep feature embeddings.
-Unlike single-layer extraction, this captures features from multiple network depths:
-  - Layer 2 (256-dim): Low-level textures, edges, surface patterns
-  - Layer 3 (256-dim): Mid-level shapes, structural patterns  
-  - AvgPool (512-dim): High-level semantic features
+Provides BOTH global and patch-level features for anomaly detection.
+Patch-level features are the key to 95%+ accuracy - they capture LOCAL
+defects that global features miss (small scratches, tiny cracks, etc).
 
-The combined 1024-dim feature vector is much more sensitive to subtle defects
-like scratches, small cracks, and discoloration that single-layer extraction misses.
+Architecture:
+  WideResNet-50-2 backbone with multi-scale extraction:
+  - Layer 2: (B, 512, 28, 28) -> texture and edge patterns
+  - Layer 3: (B, 1024, 14, 14) -> structural patterns
+  - AvgPool: (B, 2048, 1, 1) -> high-level semantics
+
+  Global features: concat(pool(layer2), pool(layer3), avgpool) = 3584-dim
+  Patch features: concat(resize(layer2), layer3) at 14x14 = 196 patches of 1536-dim
 """
 
 import cv2
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from PIL import Image
 
-# Lazy-import torchvision to handle graceful fallback
 try:
     from torchvision import models, transforms
     HAS_TORCHVISION = True
 except ImportError:
     HAS_TORCHVISION = False
-    print("[WARN] torchvision not available. Deep feature extraction disabled.")
+    print("[WARN] torchvision not available.")
 
 
 class DeepFeatureExtractor:
-    """Multi-scale feature extractor using pretrained ResNet-18.
-    
-    Extracts features from multiple network layers for comprehensive
-    anomaly detection that catches both subtle texture defects and
-    major structural issues.
-    """
+    """Multi-scale feature extractor with PatchCore-style patch features."""
 
     def __init__(self, device=None):
         if not HAS_TORCHVISION:
-            raise ImportError("torchvision is required for deep feature extraction")
+            raise ImportError("torchvision is required")
 
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
             self.device = torch.device(device)
 
-        # Load pretrained ResNet-18
+        # Load pretrained WideResNet-50-2
         try:
-            weights = models.ResNet18_Weights.DEFAULT
-            backbone = models.resnet18(weights=weights)
+            weights = models.Wide_ResNet50_2_Weights.DEFAULT
+            backbone = models.wide_resnet50_2(weights=weights)
         except AttributeError:
-            backbone = models.resnet18(pretrained=True)
+            backbone = models.wide_resnet50_2(pretrained=True)
 
         backbone.eval()
 
-        # Extract sub-modules for multi-scale feature extraction
         self.layer_prefix = nn.Sequential(
             backbone.conv1, backbone.bn1, backbone.relu, backbone.maxpool,
             backbone.layer1,
@@ -63,58 +61,19 @@ class DeepFeatureExtractor:
         self.layer4 = backbone.layer4.to(self.device).eval()
         self.avgpool = backbone.avgpool.to(self.device).eval()
 
-        # Standard ImageNet preprocessing
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
-        # Feature dimension: layer2(256) + layer3(256) + avgpool(512) = 1024
-        self.feature_dim = 1024
+        self.feature_dim = 3584        # Global feature dimension
+        self.patch_dim = 1536           # Per-patch feature dimension
+        self.n_patches = 196            # 14 x 14 spatial grid
+        print(f"  WRN-50-2 PatchCore extractor on: {self.device} (global={self.feature_dim}, patch={self.patch_dim}x{self.n_patches})")
 
-        print(f"  Multi-scale feature extractor initialized on device: {self.device} (dim={self.feature_dim})")
-
-    def _extract_multiscale(self, img_tensor):
-        """Extract multi-scale features from a batch of image tensors.
-        
-        Returns concatenated features from layer2, layer3, and avgpool.
-        """
-        with torch.no_grad():
-            # Forward through layers sequentially
-            x = self.layer_prefix(img_tensor)   # After layer1
-            x2 = self.layer2(x)                  # layer2 output: (B, 128, 14, 14)
-            x3 = self.layer3(x2)                 # layer3 output: (B, 256, 7, 7)
-            x4 = self.layer4(x3)                 # layer4 output: (B, 512, 7, 7) or similar
-            xp = self.avgpool(x4)                # avgpool output: (B, 512, 1, 1)
-
-            # Global average pool for layer2 and layer3
-            f2 = torch.nn.functional.adaptive_avg_pool2d(x2, 1).squeeze(-1).squeeze(-1)  # (B, 128)
-            f3 = torch.nn.functional.adaptive_avg_pool2d(x3, 1).squeeze(-1).squeeze(-1)  # (B, 256)
-            fp = xp.squeeze(-1).squeeze(-1)  # (B, 512)
-
-            # Concatenate: 128 + 256 + 512 = 896... wait, layer2 has 128 channels
-            # Let me also add layer4 before avgpool for richer features
-            f4_spatial = torch.nn.functional.adaptive_avg_pool2d(x3, 1).squeeze(-1).squeeze(-1)
-
-            # Concatenate multi-scale features
-            features = torch.cat([f2, f3, fp], dim=1)  # (B, 128+256+512=896)
-
-        return features.cpu().numpy()
-
-    def extract(self, image_input):
-        """Extract a multi-scale feature vector from an image.
-
-        Args:
-            image_input: str (file path), numpy array (BGR), or PIL Image
-
-        Returns:
-            numpy array of shape (feature_dim,) - L2-normalized feature vector
-        """
-        # Handle different input types
+    def _to_tensor(self, image_input):
+        """Convert any image input to a preprocessed tensor."""
         if isinstance(image_input, str):
             image = Image.open(image_input).convert('RGB')
         elif isinstance(image_input, np.ndarray):
@@ -122,62 +81,139 @@ class DeepFeatureExtractor:
         elif isinstance(image_input, Image.Image):
             image = image_input.convert('RGB')
         else:
-            raise ValueError(f"Unsupported image input type: {type(image_input)}")
+            raise ValueError(f"Unsupported input type: {type(image_input)}")
+        return self.transform(image).unsqueeze(0).to(self.device)
 
-        img_tensor = self.transform(image).unsqueeze(0).to(self.device)
-        features = self._extract_multiscale(img_tensor)
-        feat_vec = features.squeeze(0)
+    def _forward(self, img_tensor):
+        """Single forward pass returning intermediate features."""
+        with torch.no_grad():
+            x = self.layer_prefix(img_tensor)
+            x2 = self.layer2(x)         # (B, 512, 28, 28)
+            x3 = self.layer3(x2)        # (B, 1024, 14, 14)
+            x4 = self.layer4(x3)        # (B, 2048, 7, 7)
+            xp = self.avgpool(x4)       # (B, 2048, 1, 1)
+        return x2, x3, xp
 
-        # L2-normalize
+    def extract(self, image_input):
+        """Extract global feature vector (3584-dim). Used for category matching."""
+        img_tensor = self._to_tensor(image_input)
+        x2, x3, xp = self._forward(img_tensor)
+
+        with torch.no_grad():
+            f2 = F.adaptive_avg_pool2d(x2, 1).flatten(1)   # (1, 512)
+            f3 = F.adaptive_avg_pool2d(x3, 1).flatten(1)   # (1, 1024)
+            fp = xp.flatten(1)                               # (1, 2048)
+            features = torch.cat([f2, f3, fp], dim=1)        # (1, 3584)
+
+        feat_vec = features.squeeze(0).cpu().numpy()
         norm = np.linalg.norm(feat_vec)
         if norm > 1e-8:
             feat_vec = feat_vec / norm
-
-        # Update feature_dim based on actual output
-        self.feature_dim = len(feat_vec)
-
         return feat_vec
 
-    def extract_batch(self, image_paths, batch_size=16):
-        """Extract features from multiple images efficiently using batching.
-
-        Args:
-            image_paths: List of image file path strings
-            batch_size: Number of images to process simultaneously
-
-        Returns:
-            numpy array of shape (N, feature_dim) - L2-normalized feature vectors
+    def extract_patches(self, image_input):
+        """Extract patch-level features (196 patches x 1536-dim).
+        
+        This is the key to PatchCore-style anomaly detection.
+        Each patch corresponds to a 16x16 region of the 224x224 input image.
+        Local defects that are invisible in global features become detectable
+        when comparing at the patch level.
         """
-        all_features = []
+        img_tensor = self._to_tensor(image_input)
+        x2, x3, _ = self._forward(img_tensor)
 
+        with torch.no_grad():
+            # Resize layer2 to match layer3 spatial dims
+            x2_resized = F.adaptive_avg_pool2d(x2, (14, 14))  # (1, 512, 14, 14)
+            # Concatenate layer2 + layer3 for rich patch features
+            patches = torch.cat([x2_resized, x3], dim=1)       # (1, 1536, 14, 14)
+            # Reshape to (196, 1536)
+            patches = patches.squeeze(0).permute(1, 2, 0).reshape(-1, 1536)
+
+        return patches.cpu().numpy()
+
+    def extract_both(self, image_input):
+        """Extract BOTH global (3584-dim) and patch (196x1536) features in one pass."""
+        img_tensor = self._to_tensor(image_input)
+        x2, x3, xp = self._forward(img_tensor)
+
+        with torch.no_grad():
+            # Global features
+            f2 = F.adaptive_avg_pool2d(x2, 1).flatten(1)
+            f3 = F.adaptive_avg_pool2d(x3, 1).flatten(1)
+            fp = xp.flatten(1)
+            global_feat = torch.cat([f2, f3, fp], dim=1).squeeze(0).cpu().numpy()
+
+            # Patch features
+            x2_resized = F.adaptive_avg_pool2d(x2, (14, 14))
+            patch_feats = torch.cat([x2_resized, x3], dim=1)
+            patch_feats = patch_feats.squeeze(0).permute(1, 2, 0).reshape(-1, 1536).cpu().numpy()
+
+        # Normalize global features
+        norm = np.linalg.norm(global_feat)
+        if norm > 1e-8:
+            global_feat = global_feat / norm
+
+        return global_feat, patch_feats
+
+    def extract_batch(self, image_paths, batch_size=8):
+        """Extract global features from multiple images using batching."""
+        all_features = []
         for i in range(0, len(image_paths), batch_size):
             batch_paths = image_paths[i:i + batch_size]
             batch_tensors = []
-
             for path in batch_paths:
                 try:
                     image = Image.open(path).convert('RGB')
-                    img_tensor = self.transform(image)
-                    batch_tensors.append(img_tensor)
+                    batch_tensors.append(self.transform(image))
                 except Exception as e:
                     print(f"    Warning: Could not load {path}: {e}")
                     continue
-
             if not batch_tensors:
                 continue
-
             batch = torch.stack(batch_tensors).to(self.device)
-            features = self._extract_multiscale(batch)
-
-            # L2-normalize each vector
+            with torch.no_grad():
+                x = self.layer_prefix(batch)
+                x2 = self.layer2(x)
+                x3 = self.layer3(x2)
+                x4 = self.layer4(x3)
+                xp = self.avgpool(x4)
+                f2 = F.adaptive_avg_pool2d(x2, 1).flatten(1)
+                f3 = F.adaptive_avg_pool2d(x3, 1).flatten(1)
+                fp = xp.flatten(1)
+                features = torch.cat([f2, f3, fp], dim=1)
+            features = features.cpu().numpy()
             norms = np.linalg.norm(features, axis=1, keepdims=True)
-            norms = np.maximum(norms, 1e-8)
-            features = features / norms
-
+            features = features / np.maximum(norms, 1e-8)
             all_features.append(features)
-
         if all_features:
-            result = np.concatenate(all_features, axis=0)
-            self.feature_dim = result.shape[1]
-            return result
+            return np.concatenate(all_features, axis=0)
         return np.empty((0, self.feature_dim), dtype=np.float32)
+
+    def extract_patches_batch(self, image_paths, batch_size=8):
+        """Extract patch features from multiple images. Returns list of (196, 1536) arrays."""
+        all_patches = []
+        for i in range(0, len(image_paths), batch_size):
+            batch_paths = image_paths[i:i + batch_size]
+            batch_tensors = []
+            valid_indices = []
+            for idx, path in enumerate(batch_paths):
+                try:
+                    image = Image.open(path).convert('RGB')
+                    batch_tensors.append(self.transform(image))
+                    valid_indices.append(idx)
+                except Exception:
+                    continue
+            if not batch_tensors:
+                continue
+            batch = torch.stack(batch_tensors).to(self.device)
+            with torch.no_grad():
+                x = self.layer_prefix(batch)
+                x2 = self.layer2(x)
+                x3 = self.layer3(x2)
+                x2_r = F.adaptive_avg_pool2d(x2, (14, 14))
+                patches = torch.cat([x2_r, x3], dim=1)  # (B, 1536, 14, 14)
+                patches = patches.permute(0, 2, 3, 1).reshape(len(batch_tensors), -1, 1536)
+            for j in range(len(batch_tensors)):
+                all_patches.append(patches[j].cpu().numpy())
+        return all_patches

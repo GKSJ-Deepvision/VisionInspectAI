@@ -5,7 +5,7 @@ import AuthPage from './AuthPage';
 import AIInspectionPanel from './AIInspectionPanel';
 import FactoryTelemetryCharts from './FactoryTelemetryCharts';
 import { ClientOperatorView, OwnerExecutiveView } from './RoleViews';
-import { Cpu, LogOut, User, Bell } from 'lucide-react';
+import { Cpu, LogOut, User, Bell, Shield, AlertTriangle } from 'lucide-react';
 import './App.css';
 
 export default function App() {
@@ -30,7 +30,7 @@ export default function App() {
       if (role) setSelectedAuthRole(role);
       setCurrentView(view);
       setIsTransitioning(false);
-    }, 600); // Wait for exit animation
+    }, 600);
   };
 
   const handleAuthSuccess = (userSession) => {
@@ -55,10 +55,13 @@ export default function App() {
   const renderView = () => {
     if (isTransitioning) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="loading-spinner"></div>
-            <div className="text-sky-400 font-mono text-sm tracking-widest animate-pulse">INITIALIZING SECURE UPLINK...</div>
+        <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="relative">
+              <div className="loading-spinner w-16 h-16 border-4 border-sky-500/20 border-t-sky-500"></div>
+              <Cpu className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-sky-400 animate-pulse" />
+            </div>
+            <div className="text-sky-400 font-mono text-sm tracking-widest animate-pulse font-bold">ESTABLISHING SECURE UPLINK...</div>
           </div>
         </div>
       );
@@ -81,36 +84,41 @@ export default function App() {
     }
 
     return (
-      <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16 relative">
+      <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="min-h-screen bg-[#020617] text-slate-100 font-sans pb-16 relative overflow-x-hidden">
         <div className="animated-bg-pattern"></div>
-        <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50 mb-8 shadow-lg">
+        
+        <header className="border-b border-slate-800/80 bg-[#020617]/80 backdrop-blur-xl sticky top-0 z-50 mb-10 shadow-lg">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => handleNavigate('LANDING')}>
-              <Cpu className="h-6 w-6 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
-              <span className="text-lg font-black tracking-wider gradient-text-animated font-mono">
-                VISIONINSPECT AI // COMMAND CENTER
+              <div className="relative p-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20 group-hover:bg-sky-500/20 transition-colors">
+                <Cpu className="h-5 w-5 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
+              </div>
+              <span className="text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 font-mono">
+                VISIONINSPECT AI
               </span>
             </div>
 
             <div className="flex items-center space-x-4">
               <button className="p-2 rounded-full hover:bg-slate-800 transition-colors relative" onClick={() => addToast('System operating optimally', 'info')}>
                 <Bell className="h-4 w-4 text-slate-400" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-sky-500 rounded-full"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-sky-500 rounded-full animate-ping opacity-75"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-sky-500 rounded-full"></span>
               </button>
 
               {currentUser && (
-                <div className="hidden sm:flex items-center space-x-2 bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono shadow-inner">
+                <div className="hidden sm:flex items-center space-x-2 bg-slate-900/80 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono shadow-inner">
                   <User className="h-3.5 w-3.5 text-sky-400" />
                   <span className="text-slate-300 font-bold">{currentUser?.name?.toUpperCase() || 'USER'}</span>
-                  <span className="text-slate-500">|</span>
-                  <span className="text-emerald-400 font-semibold">{currentUser.role}</span>
+                  <span className="text-slate-600">|</span>
+                  <Shield className={`h-3 w-3 ${currentUser.role === 'OWNER' ? 'text-amber-400' : currentUser.role === 'ENGINEER' ? 'text-indigo-400' : 'text-emerald-400'}`} />
+                  <span className={`${currentUser.role === 'OWNER' ? 'text-amber-400' : currentUser.role === 'ENGINEER' ? 'text-indigo-400' : 'text-emerald-400'} font-bold tracking-wider`}>{currentUser.role}</span>
                 </div>
               )}
 
               <select
                 value={currentUser?.role || 'ENGINEER'}
                 onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value })}
-                className="bg-slate-900 border border-slate-700 text-sky-400 font-mono text-xs rounded-lg py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer transition-all"
+                className="bg-slate-900 border border-slate-700 text-sky-400 font-mono text-xs rounded-lg py-1.5 px-3 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer transition-all hover:bg-slate-800"
               >
                 <option value="CLIENT">Role: Operator</option>
                 <option value="ENGINEER">Role: Engineer</option>
@@ -119,21 +127,21 @@ export default function App() {
 
               <button 
                 onClick={handleLogout}
-                className="flex items-center space-x-1.5 text-xs font-mono bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 px-3 py-1.5 rounded-lg transition-all hover:shadow-[0_0_10px_rgba(225,29,72,0.3)]"
+                className="flex items-center space-x-1.5 text-xs font-mono bg-rose-950/40 hover:bg-rose-950/80 text-rose-400 border border-rose-900/50 hover:border-rose-700 px-3 py-1.5 rounded-lg transition-all hover:shadow-[0_0_15px_rgba(225,29,72,0.2)]"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span>LOG OUT</span>
+                <span className="font-bold">EXIT</span>
               </button>
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-6 space-y-8 relative z-10">
+        <main className="max-w-7xl mx-auto px-6 space-y-10 relative z-10">
           <AnimatePresence mode="wait">
             <motion.div key={currentUser?.role} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }}>
               {currentUser?.role === 'CLIENT' && <ClientOperatorView addToast={addToast} />}
               {currentUser?.role === 'ENGINEER' && (
-                <div className="space-y-8">
+                <div className="space-y-10">
                   <FactoryTelemetryCharts />
                   <AIInspectionPanel addToast={addToast} />
                 </div>
@@ -146,8 +154,11 @@ export default function App() {
         <div className="toast-container">
           <AnimatePresence>
             {toasts.map(toast => (
-              <motion.div key={toast.id} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9 }} className={`px-4 py-3 rounded-lg shadow-xl font-mono text-xs border flex items-center space-x-2 ${toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-800 text-emerald-300' : 'bg-slate-900 border-slate-700 text-sky-400'}`}>
-                <span>{toast.message}</span>
+              <motion.div key={toast.id} initial={{ opacity: 0, x: 50, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9, x: 20 }} className={`px-4 py-3 rounded-xl shadow-2xl font-mono text-xs border flex items-center space-x-3 backdrop-blur-md ${toast.type === 'success' ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300' : toast.type === 'error' ? 'bg-rose-950/80 border-rose-500/50 text-rose-300' : 'bg-slate-900/90 border-slate-700 text-sky-400'}`}>
+                {toast.type === 'success' && <Shield className="w-4 h-4 text-emerald-400" />}
+                {toast.type === 'error' && <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                {toast.type === 'info' && <Bell className="w-4 h-4 text-sky-400" />}
+                <span className="font-bold">{toast.message}</span>
               </motion.div>
             ))}
           </AnimatePresence>

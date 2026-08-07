@@ -2,8 +2,19 @@
 env/
 __pycache__/
 *.pyc
+backend/storage/heatmaps/
+backend/storage/raw_images/
+backend/visioninspect.db
 *.sqlite3
 visioninspect.db
+
+# Ignore local storage, heatmaps, raw captures, and databases
+backend/storage/
+backend/visioninspect.db
+__pycache__/
+*.pyc
+terminal.txt
+
 
 # Node / Frontend
 node_modules/
