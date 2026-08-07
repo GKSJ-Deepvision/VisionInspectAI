@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 from sqlalchemy.orm import Session
 
+from backend.models.schemas import UserResponse
+
 from backend.models.database import get_db
 from backend.models.user import User
 
@@ -28,6 +30,11 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class UpdateUserRequest(BaseModel):
+    username: str | None = None
+    password: str | None = None
+    role: str | None = None
 
 
 # -----------------------------
@@ -111,11 +118,105 @@ def login(
 # -----------------------------
 # Protected Profile API
 # -----------------------------
-@router.get("/profile")
-def profile(current_user: dict = Depends(get_current_user)):
+@router.get("/profile", response_model=UserResponse)
+def profile(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    user = (
+        db.query(User)
+        .filter(User.username == current_user["sub"])
+        .first()
+    )
+
+    return user
+
+@router.get("/users", response_model=list[UserResponse])
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)
+):
+    return db.query(User).all()
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)
+):
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return user
+
+@router.put("/users/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: int,
+    data: UpdateUserRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)
+):
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if data.username:
+        user.username = data.username
+
+    if data.password:
+        user.password = hash_password(data.password)
+
+    if data.role:
+        user.role = data.role
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)
+):
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    db.delete(user)
+    db.commit()
+
     return {
-        "message": "Protected Route Accessed Successfully",
-        "user": current_user
+        "message": "User deleted successfully"
     }
 
 
