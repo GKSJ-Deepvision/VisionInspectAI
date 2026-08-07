@@ -44,20 +44,53 @@ def predict_defect(image_path):
     img = np.expand_dims(img, axis=0)
 
     # Predict
-    prediction = float(
-        model.predict(img, verbose=0)[0][0]
-    )
+    prediction = float(model.predict(img, verbose=0)[0][0])
+
+    print("=" * 50)
+    print("Prediction Value :", prediction)
+    print("=" * 50)
 
     # Classification
     if prediction < 0.5:
         defect = "Defective"
-        confidence = (1 - prediction) * 100
+        confidence = round((1 - prediction) * 100, 2)
     else:
         defect = "No Defect"
-        confidence = prediction * 100
+        confidence = round(prediction * 100, 2)
 
-    # Return Result
+    # ==========================================
+    # Defect Categorization
+    # ==========================================
+
+    category = "No Defect"
+    severity = "None"
+    risk = "No Risk"
+
+    if defect == "Defective":
+
+        if confidence < 70:
+            category = "Minor Defect"
+            severity = "Low"
+            risk = "Low Risk"
+
+        elif confidence < 90:
+            category = "Moderate Defect"
+            severity = "Medium"
+            risk = "Medium Risk"
+
+        else:
+            category = "Critical Defect"
+            severity = "High"
+            risk = "High Risk"
+
+    # ==========================================
+    # Return Prediction Result
+    # ==========================================
+
     return {
         "defect": defect,
-        "confidence": round(confidence, 2)
+        "category": category,
+        "severity": severity,
+        "risk": risk,
+        "confidence": confidence
     }

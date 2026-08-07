@@ -56,13 +56,13 @@ function Upload() {
         }
       );
 
+      console.log(res.data);
+
       navigate("/results", {
         state: {
-          image: preview,
+          originalImage: preview,
           result: res.data,
-
-          // Processed image URL
-          processedImage: `http://localhost:8000/processed/${res.data.filename}`,
+          processedImage: `http://localhost:8000/processed/${res.data.filename}?t=${Date.now()}`,
         },
       });
     } catch (error) {

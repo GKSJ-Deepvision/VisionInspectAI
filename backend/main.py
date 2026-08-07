@@ -7,13 +7,14 @@ from history import router as history_router
 from dashboard import router as dashboard_router
 
 from preprocessing import preprocess_image
-from ai.model import predict_defect
+from ai.yolo_model import predict_objects
 from database import history_collection
 
 from datetime import datetime
 
 import os
 import shutil
+import cv2
 
 app = FastAPI()
 
@@ -65,11 +66,16 @@ def home():
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
 
+    print("========== UPLOAD RECEIVED ==========")
+    print("Filename:", file.filename)
+
     # Save Uploaded Image
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    print("Saved at:", file_path)
 
     # Image Preprocessing
     result = preprocess_image(file_path, PROCESSED_FOLDER)
@@ -80,10 +86,83 @@ async def upload_image(file: UploadFile = File(...)):
             "message": "Image could not be processed"
         }
 
-    # Dummy AI Prediction
-    prediction = predict_defect(file_path)
+    print("Preprocessing Done")
 
-    # Save Inspection History into MongoDB
+   # ---------------- YOLO Object Detection ---------------- #
+
+    detections = predict_objects(file_path)
+
+    print("Detections:", detections)
+
+    # Highest confidence detection only
+    best_detection = None
+
+    if len(detections) > 0:
+        best_detection = max(
+            detections,
+            key=lambda x: x["confidence"]
+        )
+
+    if best_detection is None:
+
+        defect = "No Defect"
+        category = "No Defect"
+        severity = "Low"
+        risk = "Low"
+        confidence = 100
+
+    else:
+
+        defect = "Defective"
+
+        category = best_detection["class"]
+        confidence = best_detection["confidence"]
+
+        if confidence >= 80:
+            severity = "High"
+            risk = "High Risk"
+
+        elif confidence >= 50:
+            severity = "Medium"
+            risk = "Medium Risk"
+
+        else:
+            severity = "Low"
+            risk = "Low Risk"
+
+    # ---------------- Detection Result ---------------- #
+
+    if len(detections) == 0:
+
+        defect = "No Defect"
+        category = "No Defect"
+        severity = "Low"
+        risk = "Low"
+        confidence = 100
+
+    else:
+
+        best = detections[0]
+
+        defect = "Defective"
+
+        category = best["class"]
+        confidence = best["confidence"]
+
+        if confidence >= 80:
+            severity = "High"
+            risk = "High Risk"
+
+        elif confidence >= 50:
+            severity = "Medium"
+            risk = "Medium Risk"
+
+        else:
+            severity = "Low"
+            risk = "Low Risk"
+
+    # ---------------- Save History ---------------- #
+
     history_collection.insert_one({
         "filename": file.filename,
         "status": "Completed",
@@ -91,31 +170,42 @@ async def upload_image(file: UploadFile = File(...)):
         "height": result["height"],
         "channels": result["channels"],
         "processed_size": "256 × 256",
-        "defect": prediction["defect"],
-        "confidence": prediction["confidence"],
+        "defect": defect,
+        "category": category,
+        "severity": severity,
+        "risk": risk,
+        "confidence": confidence,
+        "detections": detections,
         "date": datetime.now().strftime("%d-%m-%Y %I:%M %p")
     })
 
-    # Response
+    # ---------------- Response ---------------- #
+
     return {
-        "success": True,
-        "message": "Image uploaded and processed successfully",
 
-        "filename": file.filename,
+    "success": True,
+    "message": "Image uploaded and processed successfully",
 
-        "original_width": result["width"],
-        "original_height": result["height"],
+    "filename": file.filename,
 
-        "channels": result["channels"],
+    "original_width": result["width"],
+    "original_height": result["height"],
 
-        "processed_size": "256 × 256",
+    "channels": result["channels"],
 
-        "defect": prediction["defect"],
-        "confidence": prediction["confidence"],
+    "processed_size": "256 × 256",
 
-        "preprocessing": [
-            "Image Resized",
-            "Converted to Grayscale",
-            "Noise Removed using Gaussian Blur"
-        ]
-    }
+    "defect": defect,
+    "category": category,
+    "severity": severity,
+    "risk": risk,
+    "confidence": confidence,
+
+    "detections": [] if best_detection is None else [best_detection],
+
+    "preprocessing": [
+        "Image Resized",
+        "Converted to Grayscale",
+        "Noise Removed using Gaussian Blur"
+    ]
+}
