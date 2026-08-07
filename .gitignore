@@ -1,31 +1,51 @@
 # Python
+
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyc
+
+# Virtual Environment
+backend/venv/
+venv/
 
 # Environment
+
 .env
 *.env
 
 # Uploads
+
 backend/app/uploads/
 
 # Large datasets
+
 backend/dataset/
 backend/processed_dataset/
 backend/training_dataset/
 
-
-
 # Zip files
+
 *.zip
 
 # OS
+
 .DS_Store
 Thumbs.db
 
 # Node
+
 frontend/node_modules/
+frontend/dist/
+
+# Windows shortcuts
+
+*.lnk
+
+# IDE
+
+.vscode/
 
 # Logs
+
 *.log

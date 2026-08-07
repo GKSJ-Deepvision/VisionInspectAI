@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.database.base import Base
 from app.database.database import engine
+from app.database.base import Base
+
 from app.api.auth import router as auth_router
 from app.api.inspection import router as inspection_router
+
+# Create Database Tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="VisionInspect AI API",
@@ -12,51 +17,37 @@ app = FastAPI(
 )
 
 # -----------------------------
-# CORS Configuration
+# CORS
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # -----------------------------
-# Create Database Tables
+# Static Files (Uploaded Images)
 # -----------------------------
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=engine)
+app.mount(
+    "/app/uploads",
+    StaticFiles(directory="app/uploads"),
+    name="uploads"
+)
 
 # -----------------------------
-# Register Routers
+# Routers
 # -----------------------------
 app.include_router(auth_router)
 app.include_router(inspection_router)
 
 # -----------------------------
-# Home Route
+# Root
 # -----------------------------
 @app.get("/")
-def home():
+def root():
     return {
-        "message": "VisionInspectAI Backend - TEST 123"
+        "message": "VisionInspect AI Backend Running",
+        "database": "Connected Successfully"
     }
-
-# -----------------------------
-# Debug Route
-# -----------------------------
-@app.get("/routes")
-def get_routes():
-    return [
-        {
-            "path": route.path,
-            "methods": list(route.methods) if hasattr(route, "methods") else []
-        }
-        for route in app.routes
-        if hasattr(route, "path")
-    ]

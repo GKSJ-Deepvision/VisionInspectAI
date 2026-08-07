@@ -1,85 +1,236 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 
 import StatsCards from "../components/StatsCards";
-import AnalyticsChart from "../components/AnalyticsChart";
-import ConfidenceChart from "../components/ConfidenceChart";
-import UploadCard from "../components/UploadCard";
-import PredictionCard from "../components/PredictionCard";
+import QuickActions from "../components/QuickActions";
+import SystemStatus from "../components/SystemStatus";
 import HistoryTable from "../components/HistoryTable";
 
 export default function Dashboard() {
-  const [prediction, setPrediction] = useState(null);
+
+  const [dashboard, setDashboard] = useState(null);
+
   const [history, setHistory] = useState([]);
 
-  const loadHistory = async () => {
+  const [loading, setLoading] = useState(true);
+
+  const loadDashboard = async () => {
+
     try {
-      const response = await api.get("/inspection/history");
-      setHistory(response.data);
+
+      const response =
+        await api.get("/inspection/dashboard");
+
+      setDashboard(response.data);
+
     } catch (error) {
-      console.error("Failed to load history:", error);
+
+      console.error(error);
+
     }
+
+  };
+
+  const loadHistory = async () => {
+
+    try {
+
+      const response =
+        await api.get("/inspection/history");
+
+      setHistory(response.data);
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
   };
 
   useEffect(() => {
-    loadHistory();
+
+    const fetchData = async () => {
+
+      setLoading(true);
+
+      await Promise.all([
+        loadDashboard(),
+        loadHistory(),
+      ]);
+
+      setTimeout(() => {
+
+        setLoading(false);
+
+      }, 600);
+
+    };
+
+    fetchData();
+
   }, []);
 
-  const handlePrediction = (result) => {
-    setPrediction(result);
-    loadHistory();
-  };
+  if (loading) {
+
+    return <LoadingScreen />;
+
+  }
 
   return (
-    <>
-      {/* Navigation Bar */}
-      <Navbar />
 
-      <div className="min-h-screen bg-gray-100">
+    <Layout>
 
-        {/* Header */}
-        <div className="bg-blue-700 text-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-8 py-6">
-            <h1 className="text-4xl font-bold">
-              VisionInspect AI
-            </h1>
+      <div className="space-y-8">
 
-            <p className="text-blue-100 mt-2">
-              AI Manufacturing Defect Detection & Quality Inspection System
-            </p>
+        {/* Welcome Banner */}
+
+        <div className="rounded-3xl bg-gradient-to-r from-blue-700 via-cyan-600 to-indigo-700 text-white p-10 shadow-2xl">
+
+          <h1 className="text-5xl font-bold">
+
+            VisionInspect AI
+
+          </h1>
+
+          <p className="text-blue-100 text-lg mt-3">
+
+            Manufacturing Defect Detection & Quality Inspection Platform
+
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-6">
+
+            <div>
+
+              <p className="text-blue-200">
+
+                Date
+
+              </p>
+
+              <h3 className="font-bold">
+
+                {new Date().toLocaleDateString()}
+
+              </h3>
+
+            </div>
+
+            <div>
+
+              <p className="text-blue-200">
+
+                Time
+
+              </p>
+
+              <h3 className="font-bold">
+
+                {new Date().toLocaleTimeString()}
+
+              </h3>
+
+            </div>
+
           </div>
+
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto p-8">
+        {/* Statistics */}
 
-          {/* Statistics */}
-          <StatsCards history={history} />
+        <StatsCards dashboard={dashboard} />
+                {/* Quick Actions */}
 
-          {/* Charts */}
-          <div className="grid lg:grid-cols-2 gap-8 mb-10">
-            <AnalyticsChart history={history} />
-            <ConfidenceChart history={history} />
+        <QuickActions />
+
+        {/* Recent Inspections */}
+
+        <div className="bg-white rounded-3xl shadow-xl p-8">
+
+          <div className="flex items-center justify-between mb-6">
+
+            <div>
+
+              <h2 className="text-3xl font-bold text-slate-800">
+
+                Recent Inspections
+
+              </h2>
+
+              <p className="text-gray-500 mt-2">
+
+                Last 5 AI inspection records
+
+              </p>
+
+            </div>
+
           </div>
 
-          {/* Upload & Prediction */}
-          <div className="grid lg:grid-cols-2 gap-8 mb-10">
-            <UploadCard
-              onPrediction={handlePrediction}
-            />
-
-            <PredictionCard
-              prediction={prediction}
-            />
-          </div>
-
-          {/* Inspection History */}
-          <HistoryTable history={history} />
+          <HistoryTable
+            history={history.slice(0, 5)}
+            onRefresh={() => {
+              loadHistory();
+              loadDashboard();
+            }}
+          />
 
         </div>
+
+        {/* System Status */}
+
+        <SystemStatus />
+
+        {/* Footer */}
+
+        <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-8 shadow-xl">
+
+          <div className="flex flex-col lg:flex-row justify-between items-center">
+
+            <div>
+
+              <h2 className="text-2xl font-bold">
+
+                VisionInspect AI
+
+              </h2>
+
+              <p className="text-slate-300 mt-2">
+
+                Enterprise Manufacturing Quality Inspection Platform
+
+              </p>
+
+            </div>
+
+            <div className="mt-6 lg:mt-0 text-center lg:text-right">
+
+              <p className="text-slate-400">
+
+                System Version
+
+              </p>
+
+              <h3 className="text-2xl font-bold text-cyan-400">
+
+                Enterprise 2.0
+
+              </h3>
+
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
-    </>
+
+    </Layout>
+
   );
+
 }

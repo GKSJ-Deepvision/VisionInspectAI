@@ -9,8 +9,8 @@ from torchvision import models, transforms
 # Configuration
 # -----------------------
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "models" / "best_model.pth"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+MODEL_PATH = BASE_DIR / "best_model.pth"
 
 CLASS_NAMES = ["DEFECT", "GOOD"]
 
