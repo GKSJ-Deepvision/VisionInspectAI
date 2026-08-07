@@ -50,43 +50,35 @@ VisionInspectAI/
 ## Inspection Pipeline
 
 MVTec AD Dataset
-
         │
         ▼
         
 Dataset Loader
-
         │
         ▼
         
 Image Quality Analysis
-
         │
         ▼
         
 Image Preprocessing
-
         │
         ▼
         
 Feature Extraction
-
         │
         ▼
         
 Model Inference
 (Classification + Defect Detection)
-
         │
         ▼
         
 Inspection Report
-
         │
         ▼
         
 FastAPI Backend
-
         │
         ▼
         
@@ -121,7 +113,7 @@ Running the inspection pipeline generates:
 * Comparison Images, Histograms, and Edge Detection Results
 *(Note: These outputs are generated automatically and are excluded from version control).*
 
-## Future Work / Milestone 2 Features
+## Future Work / Milestone 3 Features
 * Deep Learning Model Integration
 * Product Classification & Defect Localization
 * FastAPI Integration
