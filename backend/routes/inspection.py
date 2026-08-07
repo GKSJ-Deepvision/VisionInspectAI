@@ -1,4 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form
+from PIL import Image
+import io
 
 from anomaly_detection.inference import predict_defect
 from backend.report import generate_report
@@ -14,8 +16,10 @@ async def inspect_image(
 ):
     contents = await file.read()
 
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+
     prediction_result = predict_defect(
-        contents,
+        image,
         category=category,
         enable_yolo=enable_yolo,
     )
