@@ -15,6 +15,7 @@ from backend.models.user_activity import UserActivity
 from backend.models.analytics_storage import AnalyticsStorage
 from backend.models.report_storage import ReportStorage
 from backend.models.batch_inspection import BatchInspection
+from backend.models.user import User
 
 app = FastAPI(
     title="VisionInspect AI",
@@ -22,7 +23,6 @@ app = FastAPI(
     description="Manufacturing Defect Detection Backend"
 )
 
-print(Base.metadata.tables.keys())
 Base.metadata.create_all(bind=engine)
 
 app.include_router(inspection_router)

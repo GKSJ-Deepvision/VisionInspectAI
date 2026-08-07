@@ -1,6 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
+from sqlalchemy.orm import Session
+
+from backend.models.database import get_db
+from backend.models.user import User
+
 from backend.auth.security import hash_password, verify_password
 from backend.auth.jwt_handler import (
     create_access_token,
@@ -26,63 +31,82 @@ class LoginRequest(BaseModel):
 
 
 # -----------------------------
-# Temporary Users Database
-# -----------------------------
-users_db = {
-    "admin": {
-        "username": "admin",
-        "password": hash_password("admin123"),
-        "role": "admin"
-    }
-}
-
-
-# -----------------------------
 # Signup API
 # -----------------------------
 @router.post("/signup")
-def signup(user: SignupRequest):
+def signup(
+    user: SignupRequest,
+    db: Session = Depends(get_db)
+):
 
-    if user.username in users_db:
-        raise HTTPException(status_code=400, detail="Username already exists")
+    existing_user = (
+        db.query(User)
+        .filter(User.username == user.username)
+        .first()
+    )
 
-    users_db[user.username] = {
-        "username": user.username,
-        "password": hash_password(user.password),
-        "role": user.role
-    }
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already exists"
+        )
+
+    new_user = User(
+        username=user.username,
+        password=hash_password(user.password),
+        role=user.role
+    )
+
+    db.add(new_user)
+    db.commit()
 
     return {
         "message": "User registered successfully"
     }
 
-
 # -----------------------------
 # Login API
 # -----------------------------
 @router.post("/login")
-def login(data: LoginRequest):
+def login(
+    data: LoginRequest,
+    db: Session = Depends(get_db)
+):
 
-    user = users_db.get(data.username)
+    user = (
+        db.query(User)
+        .filter(User.username == data.username)
+        .first()
+    )
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid username")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username"
+        )
 
-    if not verify_password(data.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid password")
+    if not verify_password(
+        data.password,
+        user.password
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid password"
+        )
 
-    token = create_access_token({
-        "sub": user["username"],
-        "role": user["role"]
-    })
+    token = create_access_token(
+        {
+            "sub": user.username,
+            "role": user.role
+        }
+    )
 
     return {
         "message": "Login Successful",
         "access_token": token,
         "token_type": "bearer",
-        "role": user["role"]
+        "role": user.role
     }
-
 
 # -----------------------------
 # Protected Profile API
