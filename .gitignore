@@ -16,3 +16,4 @@ __pycache__/
 visioninspect.db
 
 backend/inspection_plots/
+backend/models/trained/

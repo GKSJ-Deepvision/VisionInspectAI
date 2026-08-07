@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cpu, Mail, Lock, User, ShieldCheck, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import factoryBg from './assets/factory_bg.jpg';
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -39,14 +40,41 @@ export default function AuthPage({ initialRole, onAuthSuccess, onBackToLanding }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between relative overflow-hidden">
-      <div className="circuit-pattern absolute inset-0 opacity-30 pointer-events-none"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-sky-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans flex flex-col justify-between relative overflow-hidden">
+      {/* Animated Factory Background */}
+      <div className="absolute inset-0 z-0">
+        <img src={factoryBg} alt="" className="w-full h-full object-cover opacity-15" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#020617]/60 via-[#020617]/80 to-[#020617]/95" />
+      </div>
 
-      <nav className="p-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md z-10">
+      {/* Animated grid overlay */}
+      <div className="absolute inset-0 z-[1] opacity-10" style={{
+        backgroundImage: 'linear-gradient(rgba(56,189,248,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.15) 1px, transparent 1px)',
+        backgroundSize: '50px 50px'
+      }} />
+
+      {/* Floating orbs */}
+      <motion.div animate={{ y: [0, -20, 0], x: [0, 10, 0] }} transition={{ duration: 8, repeat: Infinity }}
+        className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-sky-500/5 rounded-full blur-[120px] pointer-events-none z-[1]" />
+      <motion.div animate={{ y: [0, 15, 0], x: [0, -15, 0] }} transition={{ duration: 10, repeat: Infinity }}
+        className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none z-[1]" />
+
+      {/* Scan line */}
+      <motion.div animate={{ top: ['0%', '100%'] }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+        className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-sky-500/30 to-transparent z-[2]" />
+
+      {/* Corner brackets */}
+      <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-sky-500/30 z-[2]" />
+      <div className="absolute top-6 right-6 w-8 h-8 border-t-2 border-r-2 border-sky-500/30 z-[2]" />
+      <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-sky-500/30 z-[2]" />
+      <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-sky-500/30 z-[2]" />
+
+      <nav className="p-6 flex items-center justify-between border-b border-slate-800/60 bg-[#020617]/40 backdrop-blur-xl z-10">
         <div onClick={onBackToLanding} className="flex items-center space-x-3 cursor-pointer group">
-          <Cpu className="h-7 w-7 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
-          <span className="font-mono font-black tracking-wider text-lg gradient-text-animated">VISIONINSPECT AI</span>
+          <div className="relative p-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20">
+            <Cpu className="h-6 w-6 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
+          </div>
+          <span className="font-mono font-black tracking-wider text-lg text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-500">VISIONINSPECT AI</span>
         </div>
         <button onClick={onBackToLanding} className="text-xs font-mono text-slate-400 hover:text-white transition-colors flex items-center">
           ← BACK
@@ -54,8 +82,13 @@ export default function AuthPage({ initialRole, onAuthSuccess, onBackToLanding }
       </nav>
 
       <main className="flex-1 flex items-center justify-center p-6 z-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md glass-card rounded-2xl p-8 relative">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md rounded-2xl p-8 relative bg-slate-900/50 backdrop-blur-2xl border border-slate-700/50 shadow-[0_0_60px_rgba(0,0,0,0.5)]">
           
+          {/* Glow border effect on hover */}
+          <div className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{ boxShadow: '0 0 30px rgba(56,189,248,0.1), inset 0 0 30px rgba(56,189,248,0.05)' }} />
+
           <div className="flex border-b border-slate-800 mb-8 font-mono text-sm relative">
             {['REGISTER', 'SIGN IN'].map((tab, idx) => {
               const isActive = (idx === 0 && isRegistering) || (idx === 1 && !isRegistering);
@@ -95,10 +128,10 @@ export default function AuthPage({ initialRole, onAuthSuccess, onBackToLanding }
               {isRegistering && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-1">
                   <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest pl-1">Operator ID</label>
-                  <div className="relative input-wrapper glow-focus rounded-xl">
-                    <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-500" />
-                    <input type="text" required={isRegistering} placeholder="Full Name" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none transition-colors" />
-                    <div className="input-underline"></div>
+                  <div className="relative rounded-xl group">
+                    <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-sky-400 transition-colors" />
+                    <input type="text" required={isRegistering} placeholder="Full Name" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-sky-500 focus:shadow-[0_0_15px_rgba(56,189,248,0.15)] transition-all" />
                   </div>
                 </motion.div>
               )}
@@ -106,19 +139,19 @@ export default function AuthPage({ initialRole, onAuthSuccess, onBackToLanding }
 
             <div className="space-y-1">
               <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest pl-1">Corporate Email</label>
-              <div className="relative input-wrapper glow-focus rounded-xl">
-                <Mail className="absolute left-4 top-3.5 h-4 w-4 text-slate-500" />
-                <input type="email" required placeholder="user@visioninspect.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none transition-colors" />
-                <div className="input-underline"></div>
+              <div className="relative rounded-xl group">
+                <Mail className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-sky-400 transition-colors" />
+                <input type="email" required placeholder="user@visioninspect.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-sky-500 focus:shadow-[0_0_15px_rgba(56,189,248,0.15)] transition-all" />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest pl-1">Passcode</label>
-              <div className="relative input-wrapper glow-focus rounded-xl">
-                <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500" />
-                <input type="password" required placeholder="••••••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none transition-colors" />
-                <div className="input-underline"></div>
+              <div className="relative rounded-xl group">
+                <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-sky-400 transition-colors" />
+                <input type="password" required placeholder="••••••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full bg-slate-950/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-sky-500 focus:shadow-[0_0_15px_rgba(56,189,248,0.15)] transition-all" />
               </div>
             </div>
 

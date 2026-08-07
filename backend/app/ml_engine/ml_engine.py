@@ -1,4 +1,4 @@
-""" ml_engine
+﻿""" ml_engine
 VisionInspect AI - Defect Detection Engine
 
 This is the main inference engine used by the FastAPI endpoint.
@@ -7,10 +7,10 @@ predictions, and falls back to heuristic OpenCV analysis if the model
 has not been trained yet.
 
 Architecture:
-    1. Check if trained model exists → Use deep feature KNN-based detection
-    2. If no trained model → Fall back to OpenCV adaptive thresholding (legacy)
-    3. When defect IS detected → Use OpenCV for defect characterization (type, severity)
-    4. When product IS good → Return PASS with confidence score
+    1. Check if trained model exists â†’ Use deep feature KNN-based detection
+    2. If no trained model â†’ Fall back to OpenCV adaptive thresholding (legacy)
+    3. When defect IS detected â†’ Use OpenCV for defect characterization (type, severity)
+    4. When product IS good â†’ Return PASS with confidence score
 """
 
 import os
@@ -41,12 +41,12 @@ class DefectDetectionEngine:
             self.trained_detector = TrainedAnomalyDetector(model_dir=model_dir)
             if self.trained_detector.is_trained:
                 cat_count = len(self.trained_detector.category_features)
-                print(f"✅ Trained anomaly detection model loaded — {cat_count} categories, accurate predictions enabled!")
+                print(f"[OK] Trained anomaly detection model loaded - {cat_count} categories, accurate predictions enabled!")
             else:
-                print("⚠ Model not trained yet. Using heuristic mode. Run: python train_model.py")
+                print("[WARN] Model not trained yet. Using heuristic mode. Run: python train_model.py")
                 self.trained_detector = None
         except Exception as e:
-            print(f"⚠ Could not load trained model ({e}). Using heuristic fallback.")
+            print(f"[WARN] Could not load trained model ({e}). Using heuristic fallback.")
             self.trained_detector = None
 
     def _preprocess_for_inspection(self, img):
@@ -91,7 +91,7 @@ class DefectDetectionEngine:
 
             return output_path
         except Exception as e:
-            print(f"⚠ Heatmap generation error: {e}")
+            print(f"âš  Heatmap generation error: {e}")
             return None
 
     def _analyze_defect_characteristics(self, img):
@@ -192,7 +192,7 @@ class DefectDetectionEngine:
     def calculate_severity_metrics(self, defect_type, confidence, defect_area_ratio, location_score=40.0):
         """Calculate severity score using the documented weighted formula.
 
-        Formula: Severity = Size×30% + Location×25% + Type×25% + Confidence×20%
+        Formula: Severity = SizeÃ—30% + LocationÃ—25% + TypeÃ—25% + ConfidenceÃ—20%
         """
         # Size score: proportional to defect area
         size_score = min(100.0, defect_area_ratio * 300.0)
@@ -211,7 +211,7 @@ class DefectDetectionEngine:
         }
         type_score = type_weights.get(defect_type, 50.0)
 
-        # Confidence score: model confidence × 100
+        # Confidence score: model confidence Ã— 100
         conf_score = confidence * 100.0
 
         # Weighted severity formula: Size 30%, Location 25%, Type 25%, Confidence 20%
@@ -234,8 +234,8 @@ class DefectDetectionEngine:
             recommendation = "Major defect detected. Repair or rework required."
         elif overall_score >= 40.0:
             level = "MEDIUM"
-            decision = "REVIEW"
-            recommendation = "Moderate quality concern. Manual verification required."
+            decision = "FAIL"
+            recommendation = "Moderate defect detected. Quality inspection recommended."
         else:
             level = "LOW"
             decision = "PASS"
@@ -280,9 +280,9 @@ class DefectDetectionEngine:
             # Preprocess image for better quality
             enhanced_img = self._preprocess_for_inspection(img)
 
-            # ══════════════════════════════════════════════════════════
+            # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             #  TRAINED MODEL MODE (Accurate deep feature-based detection)
-            # ══════════════════════════════════════════════════════════
+            # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             if self.trained_detector is not None and self.trained_detector.is_trained:
                 prediction = self.trained_detector.predict(image_path)
 
@@ -297,7 +297,7 @@ class DefectDetectionEngine:
                     is_unknown = prediction.get("is_unknown", False)
 
                     if is_defective:
-                        # ── DEFECT DETECTED ──
+                        # â”€â”€ DEFECT DETECTED â”€â”€
                         char = self._analyze_defect_characteristics(enhanced_img)
                         defect_type = char["defect_type"]
                         defect_area_ratio = char["defect_area_ratio"]
@@ -315,6 +315,14 @@ class DefectDetectionEngine:
                             defect_type, confidence, defect_area_ratio, location_score
                         )
 
+                        # CRITICAL: When anomaly detector confirms defect, NEVER return PASS.
+                        # The severity scorer may return PASS for low scores, but the ML model
+                        # already confirmed this is defective, so override to at least FAIL.
+                        if severity.get("pass_fail_decision") == "PASS":
+                            severity["pass_fail_decision"] = "FAIL"
+                            severity["severity_level"] = "LOW"
+                            severity["recommendation"] = "Defect detected by AI model. Product should be reviewed."
+
                         # For unknown products with defects, add context
                         if is_unknown:
                             severity["recommendation"] = (
@@ -327,6 +335,7 @@ class DefectDetectionEngine:
                         return {
                             "is_defective": True,
                             "defect_type": defect_type,
+                            "classification": "Defective",
                             "confidence_score": round(confidence, 4),
                             "processing_latency_ms": round(latency, 2),
                             "heatmap_image_path": heatmap_path,
@@ -339,15 +348,15 @@ class DefectDetectionEngine:
                         }
 
                     else:
-                        # ── GOOD PRODUCT ──
+                        # â”€â”€ GOOD PRODUCT â”€â”€
                         latency = (datetime.now() - start_time).total_seconds() * 1000
 
                         if is_unknown:
                             recommendation = (
                                 f"Unknown product type (nearest match: {matched_category}). "
-                                f"No defects detected but manual verification recommended."
+                                f"No defects detected. Product appears normal."
                             )
-                            decision = "REVIEW"
+                            decision = "PASS"
                         else:
                             recommendation = f"Product quality verified ({matched_category}). No defects detected."
                             decision = "PASS"
@@ -355,6 +364,7 @@ class DefectDetectionEngine:
                         return {
                             "is_defective": False,
                             "defect_type": "None",
+                            "classification": "Normal",
                             "confidence_score": round(confidence, 4),
                             "processing_latency_ms": round(latency, 2),
                             "heatmap_image_path": None,
@@ -373,13 +383,13 @@ class DefectDetectionEngine:
                             "pass_fail_decision": decision,
                         }
 
-            # ══════════════════════════════════════════════════════════
+            # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             #  HEURISTIC FALLBACK MODE (When model is not trained)
-            # ══════════════════════════════════════════════════════════
+            # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             return self._heuristic_inspect(enhanced_img, image_path, output_dir, start_time)
 
         except Exception as e:
-            print(f"⚠ Inspection pipeline error: {e}\n{traceback.format_exc()}")
+            print(f"âš  Inspection pipeline error: {e}\n{traceback.format_exc()}")
             latency = (datetime.now() - start_time).total_seconds() * 1000
 
             return {
@@ -400,7 +410,7 @@ class DefectDetectionEngine:
                 "overall_severity_score": 0.0,
                 "severity_level": "NONE",
                 "recommendation": "Inspection error. Manual review required.",
-                "pass_fail_decision": "REVIEW",
+                "pass_fail_decision": "FAIL",
             }
 
     def _heuristic_inspect(self, img, image_path, output_dir, start_time):
