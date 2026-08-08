@@ -1,0 +1,108 @@
+.history-page{
+    padding:30px;
+}
+
+.history-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+}
+
+.history-header h1{
+    color:#21409A;
+    font-size:38px;
+}
+
+.history-header input{
+    width:260px;
+    padding:12px;
+    border-radius:8px;
+    border:1px solid #ccc;
+    font-size:16px;
+}
+
+.history-card{
+
+    background:white;
+    border-radius:15px;
+    padding:25px;
+    box-shadow:0 8px 20px rgba(0,0,0,.15);
+
+}
+
+table{
+
+    width:100%;
+    border-collapse:collapse;
+
+}
+
+thead{
+
+    background:#21409A;
+    color:white;
+
+}
+
+th{
+
+    padding:15px;
+    text-align:center;
+    font-size:18px;
+
+}
+
+td{
+
+    padding:15px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+
+}
+
+tbody tr:hover{
+
+    background:#f5f7ff;
+
+}
+
+.low{
+
+    background:#28a745;
+    color:white;
+    padding:6px 15px;
+    border-radius:20px;
+    font-weight:bold;
+
+}
+
+.medium{
+
+    background:#ffc107;
+    color:black;
+    padding:6px 15px;
+    border-radius:20px;
+    font-weight:bold;
+
+}
+
+.high{
+
+    background:#ff5722;
+    color:white;
+    padding:6px 15px;
+    border-radius:20px;
+    font-weight:bold;
+
+}
+
+.critical{
+
+    background:#dc3545;
+    color:white;
+    padding:6px 15px;
+    border-radius:20px;
+    font-weight:bold;
+
+}

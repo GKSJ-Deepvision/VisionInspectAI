@@ -1,0 +1,26 @@
+.navbar {
+    height: 70px;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 35px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.navbar h2 {
+    color: #2563EB;
+}
+
+.profile {
+    background: #2563EB;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.profile:hover {
+    background: #1D4ED8;
+}

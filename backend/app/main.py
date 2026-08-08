@@ -1,11 +1,11 @@
 from fastapi import FastAPI, File, UploadFile
-from ml_model.predict import predict_defect
 from fastapi.middleware.cors import CORSMiddleware
+from ml_model.predict import predict_defect
 import shutil
+import os
 
 app = FastAPI()
 
-# Allow frontend connection
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,24 +14,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Home API
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
 @app.get("/")
 def home():
     return {"message": "VisionInspect AI Backend Running"}
 
-# Upload API
+
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
 
-    file_location = f"uploads/{file.filename}"
+    file_location = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(file_location, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     return {
         "filename": file.filename,
-        "status": "uploaded successfully"
+        "status": "Uploaded Successfully"
     }
+
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
 

@@ -1,0 +1,74 @@
+.settings-page{
+    padding:30px;
+}
+
+.settings-page h1{
+    color:#21409A;
+    margin-bottom:25px;
+}
+
+.settings-card{
+
+    width:500px;
+
+    background:white;
+
+    padding:30px;
+
+    border-radius:15px;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.2);
+
+}
+
+.settings-card label{
+
+    display:block;
+
+    margin-top:20px;
+
+    font-weight:bold;
+
+}
+
+.settings-card input{
+
+    width:100%;
+
+    padding:12px;
+
+    margin-top:8px;
+
+    border-radius:8px;
+
+    border:1px solid #ccc;
+
+}
+
+.settings-card button{
+
+    margin-top:25px;
+
+    width:100%;
+
+    padding:14px;
+
+    background:#21409A;
+
+    color:white;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+}
+
+.settings-card button:hover{
+
+    background:#18357a;
+
+}

@@ -1,0 +1,173 @@
+.dashboard{
+    display:flex;
+    height:100vh;
+    background:#eef2f7;
+}
+
+.main-content{
+    flex:1;
+}
+
+.content{
+    padding:30px;
+}
+
+.welcome-card{
+
+    background:linear-gradient(135deg,#1E3A8A,#2563EB);
+
+    color:white;
+
+    padding:30px;
+
+    border-radius:15px;
+
+    margin-bottom:25px;
+
+}
+
+.welcome-card h1{
+
+    font-size:38px;
+
+}
+
+.welcome-card p{
+
+    margin-top:10px;
+
+    font-size:18px;
+
+}
+
+.dashboard-cards{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:20px;
+
+    margin-bottom:25px;
+
+}
+
+.card{
+
+    padding:25px;
+
+    color:white;
+
+    border-radius:15px;
+
+    text-align:center;
+
+    box-shadow:0 6px 15px rgba(0,0,0,.2);
+
+}
+
+.card h2{
+
+    margin-bottom:15px;
+
+}
+
+.blue{
+    background:#2563EB;
+}
+
+.green{
+    background:#16A34A;
+}
+
+.orange{
+    background:#F59E0B;
+}
+
+.red{
+    background:#DC2626;
+}
+
+.dashboard-grid{
+
+    display:grid;
+
+    grid-template-columns:2fr 1fr;
+
+    gap:25px;
+
+}
+
+.section{
+
+    background:white;
+
+    border-radius:15px;
+
+    padding:25px;
+
+    margin-bottom:20px;
+
+    box-shadow:0 5px 12px rgba(0,0,0,.1);
+
+}
+
+.section h2{
+
+    color:#1E3A8A;
+
+    margin-bottom:20px;
+
+}
+
+.section ul{
+
+    list-style:none;
+
+    padding:0;
+
+}
+
+.section ul li{
+
+    margin:15px 0;
+
+    font-size:17px;
+
+}
+
+.section p{
+
+    font-size:16px;
+
+    line-height:28px;
+
+}
+
+button{
+
+    width:100%;
+
+    padding:13px;
+
+    margin-bottom:15px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#2563EB;
+
+    color:white;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+}
+
+button:hover{
+
+    background:#1D4ED8;
+
+}

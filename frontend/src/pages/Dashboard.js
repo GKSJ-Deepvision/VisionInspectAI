@@ -1,100 +1,167 @@
-import React, { useState } from "react";
-import axios from "axios";
+import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
+import "../styles/Dashboard.css";
 
 function Dashboard() {
 
-  const [file, setFile] = useState(null);
-  const [result, setResult] = useState(null);
+    const navigate = useNavigate();
 
-  const predictImage = async () => {
+    return (
 
-    if (!file) {
-      alert("Please select an image.");
-      return;
-    }
+        <div className="dashboard">
 
-    const formData = new FormData();
-    formData.append("file", file);
+            <Sidebar />
 
-    try {
+            <div className="main-content">
 
-      const response = await axios.post(
-        "http://127.0.0.1:8000/predict",
-        formData
-      );
+                <Navbar />
 
-      setResult(response.data);
+                <div className="content">
 
-    } catch (error) {
+                    <div className="welcome-card">
 
-      console.log(error);
-      alert("Prediction Failed");
+                        <h1>Welcome to VisionInspect AI</h1>
 
-    }
+                        <p>
+                            AI Powered Industrial Defect Detection System
+                        </p>
 
-  };
+                    </div>
 
-  return (
+                    <div className="dashboard-cards">
 
-    <div style={{padding:"40px", textAlign:"center"}}>
+                        <div className="card blue">
 
-      <h1>VisionInspect AI Dashboard</h1>
+                            <h2>🤖 AI Model</h2>
 
-      <h3>Manufacturing Defect Detection System</h3>
+                            <p>Ready for Prediction</p>
 
-      <br/>
+                        </div>
 
-      <input
-        type="file"
-        onChange={(e)=>setFile(e.target.files[0])}
-      />
+                        <div className="card green">
 
-      <br/><br/>
+                            <h2>🖥 Backend</h2>
 
-      <button
-        onClick={predictImage}
-        style={{
-          padding:"10px 20px",
-          backgroundColor:"#1E3C72",
-          color:"white",
-          border:"none",
-          borderRadius:"5px",
-          cursor:"pointer"
-        }}
-      >
-        Detect Defect
-      </button>
+                            <p>Connected Successfully</p>
 
-      <br/><br/>
+                        </div>
 
-      {result && (
+                        <div className="card orange">
 
-        <div
-          style={{
-            border:"1px solid #ccc",
-            borderRadius:"10px",
-            padding:"20px",
-            width:"350px",
-            margin:"20px auto",
-            boxShadow:"0px 3px 10px rgba(0,0,0,0.2)"
-          }}
-        >
+                            <h2>📤 Upload</h2>
 
-          <h2>Prediction Result</h2>
+                            <p>Ready to Inspect Images</p>
 
-          <p><strong>Defect:</strong> {result.prediction}</p>
+                        </div>
 
-          <p><strong>Confidence:</strong> {result.confidence}%</p>
+                        <div className="card red">
 
-          <p><strong>Severity:</strong> {result.severity}</p>
+                            <h2>⚡ Status</h2>
+
+                            <p>System Online</p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="dashboard-grid">
+
+                        <div className="left-panel">
+
+                            <div className="section">
+
+                                <h2>System Status</h2>
+
+                                <ul>
+
+                                    <li>🟢 FastAPI Backend Running</li>
+
+                                    <li>🟢 React Frontend Connected</li>
+
+                                    <li>🟢 CNN Model Loaded</li>
+
+                                    <li>🟢 Ready for Image Prediction</li>
+
+                                </ul>
+
+                            </div>
+
+                            <div className="section">
+
+                                <h2>Project Overview</h2>
+
+                                <p>
+
+                                    VisionInspect AI is an Industrial Defect
+                                    Detection System developed using React,
+                                    FastAPI and Deep Learning.
+
+                                </p>
+
+                                <br />
+
+                                <p>
+
+                                    Users can upload bottle images and the AI
+                                    model predicts whether the product is Good,
+                                    Broken Small, Broken Large or
+                                    Contamination.
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div className="right-panel">
+
+                            <div className="section">
+
+                                <h2>Quick Actions</h2>
+
+                                <button onClick={() => navigate("/upload")}>
+                                    📤 Upload Image
+                                </button>
+
+                                <button onClick={() => navigate("/history")}>
+                                    📊 View History
+                                </button>
+
+                                <button onClick={() => navigate("/settings")}>
+                                    ⚙ Settings
+                                </button>
+
+                            </div>
+
+                            <div className="section">
+
+                                <h2>Technology Stack</h2>
+
+                                <p><b>Frontend :</b> ReactJS</p>
+
+                                <p><b>Backend :</b> FastAPI</p>
+
+                                <p><b>Language :</b> Python</p>
+
+                                <p><b>AI Model :</b> CNN</p>
+
+                                <p><b>Dataset :</b> MVTec Bottle Dataset</p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
 
-      )}
+    );
 
-    </div>
-
-  );
 }
 
 export default Dashboard;
