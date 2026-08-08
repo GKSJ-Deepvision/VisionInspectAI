@@ -1,15 +1,21 @@
-jupyter
-notebook
-ipykernel
-numpy
-pandas
-matplotlib
-opencv-python
-pillow
-scikit-image
-scikit-learn
-torch
-torchvision
-anomalib
-joblib
-pytest
+# Core image processing and portable inference
+joblib==1.5.3
+numpy==2.4.4
+opencv-python-headless==5.0.0.93
+pandas==3.0.3
+pillow==12.2.0
+scikit-learn==1.6.1
+openvino==2026.2.1
+
+# Training and advanced anomaly models
+anomalib==2.5.0
+torch==2.11.0
+torchvision==0.26.0
+
+# Notebooks, plots, tests, and linting
+ipykernel==6.29.5
+jupyter==1.1.1
+matplotlib==3.10.0
+notebook==7.3.2
+pytest==9.1.1
+ruff==0.15.20

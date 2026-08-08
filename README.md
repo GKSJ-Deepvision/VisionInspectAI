@@ -1,82 +1,100 @@
 # VisionInspect AI - AI/ML Module
 
-This branch contains the complete AI/ML module for VisionInspect AI, a manufacturing defect detection and quality inspection system. The module processes bottle images, detects anomalies, localizes suspicious regions, classifies defect types, calculates severity, and produces results that can be consumed by the backend API.
+This branch contains the AI/ML work assigned to Member 4 for VisionInspect AI. It covers image preprocessing, multi-category anomaly detection, defect localization, defect subtype classification, severity scoring, model evaluation, portable inference artifacts, and backend-ready prediction output.
 
-## Module Responsibilities
+Branch: `Himanshu-parhi-ai/ml`
 
-- Digital image fundamentals and image handling
-- MVTec AD bottle dataset loading and validation
-- Image preprocessing and enhancement
-- OpenCV baseline anomaly detection
-- PaDiM anomaly detection and localization
-- Defect-type classification
-- Heatmap and defect-mask generation
-- Severity scoring and pass/review/fail decisions
-- Model evaluation and k-fold validation
-- Backend-ready inference output
+## Supported Categories
 
-## Structure
+The model registry supports all 15 MVTec AD categories:
 
-```text
-ml/                         AI/ML source code
-models/                     Trained model artifacts and reference images
-notebooks/                  End-to-end learning, training and evaluation workflow
-tests/                      AI/ML validation tests
-requirements-ai.txt         Python dependencies for this module
-.gitattributes              Git LFS rules for large model files
-```
+`bottle`, `cable`, `capsule`, `carpet`, `grid`, `hazelnut`, `leather`, `metal_nut`, `pill`, `screw`, `tile`, `toothbrush`, `transistor`, `wood`, and `zipper`.
+
+Each category has its own calibrated detector threshold, normal reference profile, defect subtype classifier, metadata, and runtime configuration.
 
 ## AI/ML Workflow
 
 ```text
-Input image
-    -> image validation and preprocessing
-    -> anomaly detection using PaDiM or the OpenCV baseline
-    -> anomaly map and heatmap generation
-    -> good/defective decision
-    -> defect-type classification
-    -> severity score calculation
-    -> pass, review or fail decision
-    -> backend-ready prediction result
+Product image and category
+    -> validation and object-aware preprocessing
+    -> category-specific anomaly detector
+    -> good or defective decision
+    -> anomaly map, defect mask, and heatmap
+    -> defect subtype classifier for defective images
+    -> confidence and defect geometry
+    -> weighted severity score
+    -> pass, review, or fail decision
+    -> backend-ready prediction dictionary
 ```
 
-## Dataset
+## Model Architecture
 
-The module uses the MVTec AD `bottle` category.
+### Advanced anomaly detection
+
+- PaDiM is the trained anomaly detector for most categories.
+- PatchCore is selected for `cable`, `hazelnut`, and `screw`, where benchmark comparison showed stronger performance.
+- Training checkpoints are intentionally excluded because they are large training artifacts and are not required by the portable runtime.
+
+### Portable anomaly detection
+
+- A shared ResNet18 ONNX feature extractor generates image embeddings.
+- Each category stores a normal embedding memory and calibrated threshold in `normal_profile.npz` and `model_metadata.json`.
+- OpenCV residual analysis localizes suspicious regions and produces defect masks and heatmaps.
+- Cable additionally includes an exported OpenVINO PatchCore model and calibrated compact runtime.
+
+### Defect subtype classification
+
+- Category-specific classifiers predict the defect subtype only after anomaly detection marks an image as defective.
+- Classifiers use ResNet18 embeddings or category-specific visual and texture features.
+- Capsule and wood include fine-tuned CNN classifiers exported to ONNX.
+- Portable classifier artifacts are stored as `.pkl`, `.npz`, or `.onnx` files.
+
+## Repository Structure
 
 ```text
-data/raw/mvtec_anomaly_detection/bottle/
-├── train/good/
-├── test/good/
-├── test/broken_large/
-├── test/broken_small/
-├── test/contamination/
-└── ground_truth/
-    ├── broken_large/
-    ├── broken_small/
-    └── contamination/
+ml/                  Core preprocessing, detection, classification, and scoring code
+models/              Portable category model registry and inference artifacts
+notebooks/           Ten connected AI/ML notebooks with inline results
+scripts/             Training, benchmarking, calibration, promotion, and export tools
+tests/               Standalone AI/ML unit and artifact validation tests
+documentation/       AI/ML module report files
+requirements-ai.txt  Reproducible Python dependencies
+pyproject.toml       Test and lint configuration
 ```
 
-The dataset is not included in the repository. Place it at the path above before running dataset-dependent notebooks or tests.
+The inherited team `frontend/` directory is not owned or modified by this AI/ML branch.
+
+## Dataset Setup
+
+The dataset is not committed to GitHub. Download MVTec AD and place it at:
+
+```text
+data/raw/mvtec_anomaly_detection/
+    bottle/
+    cable/
+    capsule/
+    ...
+    zipper/
+```
+
+Every category should contain `train/good`, `test/<defect_type>`, and `ground_truth/<defect_type>` where masks are available.
 
 ## Installation
 
-Create or activate a Python environment, then install the AI dependencies:
+Use Python 3.11 or 3.12. Clone the repository and switch to this branch:
 
 ```bash
-pip install -r requirements-ai.txt
-```
-
-Large model artifacts are tracked with Git LFS:
-
-```bash
+git clone https://github.com/GKSJ-Deepvision/VisionInspectAI.git
+cd VisionInspectAI
+git switch Himanshu-parhi-ai/ml
 git lfs install
 git lfs pull
+python -m pip install -r requirements-ai.txt
 ```
 
-## Notebook Order
+Git LFS is required because the portable ONNX, OpenVINO, NumPy, and scikit-learn model artifacts are versioned with this branch.
 
-Run the notebooks in this sequence:
+## Notebook Sequence
 
 1. `01_digital_image_basics.ipynb`
 2. `02_opencv_numpy_matplotlib.ipynb`
@@ -89,88 +107,108 @@ Run the notebooks in this sequence:
 9. `09_severity_scoring.ipynb`
 10. `10_model_evaluation_results.ipynb`
 
-The notebooks use real MVTec bottle images and display preprocessing, training, prediction and evaluation evidence inline.
+The notebooks display their important images, tables, metrics, prediction dictionaries, and validation evidence inline. They do not require generated report folders for presentation evidence.
 
-## Models
+## Training and Evaluation Tools
 
-### PaDiM
+```bash
+# Train category anomaly models and portable reference profiles
+python scripts/train_category_models.py --category bottle
 
-PaDiM learns the distribution of normal bottle features and identifies deviations as anomalies. It provides image-level defect detection and pixel-level localization.
+# Train category defect subtype classifiers
+python scripts/train_category_classifiers.py --category bottle
 
-Saved evaluation metrics:
+# Compare PaDiM and PatchCore candidates
+python scripts/benchmark_category_models.py --category cable
 
-| Metric | Score |
-| --- | ---: |
-| Image AUROC | 0.9984 |
-| Image F1 | 0.9839 |
-| Pixel AUROC | 0.9821 |
-| Pixel F1 | 0.7136 |
+# Calibrate category thresholds and portable runtime artifacts
+python scripts/calibrate_category_thresholds.py --category cable
 
-### Defect Classifier
+# Export supported anomaly models to OpenVINO
+python scripts/export_openvino.py --category cable
 
-The defect classifier uses frozen ResNet18 ImageNet features with a scikit-learn classifier.
+# Train and export fine-tuned CNN subtype classifiers
+python scripts/train_finetuned_cnn_classifiers.py --category capsule
+```
 
-Supported classes:
+Run a script with `--help` before training to inspect its complete arguments.
 
-- `good`
-- `broken_large`
-- `broken_small`
-- `contamination`
+## Prediction Output
 
-Saved classifier accuracy: `0.9318`.
+`ml/predict.py` produces a structured result suitable for FastAPI integration. The output includes:
 
-### OpenCV Baseline
-
-The baseline compares a preprocessed image against a normal reference image. It provides lightweight anomaly scoring and heatmap generation when PaDiM is unavailable.
+- category and model used
+- good or defective prediction
+- defect subtype and confidence
+- anomaly score and active threshold
+- defect area ratio and localization data
+- heatmap and explainability information
+- severity score and level
+- pass, review, or fail decision
 
 ## Severity Scoring
 
 ```text
-Severity Score =
-    Defect Size x 30%
-  + Defect Location x 25%
-  + Defect Type x 25%
-  + Detection Confidence x 20%
+Severity score =
+    defect size       x 30%
+  + defect location   x 25%
+  + defect type       x 25%
+  + confidence        x 20%
 ```
 
-| Score | Level | Decision guidance |
+| Score | Level | QA guidance |
 | ---: | --- | --- |
-| 80-100 | Critical | Reject or immediate action |
-| 60-79 | High | Fail or rework |
-| 40-59 | Medium | Manual review |
+| 80-100 | Critical | Reject and trigger immediate action |
+| 60-79 | High | Fail or send for rework |
+| 40-59 | Medium | Manual quality review |
 | 0-39 | Low | Generally acceptable |
+
+## Recorded Evaluation Highlights
+
+| Model or pipeline | Main result |
+| --- | ---: |
+| Bottle PaDiM image AUROC | 0.9968 |
+| Bottle PaDiM image F1 | 0.9764 |
+| Bottle portable detector AUROC | 0.9913 |
+| Bottle subtype classifier macro F1 | 0.8719 |
+| Cable PatchCore image AUROC | 0.9695 |
+| Cable PatchCore image F1 | 0.9274 |
+| Cable OpenVINO calibrated detector F1 | 0.9670 |
+| Cable defect subtype classifier macro F1 | 0.8529 |
+
+Metrics are read from the committed category metadata. They should be interpreted with their documented validation protocol; subtype results use the labelled MVTec defect folders and are separate from the official anomaly-detection benchmark.
 
 ## Testing
 
-Run the standalone AI/ML tests on this branch with:
+Run the complete standalone AI/ML suite:
 
 ```bash
-pytest tests/ --ignore=tests/test_prediction.py
+pytest -q
 ```
 
-Dataset-dependent tests are skipped when the local MVTec dataset is unavailable. After the backend module is integrated, run the complete suite with `pytest tests/`, including `test_prediction.py`.
+Run static checks:
 
-## Model Artifacts
-
-```text
-models/
-├── checkpoints/padim_mvtec_bottle_v1.ckpt
-├── defect_classifier.pkl
-├── model_metadata.json
-└── inference/
-    ├── normal_reference.png
-    └── resnet18-f37072fd.pth
+```bash
+ruff check ml scripts tests
 ```
 
-## Current Scope
+Dataset-dependent tests skip automatically when the local MVTec dataset is unavailable. Portable artifact tests verify that all 15 categories can be loaded without the excluded training checkpoints.
 
-- Product category: MVTec AD bottle
-- Anomaly detector: PaDiM
-- Fallback detector: OpenCV normal-profile residual comparison
-- Feature extractor: ResNet18
-- Defect classifier: scikit-learn pipeline
-- Output: prediction, defect type, confidence, anomaly score, heatmap, severity and quality decision
+## Version-Control Policy
 
-The `normal_profile.npz` artifact contains the normal-image mean, expected pixel variation, and product-region mask used by the fallback detector. It allows fallback inference without keeping the full dataset in the repository.
+Committed:
 
-Additional product categories require their own training data, evaluation and calibrated decision thresholds.
+- AI/ML source code and notebooks
+- model metadata and calibrated portable artifacts
+- shared ONNX feature extractor
+- selected OpenVINO and ONNX runtimes
+- AI/ML scripts and tests
+
+Excluded:
+
+- MVTec datasets
+- environment files and credentials
+- caches and generated reports
+- Anomalib training runs
+- large `.ckpt` and `.pth` training artifacts
+- frontend, backend, database, and deployment changes owned by other team members

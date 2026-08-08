@@ -1,16 +1,33 @@
+# Secrets and local configuration
 .env
 .env.*
 !.env.example
 
+# Python and notebook caches
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
+.venv/
+venv/
 
+# Frontend build artifacts inherited from the team repository
 node_modules/
 .next/
 
+# Local data and generated output
 data/
 results/
 outputs/
+tmp/
 *.log
+
+# Heavy training-only artifacts. Portable inference assets remain tracked.
+models/checkpoints/
+models/local_checkpoints/
+models/categories/**/training_runs/
+models/categories/**/benchmark_runs/
+models/categories/**/promotion_runs/
+*.ckpt
+*.pth

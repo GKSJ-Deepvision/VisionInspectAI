@@ -6,10 +6,10 @@ from ml.baseline_detector import (
     anomaly_mask,
     anomaly_score,
     evaluate_binary_predictions,
-    load_reference_profile,
     predict_from_score,
     threshold_from_scores,
 )
+from ml.inference import has_localized_baseline_defect
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,12 +27,7 @@ def test_anomaly_score_uses_percentile():
     diff_map = np.array([[0, 10], [20, 30]], dtype=np.float32)
 
     assert anomaly_score(diff_map, percentile=50) == 15.0
-    assert (
-        anomaly_score(
-            diff_map, percentile=50, mask=np.array([[True, False], [False, True]])
-        )
-        == 15.0
-    )
+    assert anomaly_score(diff_map, percentile=50, mask=np.array([[True, False], [False, True]])) == 15.0
 
 
 def test_anomaly_mask_filters_tiny_residual_noise():
@@ -46,10 +41,19 @@ def test_anomaly_mask_filters_tiny_residual_noise():
     assert int(mask.sum()) == 9
 
 
+def test_baseline_requires_a_localized_defect_mask_for_a_fail_decision():
+    empty_mask = np.zeros((8, 8), dtype=bool)
+    localized_mask = empty_mask.copy()
+    localized_mask[3:5, 3:5] = True
+
+    assert not has_localized_baseline_defect(1.46, 1.45, empty_mask)
+    assert has_localized_baseline_defect(1.46, 1.45, localized_mask)
+
+
 def test_saved_normal_profile_has_runtime_arrays():
-    profile = load_reference_profile(
-        PROJECT_ROOT / "models" / "inference" / "normal_profile.npz"
-    )
+    from ml.baseline_detector import load_reference_profile
+
+    profile = load_reference_profile(PROJECT_ROOT / "models" / "inference" / "normal_profile.npz")
 
     assert profile["mean"].shape == (256, 256)
     assert profile["std"].shape == (256, 256)

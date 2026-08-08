@@ -6,7 +6,6 @@ import os
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_ROOT / "backend"
 
@@ -19,34 +18,10 @@ if str(BACKEND_DIR) not in sys.path:
 def default_demo_image() -> Path:
     """Return a real MVTec bottle image for command-line demonstration."""
     candidates = [
-        PROJECT_ROOT
-        / "data"
-        / "raw"
-        / "mvtec_anomaly_detection"
-        / "bottle"
-        / "test"
-        / "contamination",
-        PROJECT_ROOT
-        / "data"
-        / "raw"
-        / "mvtec_anomaly_detection"
-        / "bottle"
-        / "test"
-        / "broken_large",
-        PROJECT_ROOT
-        / "data"
-        / "raw"
-        / "mvtec_anomaly_detection"
-        / "bottle"
-        / "test"
-        / "broken_small",
-        PROJECT_ROOT
-        / "data"
-        / "raw"
-        / "mvtec_anomaly_detection"
-        / "bottle"
-        / "test"
-        / "good",
+        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "contamination",
+        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "broken_large",
+        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "broken_small",
+        PROJECT_ROOT / "data" / "raw" / "mvtec_anomaly_detection" / "bottle" / "test" / "good",
     ]
     for directory in candidates:
         image_paths = sorted(directory.glob("*.png"))
@@ -55,37 +30,60 @@ def default_demo_image() -> Path:
     raise FileNotFoundError("No MVTec bottle test image found under data/raw.")
 
 
-def inspect_image(image_path: str | Path | None = None) -> dict:
-    """Run the backend-compatible AI pipeline without creating external output files."""
-    from app.config import settings
-    from app.services.model_settings_service import load_runtime_settings
-    from app.services.prediction_service import resolve_backend_path
-    from ml.inference import InferenceConfig, inspect_image as inspect_image_runtime
+def _environment_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def build_inference_config(category: str):
+    """Build a standalone ML configuration without importing the backend."""
+    from ml.inference import InferenceConfig
+    from ml.model_registry import category_model_spec, is_valid_checkpoint
+
+    spec = category_model_spec(category)
+    openvino_available = bool(
+        spec.openvino_path
+        and spec.openvino_path.exists()
+        and spec.openvino_path.with_suffix(".bin").exists()
+    )
+    use_openvino = _environment_flag("USE_OPENVINO_INFERENCE", True) and openvino_available
+    advanced_available = is_valid_checkpoint(spec.checkpoint_path) or openvino_available
+
+    return InferenceConfig(
+        category=spec.category,
+        anomaly_model_kind=spec.model_kind,
+        use_padim_inference=_environment_flag("USE_PADIM_INFERENCE") and advanced_available,
+        use_openvino_inference=use_openvino,
+        openvino_inference_device=os.getenv("OPENVINO_INFERENCE_DEVICE", "CPU"),
+        padim_inference_accelerator=os.getenv("PADIM_INFERENCE_ACCELERATOR", "auto"),
+        model_checkpoint_path=spec.checkpoint_path,
+        classifier_model_path=spec.classifier_path,
+        cnn_classifier_model_path=spec.cnn_classifier_path,
+        model_metadata_path=spec.metadata_path,
+        baseline_profile_path=spec.baseline_profile_path,
+        baseline_threshold=spec.baseline_score_threshold,
+        baseline_residual_threshold=spec.baseline_residual_threshold,
+        padim_score_threshold=spec.padim_score_threshold,
+        review_severity_threshold=40.0,
+        fail_severity_threshold=60.0,
+        openvino_path=spec.openvino_path if use_openvino else None,
+        openvino_calibrator_path=spec.openvino_calibrator_path if use_openvino else None,
+        compact_classifier_path=spec.compact_classifier_path,
+    )
+
+
+def inspect_image(image_path: str | Path | None = None, category: str = "bottle") -> dict:
+    """Run the standalone AI pipeline without creating external output files."""
+    from ml.inference import inspect_image as inspect_image_runtime
 
     selected_image = Path(image_path) if image_path else default_demo_image()
-    runtime_settings = load_runtime_settings()
-    config = InferenceConfig(
-        use_padim_inference=settings.use_padim_inference,
-        padim_inference_accelerator=settings.padim_inference_accelerator,
-        model_checkpoint_path=resolve_backend_path(settings.model_checkpoint_path),
-        classifier_model_path=resolve_backend_path(settings.classifier_model_path),
-        model_metadata_path=resolve_backend_path(settings.model_metadata_path),
-        baseline_reference_path=resolve_backend_path(settings.baseline_reference_path),
-        baseline_profile_path=resolve_backend_path(
-            getattr(
-                settings,
-                "baseline_profile_path",
-                "../models/inference/normal_profile.npz",
-            )
-        ),
-        baseline_threshold=runtime_settings.baseline_threshold,
-        padim_score_threshold=runtime_settings.padim_score_threshold,
-        review_severity_threshold=runtime_settings.review_severity_threshold,
-        fail_severity_threshold=runtime_settings.fail_severity_threshold,
-    )
+    config = build_inference_config(category)
     result = inspect_image_runtime(selected_image, config)
     return {
         "input_image": str(selected_image),
+        "category": result.get("model_category", category),
         "prediction": result["prediction"],
         "defect_type": result["defect_type"],
         "confidence": result["confidence"],
@@ -105,12 +103,9 @@ def inspect_image(image_path: str | Path | None = None) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run VisionInspect AI inference on one image."
-    )
-    parser.add_argument(
-        "--image", type=str, default=None, help="Path to an input product image."
-    )
+    parser = argparse.ArgumentParser(description="Run VisionInspect AI inference on one image.")
+    parser.add_argument("--image", type=str, default=None, help="Path to an input product image.")
+    parser.add_argument("--category", default="bottle", help="MVTec product category for category-specific inference.")
     parser.add_argument(
         "--use-padim",
         action="store_true",
@@ -130,7 +125,7 @@ def main() -> None:
     if args.use_baseline:
         os.environ["USE_PADIM_INFERENCE"] = "false"
 
-    print(json.dumps(inspect_image(args.image), indent=2))
+    print(json.dumps(inspect_image(args.image, args.category), indent=2))
 
 
 if __name__ == "__main__":

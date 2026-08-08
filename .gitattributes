@@ -1,4 +1,9 @@
-# Auto detect text files and perform LF normalization
+# Normalize text files while keeping model binaries in Git LFS.
 * text=auto
-models/checkpoints/*.ckpt filter=lfs diff=lfs merge=lfs -text
-models/inference/*.pth filter=lfs diff=lfs merge=lfs -text
+
+*.ckpt filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.npz filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+models/exported/**/model.bin filter=lfs diff=lfs merge=lfs -text
