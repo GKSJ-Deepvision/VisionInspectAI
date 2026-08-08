@@ -10,4 +10,7 @@ __pycache__/
 
 # Dataset
 dataset/
-
+src/results/
+src/predictions/
+*.ckpt
+*.pth
