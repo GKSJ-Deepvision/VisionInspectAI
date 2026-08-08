@@ -1,6 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Depends, Form
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from PIL import Image
+import io
+from datetime import datetime
 
-from backend.routes.inspection import router as inspection_router
 from backend.routes.auth import router as auth_router
 from backend.routes.upload import router as upload_router
 from backend.routes.dataset import router as dataset_router
@@ -9,23 +15,37 @@ from backend.routes.augmentation import router as augmentation_router
 from backend.routes.severity import router as severity_router
 from backend.routes.statistics import router as statistics_router
 
-from backend.models.database import engine, Base
+from backend.models.database import engine, Base, get_db
 from backend.models.inspection_history import InspectionHistory
-from backend.models.user_activity import UserActivity
 from backend.models.analytics_storage import AnalyticsStorage
 from backend.models.report_storage import ReportStorage
 from backend.models.batch_inspection import BatchInspection
-from backend.models.user import User
+from backend.models.inspection_workflow import InspectionWorkflow
+
+from backend.services.database_service import save_inspection
+from backend.report import generate_report
+
+from anomaly_detection.inference import predict_defect
+from anomaly_detection.inspection_log import inspection_log
+
 
 app = FastAPI(
     title="VisionInspect AI",
-    version="1.0.0",
+    version="1.1.0",
     description="Manufacturing Defect Detection Backend"
 )
 
+# ------------------------------------------------------------------
+# Database
+# ------------------------------------------------------------------
+
 Base.metadata.create_all(bind=engine)
 
-app.include_router(inspection_router)
+
+# ------------------------------------------------------------------
+# Existing routers
+# ------------------------------------------------------------------
+
 app.include_router(upload_router)
 app.include_router(dataset_router)
 app.include_router(preprocess_router)
@@ -34,8 +54,685 @@ app.include_router(severity_router)
 app.include_router(statistics_router)
 app.include_router(auth_router)
 
+
+# ------------------------------------------------------------------
+# CORS
+# ------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ------------------------------------------------------------------
+# Basic endpoint
+# ------------------------------------------------------------------
+
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to VisionInspect AI Backend!"
+        "message": "Welcome to VisionInspect AI Backend!",
+        "status": "online"
     }
+
+
+# ------------------------------------------------------------------
+# Status
+# ------------------------------------------------------------------
+
+@app.get("/status")
+def get_status(category: str = "bottle"):
+    return {
+        "status": "online",
+        "category": category.lower()
+    }
+
+
+# ------------------------------------------------------------------
+# Main prediction endpoint
+# ------------------------------------------------------------------
+
+@app.post("/predict")
+async def predict(
+    file: UploadFile = File(...),
+    category: str = "bottle",
+    enable_yolo: bool = True
+):
+    try:
+        contents = await file.read()
+
+        from PIL import Image
+        import io
+
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+        result = predict_defect(
+            image,
+            category=category.lower(),
+            enable_yolo=enable_yolo
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Prediction failed: {str(e)}"
+        )
+
+
+# ------------------------------------------------------------------
+# Batch prediction
+# ------------------------------------------------------------------
+
+@app.post("/batch-predict")
+async def batch_predict(
+    files: list[UploadFile] = File(...),
+    category: str = "bottle",
+    enable_yolo: bool = True
+):
+    if len(files) > 20:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum batch size is 20 images."
+        )
+
+    from PIL import Image
+    import io
+
+    results = []
+    anomalous_count = 0
+
+    for file in files:
+        try:
+            contents = await file.read()
+            image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+            result = predict_defect(
+                image,
+                category=category.lower(),
+                enable_yolo=enable_yolo
+            )
+
+            results.append({
+                "filename": file.filename,
+                **result
+            })
+
+            if result.get("is_anomaly"):
+                anomalous_count += 1
+
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "error": str(e),
+                "is_anomaly": False
+            })
+
+    total = len(files)
+    pass_count = total - anomalous_count
+
+    return {
+        "category": category.lower(),
+        "batch_size": total,
+        "anomalous_count": anomalous_count,
+        "pass_count": pass_count,
+        "pass_rate": round(
+            (pass_count / total) * 100,
+            2
+        ) if total else 100.0,
+        "results": results
+    }
+
+
+# ------------------------------------------------------------------
+# Analytics
+# ------------------------------------------------------------------
+
+@app.get("/analytics/trends")
+def get_analytics_trends(
+    db: Session = Depends(get_db)
+):
+    records = (
+        db.query(InspectionHistory)
+        .order_by(InspectionHistory.created_at.asc())
+        .all()
+    )
+
+    time_series = []
+
+    for entry in records:
+        time_series.append({
+            "timestamp": entry.created_at.isoformat() if entry.created_at else None,
+            "category": entry.category,
+            "is_anomaly": entry.result == "REJECT",
+            "anomaly_score": entry.anomaly_score,
+            "severity_score": entry.severity_score,
+            "severity_level": entry.severity_level,
+            "inferred_defect_type": entry.defect,
+        })
+
+    total = len(records)
+    defective = sum(1 for entry in records if entry.result == "REJECT")
+    passed = total - defective
+
+    severity_distribution = {
+        "Critical": sum(1 for e in records if e.severity_level == "Critical"),
+        "High": sum(1 for e in records if e.severity_level == "High"),
+        "Medium": sum(1 for e in records if e.severity_level == "Medium"),
+        "Low": sum(1 for e in records if e.severity_level == "Low"),
+    }
+
+    category_stats = {}
+
+    for entry in records:
+        category = entry.category or "unknown"
+
+        if category not in category_stats:
+            category_stats[category] = {
+                "total": 0,
+                "anomalous": 0
+            }
+
+        category_stats[category]["total"] += 1
+
+        if entry.result == "REJECT":
+            category_stats[category]["anomalous"] += 1
+
+    defect_rate = (
+        (defective / total) * 100
+        if total
+        else 0.0
+    )
+
+    pass_rate = (
+        (passed / total) * 100
+        if total
+        else 100.0
+    )
+
+    return {
+        "summary": {
+            "total_inspections": total,
+            "pass_rate": round(pass_rate, 2),
+            "defect_rate": round(defect_rate, 2),
+            "anomalous_count": defective,
+            "severity_distribution": severity_distribution,
+            "category_stats": category_stats,
+        },
+        "time_series": time_series,
+        "defect_type_breakdown": severity_distribution,
+    }
+
+
+@app.get("/analytics/risk-assessment")
+def get_risk_assessment(
+    db: Session = Depends(get_db)
+):
+    records = db.query(InspectionHistory).all()
+
+    category_risk = {}
+
+    categories = set(
+        entry.category or "unknown"
+        for entry in records
+    )
+
+    for category in categories:
+        category_records = [
+            entry
+            for entry in records
+            if (entry.category or "unknown") == category
+        ]
+
+        total = len(category_records)
+
+        defective = sum(
+            1
+            for entry in category_records
+            if entry.result == "REJECT"
+        )
+
+        defect_rate = (
+            defective / total * 100
+            if total
+            else 0.0
+        )
+
+        if defect_rate > 30:
+            risk_level = "HIGH RISK"
+            action = (
+                "Escalate to Quality Assurance "
+                "Supervisor immediately"
+            )
+        elif defect_rate > 10:
+            risk_level = "MEDIUM RISK"
+            action = (
+                "Monitor conveyor line calibration "
+                "and tool wear"
+            )
+        else:
+            risk_level = "LOW RISK"
+            action = "Normal operating parameters"
+
+        category_risk[category] = {
+            "total_inspections": total,
+            "defective_units": defective,
+            "defect_rate_pct": round(defect_rate, 2),
+            "risk_level": risk_level,
+            "recommended_action": action,
+        }
+
+    total = len(records)
+
+    defective = sum(
+        1
+        for entry in records
+        if entry.result == "REJECT"
+    )
+
+    overall_defect_rate = (
+        defective / total * 100
+        if total
+        else 0.0
+    )
+
+    return {
+        "overall_defect_rate": round(
+            overall_defect_rate,
+            2
+        ),
+        "total_units_inspected": total,
+        "category_risk_levels": category_risk,
+    }
+
+
+# ------------------------------------------------------------------
+# Production report
+# ------------------------------------------------------------------
+
+@app.get("/reports/production")
+def get_production_report(
+    db: Session = Depends(get_db)
+):
+    records = db.query(InspectionHistory).all()
+
+    total = len(records)
+
+    rejected = sum(
+        1
+        for entry in records
+        if entry.result == "REJECT"
+    )
+
+    passed = total - rejected
+
+    pass_rate = (
+        passed / total * 100
+        if total
+        else 100.0
+    )
+
+    defect_rate = (
+        rejected / total * 100
+        if total
+        else 0.0
+    )
+
+    severity_distribution = {
+        "Critical": sum(
+            1 for e in records
+            if e.severity_level == "Critical"
+        ),
+        "High": sum(
+            1 for e in records
+            if e.severity_level == "High"
+        ),
+        "Medium": sum(
+            1 for e in records
+            if e.severity_level == "Medium"
+        ),
+        "Low": sum(
+            1 for e in records
+            if e.severity_level == "Low"
+        ),
+    }
+
+    category_performance = {}
+
+    for entry in records:
+        category = entry.category or "unknown"
+
+        if category not in category_performance:
+            category_performance[category] = {
+                "total": 0,
+                "anomalous": 0
+            }
+
+        category_performance[category]["total"] += 1
+
+        if entry.result == "REJECT":
+            category_performance[category]["anomalous"] += 1
+
+    return {
+        "report_title": (
+            "Executive Production Quality "
+            "Summary Report"
+        ),
+        "system_status": "OPERATIONAL",
+        "total_units_inspected": total,
+        "units_passed": passed,
+        "units_rejected": rejected,
+        "yield_pass_rate_pct": round(pass_rate, 2),
+        "defect_rate_pct": round(defect_rate, 2),
+        "severity_distribution": severity_distribution,
+        "category_performance": category_performance,
+    }
+
+
+# ------------------------------------------------------------------
+# Inspection report
+# ------------------------------------------------------------------
+
+@app.get("/report/{inspection_id}")
+def get_report(
+    inspection_id: str,
+    db: Session = Depends(get_db),
+    format: str = Query(
+        "json",
+        pattern="^(json|markdown|html)$"
+    )
+):
+    try:
+        inspection_id_int = int(inspection_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid inspection ID."
+        )
+
+    entry = (
+        db.query(InspectionHistory)
+        .filter(
+            InspectionHistory.id == inspection_id_int
+        )
+        .first()
+    )
+
+    if not entry:
+        raise HTTPException(
+            status_code=404,
+            detail="Inspection report not found."
+        )
+
+    if format == "json":
+        return {
+            "id": entry.id,
+            "username": entry.username,
+            "image_name": entry.image_name,
+            "category": entry.category,
+            "defect": entry.defect,
+            "result": entry.result,
+            "confidence": entry.confidence,
+            "anomaly_score": entry.anomaly_score,
+            "severity_score": entry.severity_score,
+            "severity_level": entry.severity_level,
+            "created_at": (
+                entry.created_at.isoformat()
+                if entry.created_at
+                else None
+            ),
+        }
+
+    prediction = {
+        "image_name": entry.image_name,
+        "defect_result": entry.result,
+        "defect_class": entry.defect,
+        "confidence_score": entry.confidence,
+        "anomaly_score": entry.anomaly_score,
+        "severity_score": entry.severity_score,
+        "severity_level": entry.severity_level,
+    }
+
+    report = generate_report(prediction)
+
+    return {
+        "inspection_id": entry.id,
+        "report": report,
+    }
+
+# ------------------------------------------------------------------
+# Authenticated inspection endpoint
+# ------------------------------------------------------------------
+
+@app.post("/inspect")
+async def inspect_image(
+    file: UploadFile = File(...),
+    category: str = Form("bottle"),
+    enable_yolo: bool = Form(True),
+):
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+        prediction_result = predict_defect(
+            image,
+            category=category.lower(),
+            enable_yolo=enable_yolo,
+        )
+
+        # Save inspection in database
+        save_inspection(
+            username="default",
+            image_name=file.filename or "uploaded_image",
+            category=prediction_result.get("category", category.lower()),
+            defect=prediction_result.get("defect_class", "unknown"),
+            result=prediction_result.get("defect_result", "UNKNOWN"),
+            confidence=float(prediction_result.get("confidence_score", 0)),
+            anomaly_score=float(prediction_result.get("anomaly_score", 0)),
+            severity_score=float(prediction_result.get("severity_score", 0)),
+            severity_level=prediction_result.get("severity_level", "Unknown"),
+        )
+
+        report = generate_report(prediction_result)
+
+        prediction_result.pop("original_image", None)
+
+        return {
+            "inspection_result": prediction_result,
+            "inspection_report": report,
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Inspection failed: {str(e)}",
+        )
+
+
+# ------------------------------------------------------------------
+# Database inspection history
+# ------------------------------------------------------------------
+
+@app.get("/history")
+def get_history(
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(InspectionHistory)
+        .order_by(InspectionHistory.created_at.desc())
+        .all()
+    )
+
+
+# ------------------------------------------------------------------
+# Stored reports
+# ------------------------------------------------------------------
+
+@app.get("/reports")
+def get_reports(
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(ReportStorage)
+        .order_by(ReportStorage.created_at.desc())
+        .all()
+    )
+
+
+# ------------------------------------------------------------------
+# Database analytics
+# ------------------------------------------------------------------
+
+@app.get("/analytics")
+def get_database_analytics(
+    db: Session = Depends(get_db)
+):
+    total_images = (
+        db.query(func.sum(AnalyticsStorage.total_images))
+        .scalar()
+    ) or 0
+
+    total_defects = (
+        db.query(func.sum(AnalyticsStorage.defect_count))
+        .scalar()
+    ) or 0
+
+    total_normal = (
+        db.query(func.sum(AnalyticsStorage.normal_count))
+        .scalar()
+    ) or 0
+
+    return {
+        "total_images": total_images,
+        "defect_count": total_defects,
+        "normal_count": total_normal,
+    }
+
+
+# ------------------------------------------------------------------
+# Batch inspection records
+# ------------------------------------------------------------------
+
+@app.get("/batches")
+def get_batches(
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(BatchInspection)
+        .order_by(BatchInspection.created_at.desc())
+        .all()
+    )
+
+# ------------------------------------------------------------------
+# Supervisor inspection workflow
+# ------------------------------------------------------------------
+
+@app.post("/supervisor/inspections/{inspection_id}/approve-rework")
+def approve_rework(
+    inspection_id: int,
+    db: Session = Depends(get_db),
+):
+    inspection = (
+        db.query(InspectionHistory)
+        .filter(InspectionHistory.id == inspection_id)
+        .first()
+    )
+
+    if not inspection:
+        raise HTTPException(
+            status_code=404,
+            detail="Inspection not found",
+        )
+
+    workflow = (
+        db.query(InspectionWorkflow)
+        .filter(
+            InspectionWorkflow.inspection_id == inspection_id
+        )
+        .first()
+    )
+
+    if workflow:
+        workflow.status = "REWORK_APPROVED"
+        workflow.action_by = "factory_supervisor"
+        workflow.action_at = datetime.utcnow()
+    else:
+        workflow = InspectionWorkflow(
+            inspection_id=inspection_id,
+            status="REWORK_APPROVED",
+            action_by="factory_supervisor",
+            action_at=datetime.utcnow(),
+        )
+        db.add(workflow)
+
+    db.commit()
+    db.refresh(workflow)
+
+    return {
+        "message": "Rework approved",
+        "inspection_id": inspection_id,
+        "status": workflow.status,
+    }
+
+
+@app.post("/supervisor/inspections/{inspection_id}/escalate")
+def escalate_inspection(
+    inspection_id: int,
+    db: Session = Depends(get_db),
+):
+    inspection = (
+        db.query(InspectionHistory)
+        .filter(InspectionHistory.id == inspection_id)
+        .first()
+    )
+
+    if not inspection:
+        raise HTTPException(
+            status_code=404,
+            detail="Inspection not found",
+        )
+
+    workflow = (
+        db.query(InspectionWorkflow)
+        .filter(
+            InspectionWorkflow.inspection_id == inspection_id
+        )
+        .first()
+    )
+
+    if workflow:
+        workflow.status = "ESCALATED"
+        workflow.action_by = "factory_supervisor"
+        workflow.action_at = datetime.utcnow()
+    else:
+        workflow = InspectionWorkflow(
+            inspection_id=inspection_id,
+            status="ESCALATED",
+            action_by="factory_supervisor",
+            action_at=datetime.utcnow(),
+        )
+        db.add(workflow)
+
+    db.commit()
+    db.refresh(workflow)
+
+    return {
+        "message": "Inspection escalated",
+        "inspection_id": inspection_id,
+        "status": workflow.status,
+    }
+
+@app.get("/supervisor/workflows")
+def get_supervisor_workflows(
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(InspectionWorkflow)
+        .order_by(InspectionWorkflow.created_at.desc())
+        .all()
+    )
