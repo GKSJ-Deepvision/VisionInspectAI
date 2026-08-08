@@ -1,27 +1,3 @@
-"""
-predict.py — VisionInspect AI: PatchCore inference module
-
-Loads a trained checkpoint for a given MVTec AD category and runs
-inference on a new image, producing:
-  - a binary pass/fail-style prediction (Normal / Defective)
-  - a raw anomaly score
-  - a saved heatmap image showing where the model thinks the defect is
-
-This is the bridge between the trained models from Milestone 2
-(15 categories, all completed) and anything downstream that needs to
-call the model on a new image - a backend API, a demo script, a CLI
-tool, etc. Whatever your team decides for Milestone 3, this module is
-very likely part of it.
-
-Usage (command line):
-    python predict.py --category bottle --image path\to\test_image.png
-
-Usage (as a module, e.g. from a future Flask/FastAPI endpoint):
-    from predict import predict_image
-    result = predict_image("bottle", "path/to/image.png")
-    print(result)
-"""
-
 import argparse
 import os
 import sys
@@ -52,20 +28,6 @@ def _find_ckpt_under(folder: str):
 
 
 def find_checkpoint(category: str) -> str:
-    """
-    Locate the trained .ckpt file for a category under RESULTS_DIR.
-
-    Deterministic resolution order (previously this walked the folder tree
-    and returned whichever .ckpt os.walk() happened to reach first - NOT
-    guaranteed to be the newest version, since folder traversal order isn't
-    guaranteed to be sorted. That made it silently possible to validate an
-    old checkpoint after retraining a category. Fixed to always prefer the
-    newest run explicitly):
-
-      1. category_dir/latest/  (anomalib's "latest run" symlink), if present
-      2. the highest-numbered vN folder (v0, v1, v2, ...), by version number
-      3. fallback: whatever os.walk() finds first (old behaviour, last resort)
-    """
     category_dir = os.path.join(RESULTS_DIR, "Patchcore", "MVTecAD", category)
     if not os.path.isdir(category_dir):
         raise FileNotFoundError(
