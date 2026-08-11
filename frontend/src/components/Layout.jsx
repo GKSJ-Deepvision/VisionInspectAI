@@ -15,7 +15,7 @@ backgroundImage: `linear-gradient(rgba(5,10,25,.75), rgba(5,10,25,.82)), url(${l
   <Header />
 
   {/* Main Content */}
-  <main className="pt-20 min-h-screen">
+  <main className="pt-20 sm:pt-24 min-h-screen">
     {children}
   </main>
 

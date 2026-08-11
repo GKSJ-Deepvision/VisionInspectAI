@@ -9,6 +9,7 @@ const { user, logoutUser, hasPermission } = useAuth()
 const navigate = useNavigate()
 
 const [isOnline, setIsOnline] = useState(null)
+const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 useEffect(() => {
 let mounted = true
@@ -36,6 +37,7 @@ return () => {
 
 function handleLogout() {
 logoutUser()
+setMobileMenuOpen(false)
 navigate('/login')
 }
 
@@ -76,12 +78,12 @@ hasPermission(item.permission)
 return ( <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-md border-b border-gray-700">
 
 
-  <div className="max-w-7xl mx-auto px-8 h-24 flex items-center justify-between">
+  <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 sm:h-24 flex items-center justify-between">
 
     {/* ================= LOGO ================= */}
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
 
-      <div className="w-16 h-16 flex items-center justify-center">
+      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
         <img
           src={eyeLogo}
           alt="VisionInspect AI"
@@ -89,8 +91,8 @@ return ( <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backd
         />
       </div>
 
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-wide">
+      <div className="min-w-0">
+        <h1 className="text-lg sm:text-2xl font-extrabold tracking-wide truncate">
           <span className="text-white">
             VisionInspect
           </span>{' '}
@@ -158,10 +160,10 @@ return ( <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backd
 
 
     {/* ================= USER SECTION ================= */}
-    <div className="flex items-center gap-5">
+    <div className="flex items-center gap-3 sm:gap-5">
 
       {/* Operator Name & Role */}
-      <div className="text-right">
+      <div className="text-right hidden sm:block">
 
         <h3 className="text-white font-semibold text-base">
           {user?.name || 'Himabindhu Ravuri'}
@@ -182,7 +184,7 @@ return ( <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backd
         onClick={handleLogout}
         title="Logout"
         aria-label="Logout"
-        className="w-11 h-11 flex items-center justify-center rounded-xl bg-gray-800 border border-gray-700 hover:bg-red-500 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300"
+        className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center rounded-xl bg-gray-800 border border-gray-700 hover:bg-red-500 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300"
       >
 
         {/* Door + Arrow Logout Icon */}
@@ -210,9 +212,79 @@ return ( <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backd
 
       </button>
 
+      {/* ================= MOBILE MENU TOGGLE ================= */}
+      <button
+        onClick={() => setMobileMenuOpen((open) => !open)}
+        title="Menu"
+        aria-label="Toggle navigation menu"
+        aria-expanded={mobileMenuOpen}
+        className="md:hidden w-10 h-10 shrink-0 flex items-center justify-center rounded-xl bg-gray-800 border border-gray-700 hover:bg-gray-700 transition-all duration-300"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 text-white"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {mobileMenuOpen ? (
+            <>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </>
+          ) : (
+            <>
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </>
+          )}
+        </svg>
+      </button>
+
     </div>
 
   </div>
+
+  {/* ================= MOBILE NAVIGATION PANEL ================= */}
+  {mobileMenuOpen && (
+    <nav className="md:hidden border-t border-gray-700 bg-gray-900/98 backdrop-blur-md px-4 py-3 flex flex-col gap-1">
+
+      {/* Operator name shown here on mobile since it's hidden in the header row */}
+      <div className="sm:hidden px-2 pb-2 mb-1 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">
+          {user?.name || 'Himabindhu Ravuri'}
+        </h3>
+        <p className="text-xs uppercase tracking-[2px] text-blue-400 mt-1">
+          {{
+            quality_inspector: 'Quality Inspector',
+            factory_supervisor: 'Factory Supervisor',
+          }[user?.role] || 'Quality Inspector'}
+        </p>
+      </div>
+
+      {navItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          onClick={() => setMobileMenuOpen(false)}
+          className={({ isActive }) =>
+            `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ${
+              isActive
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            }`
+          }
+        >
+          {item.label}
+        </NavLink>
+      ))}
+
+    </nav>
+  )}
 
 </header>
 

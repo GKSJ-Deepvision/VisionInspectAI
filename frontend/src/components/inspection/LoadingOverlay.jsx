@@ -8,9 +8,9 @@ export default function LoadingOverlay({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
 
-      <div className="bg-gray-900 rounded-3xl shadow-2xl border border-gray-700 p-10 w-[430px]">
+      <div className="bg-gray-900 rounded-3xl shadow-2xl border border-gray-700 p-6 sm:p-10 w-full max-w-[430px]">
 
         <div className="flex justify-center">
 
