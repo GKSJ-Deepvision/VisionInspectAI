@@ -92,3 +92,5 @@ models/*.pth
 backend/models/*.db
 
 *.sqlite3
+# Local database backup
+visioninspect_backup.db

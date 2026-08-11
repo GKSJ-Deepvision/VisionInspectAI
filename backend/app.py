@@ -1,10 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Depends, Form
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from PIL import Image
 import io
+import json
 from datetime import datetime
 
 from backend.routes.auth import router as auth_router
@@ -17,7 +16,6 @@ from backend.routes.statistics import router as statistics_router
 
 from backend.models.database import engine, Base, get_db
 from backend.models.inspection_history import InspectionHistory
-from backend.models.analytics_storage import AnalyticsStorage
 from backend.models.report_storage import ReportStorage
 from backend.models.batch_inspection import BatchInspection
 from backend.models.inspection_workflow import InspectionWorkflow
@@ -26,7 +24,6 @@ from backend.services.database_service import save_inspection
 from backend.report import generate_report
 
 from anomaly_detection.inference import predict_defect
-from anomaly_detection.inspection_log import inspection_log
 
 
 app = FastAPI(
@@ -34,6 +31,15 @@ app = FastAPI(
     version="1.1.0",
     description="Manufacturing Defect Detection Backend"
 )
+
+def normalize_category(category: str) -> str:
+    category = category.strip().lower()
+
+    aliases = {
+        "metalnut": "metal_nut",
+    }
+
+    return aliases.get(category, category)
 
 # ------------------------------------------------------------------
 # Database
@@ -88,7 +94,7 @@ def home():
 def get_status(category: str = "bottle"):
     return {
         "status": "online",
-        "category": category.lower()
+        "category": normalize_category(category),
     }
 
 
@@ -103,10 +109,8 @@ async def predict(
     enable_yolo: bool = True
 ):
     try:
+        category = normalize_category(category)
         contents = await file.read()
-
-        from PIL import Image
-        import io
 
         image = Image.open(io.BytesIO(contents)).convert("RGB")
 
@@ -135,14 +139,13 @@ async def batch_predict(
     category: str = "bottle",
     enable_yolo: bool = True
 ):
+    category = normalize_category(category)
+
     if len(files) > 20:
         raise HTTPException(
             status_code=400,
             detail="Maximum batch size is 20 images."
         )
-
-    from PIL import Image
-    import io
 
     results = []
     anomalous_count = 0
@@ -154,7 +157,7 @@ async def batch_predict(
 
             result = predict_defect(
                 image,
-                category=category.lower(),
+                category=category,
                 enable_yolo=enable_yolo
             )
 
@@ -177,7 +180,7 @@ async def batch_predict(
     pass_count = total - anomalous_count
 
     return {
-        "category": category.lower(),
+        "category": category,
         "batch_size": total,
         "anomalous_count": anomalous_count,
         "pass_count": pass_count,
@@ -440,25 +443,17 @@ def get_production_report(
 
 @app.get("/report/{inspection_id}")
 def get_report(
-    inspection_id: str,
+    inspection_id: int,
     db: Session = Depends(get_db),
     format: str = Query(
         "json",
         pattern="^(json|markdown|html)$"
     )
 ):
-    try:
-        inspection_id_int = int(inspection_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid inspection ID."
-        )
-
     entry = (
         db.query(InspectionHistory)
         .filter(
-            InspectionHistory.id == inspection_id_int
+            InspectionHistory.id == inspection_id
         )
         .first()
     )
@@ -470,23 +465,7 @@ def get_report(
         )
 
     if format == "json":
-        return {
-            "id": entry.id,
-            "username": entry.username,
-            "image_name": entry.image_name,
-            "category": entry.category,
-            "defect": entry.defect,
-            "result": entry.result,
-            "confidence": entry.confidence,
-            "anomaly_score": entry.anomaly_score,
-            "severity_score": entry.severity_score,
-            "severity_level": entry.severity_level,
-            "created_at": (
-                entry.created_at.isoformat()
-                if entry.created_at
-                else None
-            ),
-        }
+        return serialize_inspection(entry)
 
     prediction = {
         "image_name": entry.image_name,
@@ -494,16 +473,72 @@ def get_report(
         "defect_class": entry.defect,
         "confidence_score": entry.confidence,
         "anomaly_score": entry.anomaly_score,
+        "threshold": entry.threshold,
         "severity_score": entry.severity_score,
         "severity_level": entry.severity_level,
+        "recommended_action": entry.recommended_action,
     }
 
     report = generate_report(prediction)
 
+    if format == "markdown":
+        return {
+            "inspection_id": entry.id,
+            "format": "markdown",
+            "report": report,
+        }
+
+    if format == "html":
+        return {
+            "inspection_id": entry.id,
+            "format": "html",
+            "report": report,
+        }
+
+def safe_json_load(value):
+    if not value:
+        return None
+
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
+
+def serialize_inspection(entry: InspectionHistory):
     return {
-        "inspection_id": entry.id,
-        "report": report,
-    }
+        "id": entry.id,
+        "username": entry.username,
+        "image_name": entry.image_name,
+        "category": entry.category,
+        "defect": entry.defect,
+        "result": entry.result,
+        "confidence": entry.confidence,
+        "anomaly_score": entry.anomaly_score,
+        "threshold": entry.threshold,
+        "severity_score": entry.severity_score,
+        "severity_level": entry.severity_level,
+        "recommended_action": entry.recommended_action,
+
+        "class_probabilities": safe_json_load(
+            entry.class_probabilities
+        ),
+
+        "severity_breakdown": safe_json_load(
+            entry.severity_breakdown
+        ),
+
+        "quality_report": safe_json_load(
+            entry.quality_report
+        ),
+
+        "processing_time_ms": entry.processing_time_ms,
+
+        "created_at": (
+            entry.created_at.isoformat()
+            if entry.created_at
+            else None
+        ),
+    }    
 
 # ------------------------------------------------------------------
 # Authenticated inspection endpoint
@@ -514,8 +549,10 @@ async def inspect_image(
     file: UploadFile = File(...),
     category: str = Form("bottle"),
     enable_yolo: bool = Form(True),
+    username: str = Form("default"),
 ):
     try:
+        category = normalize_category(category)
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
 
@@ -526,17 +563,62 @@ async def inspect_image(
         )
 
         # Save inspection in database
-        save_inspection(
-            username="default",
-            image_name=file.filename or "uploaded_image",
-            category=prediction_result.get("category", category.lower()),
-            defect=prediction_result.get("defect_class", "unknown"),
-            result=prediction_result.get("defect_result", "UNKNOWN"),
-            confidence=float(prediction_result.get("confidence_score", 0)),
-            anomaly_score=float(prediction_result.get("anomaly_score", 0)),
-            severity_score=float(prediction_result.get("severity_score", 0)),
-            severity_level=prediction_result.get("severity_level", "Unknown"),
+        inspection_id = save_inspection(
+    username=username.strip() or "default",
+    image_name=file.filename or "uploaded_image",
+    category=prediction_result.get("category", category.lower()),
+    defect=prediction_result.get("defect_class", "unknown"),
+    result=prediction_result.get("defect_result", "UNKNOWN"),
+    confidence=float(
+        prediction_result.get("confidence_score", 0)
+    ),
+    anomaly_score=float(
+        prediction_result.get("anomaly_score", 0)
+    ),
+    severity_score=float(
+        prediction_result.get("severity_score", 0)
+    ),
+    severity_level=prediction_result.get(
+        "severity_level",
+        "Unknown"
+    ),
+
+    # New inspection metadata
+    threshold=(
+    float(prediction_result["threshold"])
+    if prediction_result.get("threshold") is not None
+    else None
+    ),
+    recommended_action=prediction_result.get(
+        "recommended_action"
+    ),
+    class_probabilities=json.dumps(
+        prediction_result.get(
+            "class_probabilities",
+            {}
         )
+    ),
+    severity_breakdown=json.dumps(
+        prediction_result.get(
+            "severity_breakdown",
+            {}
+        )
+    ),
+    quality_report=json.dumps(
+        prediction_result.get(
+            "quality_report",
+            {}
+        )
+    ),
+    processing_time_ms=float(
+        prediction_result.get(
+            "processing_time_ms",
+            0
+        )
+    ),
+)
+
+        prediction_result["inspection_id"] = inspection_id
 
         report = generate_report(prediction_result)
 
@@ -553,21 +635,20 @@ async def inspect_image(
             detail=f"Inspection failed: {str(e)}",
         )
 
-
-# ------------------------------------------------------------------
-# Database inspection history
-# ------------------------------------------------------------------
-
 @app.get("/history")
 def get_history(
     db: Session = Depends(get_db)
 ):
-    return (
+    records = (
         db.query(InspectionHistory)
         .order_by(InspectionHistory.created_at.desc())
         .all()
     )
 
+    return [
+        serialize_inspection(entry)
+        for entry in records
+    ]
 
 # ------------------------------------------------------------------
 # Stored reports
@@ -592,25 +673,25 @@ def get_reports(
 def get_database_analytics(
     db: Session = Depends(get_db)
 ):
-    total_images = (
-        db.query(func.sum(AnalyticsStorage.total_images))
-        .scalar()
-    ) or 0
+    records = (
+        db.query(InspectionHistory)
+        .all()
+    )
 
-    total_defects = (
-        db.query(func.sum(AnalyticsStorage.defect_count))
-        .scalar()
-    ) or 0
+    total = len(records)
 
-    total_normal = (
-        db.query(func.sum(AnalyticsStorage.normal_count))
-        .scalar()
-    ) or 0
+    defects = sum(
+        1
+        for entry in records
+        if entry.result == "REJECT"
+    )
+
+    normal = total - defects
 
     return {
-        "total_images": total_images,
-        "defect_count": total_defects,
-        "normal_count": total_normal,
+        "total_images": total,
+        "defect_count": defects,
+        "normal_count": normal,
     }
 
 
@@ -648,6 +729,11 @@ def approve_rework(
             status_code=404,
             detail="Inspection not found",
         )
+    if inspection.result != "REJECT":
+        raise HTTPException(
+        status_code=400,
+        detail="Rework can only be approved for rejected inspections.",
+    )
 
     workflow = (
         db.query(InspectionWorkflow)
@@ -696,6 +782,11 @@ def escalate_inspection(
             status_code=404,
             detail="Inspection not found",
         )
+    if inspection.result != "REJECT":
+        raise HTTPException(
+        status_code=400,
+        detail="Only rejected inspections can be escalated.",
+    )
 
     workflow = (
         db.query(InspectionWorkflow)

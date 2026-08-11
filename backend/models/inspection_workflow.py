@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime
 
 from backend.models.database import Base
@@ -9,29 +9,12 @@ class InspectionWorkflow(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    inspection_id = Column(
-        Integer,
-        ForeignKey("inspection_history.id"),
-        nullable=False,
-        index=True,
-    )
+    inspection_id = Column(Integer, nullable=False, index=True)
 
-    status = Column(
-        String,
-        nullable=False,
-        default="PENDING",
-    )
+    status = Column(String, nullable=False)
 
-    action_by = Column(String, nullable=True)
+    action_by = Column(String)
 
-    action_at = Column(
-        DateTime,
-        nullable=True,
-    )
+    action_at = Column(DateTime)
 
-    notes = Column(Text, nullable=True)
-
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow,
-    )
+    created_at = Column(DateTime, default=datetime.utcnow)

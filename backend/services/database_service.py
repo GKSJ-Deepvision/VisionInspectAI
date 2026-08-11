@@ -17,6 +17,12 @@ def save_inspection(
     anomaly_score,
     severity_score,
     severity_level,
+    threshold=None,
+    recommended_action=None,
+    class_probabilities=None,
+    severity_breakdown=None,
+    quality_report=None,
+    processing_time_ms=None,
 ):
     db: Session = SessionLocal()
 
@@ -31,6 +37,12 @@ def save_inspection(
             anomaly_score=anomaly_score,
             severity_score=severity_score,
             severity_level=severity_level,
+            threshold=threshold,
+            recommended_action=recommended_action,
+            class_probabilities=class_probabilities,
+            severity_breakdown=severity_breakdown,
+            quality_report=quality_report,
+            processing_time_ms=processing_time_ms,
         )
 
         db.add(inspection)

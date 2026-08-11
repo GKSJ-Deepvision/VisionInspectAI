@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import torch
+import time
 import torch.nn.functional as F
 from torchvision import transforms
 
@@ -151,6 +152,7 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
 
     Returns a dict with result, images (base64), scores, and metadata.
     """
+    start_time = time.perf_counter()
     category = category.lower()
 
     # ── 1. Input Parsing & Auto Category Detection ───────────────────────────
@@ -286,7 +288,7 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
     reconstructed_pil = tensor_to_pil(reconstructed_tensor)
     reconstructed_pil = reconstructed_pil.resize(cropped_img.size)
 
-        # ── 10. Update Statistics ───────────────────────────────────────────────
+    # ── 10. Update Statistics ───────────────────────────────────────────────
 
     if defect_result == "PASS":
         update_statistics("Good")
@@ -295,20 +297,49 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
 
     # ── 11. Return Result ───────────────────────────────────────────────────
 
+
+    processing_time_ms = round(
+       (time.perf_counter() - start_time) * 1000,
+       2
+    )
+    
     return {
-        "category": category,
-        "is_anomaly": is_anomaly,
-        "defect_result": defect_result,
-        "defect_class": predicted_class,
-        "confidence_score": class_confidence,
-        "anomaly_score": round(anomaly_score, 6),
-        "threshold": round(threshold, 6),
-        "severity_score": round(severity_dict["severity_score"], 2),
-        "severity_level": severity_dict["severity_level"],
-        "recommended_action": severity_dict["recommended_action"],
-        "yolo_status": yolo_status,
-        "bbox": bbox,
-        "class_probabilities": class_probs,
-        "quality_report": quality_report,
-        "severity_breakdown": severity_dict["breakdown"]
-    }
+    "category": category,
+
+    "is_anomaly": is_anomaly,
+    "defect_result": defect_result,
+    "defect_class": predicted_class,
+    "confidence_score": class_confidence,
+
+    "anomaly_score": round(anomaly_score, 6),
+    "threshold": round(threshold, 6),
+
+    "severity_score": round(
+        severity_dict["severity_score"],
+        2
+    ),
+    "severity_level": severity_dict["severity_level"],
+    "recommended_action": severity_dict["recommended_action"],
+
+    "yolo_status": yolo_status,
+    "bbox": bbox,
+
+    "class_probabilities": class_probs,
+
+    "quality_report": quality_report,
+
+    "severity_breakdown": severity_dict["breakdown"],
+
+    "processing_time_ms": processing_time_ms,
+
+    # -----------------------------------------
+    # Generated inspection images
+    # -----------------------------------------
+    "images": {
+        "original": pil_to_base64_uri(pil_img),
+        "cropped": pil_to_base64_uri(cropped_img),
+        "reconstructed": pil_to_base64_uri(reconstructed_pil),
+        "heatmap": pil_to_base64_uri(heatmap_pil),
+        "overlay": pil_to_base64_uri(overlay_pil),
+    },
+}
