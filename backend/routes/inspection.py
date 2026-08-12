@@ -42,12 +42,14 @@ async def inspect_image(
     )
     prediction_result.pop("original_image", None)
 
-    report = generate_report(prediction_result)
-
     username = current_user["sub"]
     image_name = file.filename
 
-    save_inspection(
+    prediction_result["image_name"] = file.filename
+    report = generate_report(prediction_result)
+
+
+    inspection_id = save_inspection(
     username=username,
     image_name=image_name,
     category=prediction_result["category"],
@@ -57,7 +59,14 @@ async def inspect_image(
     anomaly_score=prediction_result["anomaly_score"],
     severity_score=float(prediction_result["severity_score"]),
     severity_level=prediction_result["severity_level"],
+    threshold=prediction_result.get("threshold"),
+    recommended_action=prediction_result.get("recommended_action"),
+    class_probabilities=prediction_result.get("class_probabilities"),
+    severity_breakdown=prediction_result.get("severity_breakdown"),
+    quality_report=prediction_result.get("quality_report"),
+    processing_time_ms=prediction_result.get("processing_time_ms"),
 )
+    prediction_result["inspection_id"] = inspection_id
 
     report_name = f"{image_name}_report"
 

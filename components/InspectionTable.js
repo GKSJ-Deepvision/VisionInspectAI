@@ -9,9 +9,13 @@ export default function InspectionTable({ rows }) {
   const filtered = useMemo(() => {
     return rows.filter((row) => {
       const matchesQuery =
-        !query ||
-        row.productCategory.toLowerCase().includes(query.toLowerCase()) ||
-        row.prediction.toLowerCase().includes(query.toLowerCase());
+  !query ||
+  (row.productCategory || '')
+    .toLowerCase()
+    .includes(query.toLowerCase()) ||
+  (row.prediction || '')
+    .toLowerCase()
+    .includes(query.toLowerCase());
       const matchesDecision = decisionFilter === 'all' || row.decision === decisionFilter;
       return matchesQuery && matchesDecision;
     });
