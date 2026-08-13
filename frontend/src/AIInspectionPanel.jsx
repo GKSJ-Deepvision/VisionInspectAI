@@ -13,6 +13,11 @@ export default function AIInspectionPanel({ addToast }) {
   const [error, setError] = useState(null);
   const [step, setStep] = useState(0); 
 
+  // Override States
+  const [isOverrideOpen, setIsOverrideOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideApplied, setOverrideApplied] = useState(false);
+
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -21,6 +26,8 @@ export default function AIInspectionPanel({ addToast }) {
       setResult(null);
       setError(null);
       setStep(1);
+      setOverrideApplied(false);
+      setOverrideReason("");
     }
   };
 
@@ -29,6 +36,8 @@ export default function AIInspectionPanel({ addToast }) {
     setLoading(true);
     setError(null);
     setStep(2);
+    setOverrideApplied(false);
+    setOverrideReason("");
     
     const formData = new FormData();
     formData.append("file", selectedFile);
@@ -62,7 +71,7 @@ export default function AIInspectionPanel({ addToast }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12 font-sans text-slate-100">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12 font-sans text-slate-100 relative">
       <div className="glass-card rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[100px] pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-[300px] h-[300px] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
@@ -101,7 +110,7 @@ export default function AIInspectionPanel({ addToast }) {
             </label>
 
             <div className="mt-6">
-              <button onClick={handleInspect} disabled={!selectedFile || loading} className="w-full py-4 rounded-xl font-black text-sm tracking-widest uppercase transition-all bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white disabled:opacity-40 shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] flex items-center justify-center space-x-2 transform active:scale-95">
+              <button onClick={handleInspect} disabled={!selectedFile || loading} className="w-full py-4 rounded-xl font-black text-sm tracking-widest uppercase transition-all bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white disabled:opacity-40 shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] flex items-center justify-center space-x-2 transform active:scale-95 cursor-pointer">
                 {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /><span>PROCESSING FRAME...</span></> : <><Cpu className="h-4 w-4" /><span>EXECUTE INSPECTION</span></>}
               </button>
             </div>
@@ -146,20 +155,60 @@ export default function AIInspectionPanel({ addToast }) {
             ) : (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, type: 'spring' }} className="space-y-6 h-full flex flex-col">
                 
-                <div className={`p-8 rounded-3xl border shadow-2xl relative overflow-hidden transition-colors duration-500 ${result.pass_fail_decision === 'PASS' ? 'bg-emerald-950/30 border-emerald-500/50 hover:bg-emerald-950/40' : 'bg-rose-950/30 border-rose-500/50 hover:bg-rose-950/40'}`}>
-                  <div className={`absolute top-0 right-0 w-[400px] h-[400px] rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none transition-colors duration-1000 ${result.pass_fail_decision === 'PASS' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}></div>
+                {/* System Verdict Card */}
+                <div className={`p-8 rounded-3xl border shadow-2xl relative overflow-hidden transition-colors duration-500 ${
+                  overrideApplied 
+                    ? 'bg-amber-950/20 border-amber-500/50 hover:bg-amber-950/30' 
+                    : result.pass_fail_decision === 'PASS' 
+                    ? 'bg-emerald-950/30 border-emerald-500/50 hover:bg-emerald-950/40' 
+                    : 'bg-rose-950/30 border-rose-500/50 hover:bg-rose-950/40'
+                }`}>
+                  <div className={`absolute top-0 right-0 w-[400px] h-[400px] rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none transition-colors duration-1000 ${
+                    overrideApplied 
+                      ? 'bg-amber-500/20' 
+                      : result.pass_fail_decision === 'PASS' 
+                      ? 'bg-emerald-500/20' 
+                      : 'bg-rose-500/20'
+                  }`}></div>
                   
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
                     <div className="flex items-center space-x-6">
-                      <div className={`p-5 rounded-2xl ${result.pass_fail_decision === 'PASS' ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.4)]' : 'bg-rose-500/20 text-rose-400 shadow-[0_0_30px_rgba(251,113,133,0.4)] animate-pulse'}`}>
-                        {result.pass_fail_decision === 'PASS' ? <CheckCircle2 className="h-10 w-10" /> : <AlertTriangle className="h-10 w-10" />}
+                      <div className={`p-5 rounded-2xl ${
+                        overrideApplied
+                          ? 'bg-amber-500/20 text-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)]'
+                          : result.pass_fail_decision === 'PASS' 
+                          ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.4)]' 
+                          : 'bg-rose-500/20 text-rose-400 shadow-[0_0_30px_rgba(251,113,133,0.4)] animate-pulse'
+                      }`}>
+                        {overrideApplied ? <CheckCircle2 className="h-10 w-10 text-amber-400" /> : result.pass_fail_decision === 'PASS' ? <CheckCircle2 className="h-10 w-10" /> : <AlertTriangle className="h-10 w-10" />}
                       </div>
                       <div>
                         <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 mb-1 flex items-center">
                           <Cpu className="w-3 h-3 mr-1" /> SYSTEM VERDICT
                         </div>
-                        <div className={`text-5xl font-black tracking-wide font-mono ${result.pass_fail_decision === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}`}>{result.pass_fail_decision}</div>
-                        <div className="text-xs font-semibold mt-2 text-slate-300 bg-slate-900/50 px-3 py-1.5 rounded-lg inline-block border border-slate-700/50 backdrop-blur-sm">{result.recommendation}</div>
+
+                        {/* Verdict Text & Override Badge */}
+                        <div className={`text-4xl sm:text-5xl font-black tracking-wide font-mono ${
+                          overrideApplied ? 'text-amber-400' : result.pass_fail_decision === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
+                        }`}>
+                          {overrideApplied ? 'PASS' : result.pass_fail_decision}
+                        </div>
+
+                        <div className="text-xs font-semibold mt-2 text-slate-300 bg-slate-900/50 px-3 py-1.5 rounded-lg inline-block border border-slate-700/50 backdrop-blur-sm">
+                          {overrideApplied ? `Supervisor Override: ${overrideReason}` : result.recommendation}
+                        </div>
+
+                        {/* Override Action Button */}
+                        {result.pass_fail_decision === 'FAIL' && !overrideApplied && (
+                          <div className="mt-3">
+                            <button 
+                              onClick={() => setIsOverrideOpen(true)}
+                              className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 hover:border-amber-500/80 text-amber-400 text-xs font-mono rounded-lg hover:bg-amber-500/20 transition-all flex items-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                            >
+                              <span>⚡</span> Manual Supervisor Override
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -252,6 +301,59 @@ export default function AIInspectionPanel({ addToast }) {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Manual Verdict Override Modal */}
+      {isOverrideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span className="text-amber-400">⚠️</span> Supervisor Verdict Override
+              </h3>
+              <button 
+                onClick={() => setIsOverrideOpen(false)}
+                className="text-slate-400 hover:text-white text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Select an authorized reason to reclassify this inspection for quality audit logs:
+            </p>
+
+            <div className="space-y-2">
+              {[
+                "Acceptable Surface Tolerance",
+                "False Positive / Shadow Artifact",
+                "Material Grade Exemption",
+                "Calibrated Spec Approved"
+              ].map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => {
+                    setOverrideReason(reason);
+                    setOverrideApplied(true);
+                    setIsOverrideOpen(false);
+                    addToast?.('Verdict manually overridden to PASS', 'info');
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 bg-slate-800/60 hover:bg-amber-500/10 hover:border-amber-500/50 border border-slate-700/60 rounded-xl text-xs text-slate-200 transition-all flex items-center justify-between group cursor-pointer"
+                >
+                  <span>• {reason}</span>
+                  <span className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">Select ↵</span>
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setIsOverrideOpen(false)}
+              className="w-full py-2 bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-mono transition-all border border-slate-700/50 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
