@@ -4,7 +4,7 @@ import {
   Cpu, Users, ArrowRight, Eye, Activity, Database, Workflow, 
   CheckCircle, BarChart, Scan, Layers, Brain, Gauge, 
   AlertTriangle, Target, ChevronDown, Factory, Cog, Globe, 
-  Sparkles, ArrowUpRight, CircuitBoard 
+  Sparkles, ArrowUpRight, CircuitBoard, Check 
 } from 'lucide-react';
 import factoryBg from './assets/factory_bg.jpg';
 
@@ -44,73 +44,144 @@ const CATEGORY_DETAILS = {
   zipper: { defects: 'Broken Tooth, Split Fabric', resolution: '1024 x 1024 (HD)', type: 'Object Composite' },
 };
 
-/* ─── INTRO SPLASH ─── */
+/* ─── BOOT SYSTEM INTRO SPLASH ─── */
 const IntroSplash = ({ onComplete }) => {
-  const [phase, setPhase] = useState(0);
+  const [bootStep, setBootStep] = useState(0);
+  const [progress, setProgress] = useState(0);
   const callbackRef = useRef(onComplete);
   callbackRef.current = onComplete;
 
+  const bootLogs = [
+    "VISION SENSOR ........ ONLINE",
+    "DATA PIPELINE ........ ONLINE",
+    "PATCHCORE ENGINE ..... ONLINE",
+    "15 CATEGORIES ........ LOADED",
+    "ANOMALY ENGINE ....... READY"
+  ];
+
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 300);
-    const t2 = setTimeout(() => setPhase(2), 1200);
-    const t3 = setTimeout(() => setPhase(3), 2200);
-    const t4 = setTimeout(() => callbackRef.current?.(), 3800);
-    const safety = setTimeout(() => callbackRef.current?.(), 5000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(safety); };
+    const logInterval = setInterval(() => {
+      setBootStep((prev) => {
+        if (prev < bootLogs.length) return prev + 1;
+        clearInterval(logInterval);
+        return prev;
+      });
+    }, 450);
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 50);
+
+    const finishTimeout = setTimeout(() => {
+      callbackRef.current?.();
+    }, 3800);
+
+    return () => {
+      clearInterval(logInterval);
+      clearInterval(progressInterval);
+      clearTimeout(finishTimeout);
+    };
   }, []);
 
   return (
     <motion.div exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse at center, #0a1628 0%, #020617 70%)' }}>
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-[#020617] font-mono">
       
-      {/* Grid */}
       <div className="absolute inset-0 opacity-10" style={{
         backgroundImage: 'linear-gradient(rgba(56,189,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.3) 1px, transparent 1px)',
-        backgroundSize: '60px 60px'
+        backgroundSize: '40px 40px'
       }} />
 
-      {/* Scan line */}
       <motion.div animate={{ top: ['0%', '100%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-        className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50 z-10" />
+        className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400 to-transparent opacity-60 z-10" />
 
-      {/* Corner brackets */}
-      {phase >= 1 && <>
-        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-8 left-8 w-10 h-10 border-t-2 border-l-2 border-sky-500/60" />
-        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-8 right-8 w-10 h-10 border-t-2 border-r-2 border-sky-500/60" />
-        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute bottom-8 left-8 w-10 h-10 border-b-2 border-l-2 border-sky-500/60" />
-        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute bottom-8 right-8 w-10 h-10 border-b-2 border-r-2 border-sky-500/60" />
-      </>}
+      <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-sky-500/60" />
+      <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-sky-500/60" />
+      <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-sky-500/60" />
+      <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-sky-500/60" />
 
-      <div className="text-center relative z-20">
-        <motion.div initial={{ opacity: 0 }} animate={phase >= 1 ? { opacity: 1 } : {}} transition={{ duration: 0.5 }}
-          className="text-xs font-mono tracking-[0.5em] text-sky-500/70 mb-6 uppercase">This Is</motion.div>
+      <div className="w-full max-w-md px-6 relative z-20">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-black text-white tracking-widest">VISIONINSPECT AI</h1>
+          <p className="text-[10px] text-sky-400/80 tracking-[0.3em] uppercase mt-1">COMMAND CENTER BOOT SEQUENCE</p>
+        </div>
 
-        <motion.h1 initial={{ opacity: 0, scale: 0.7, filter: 'blur(20px)' }}
-          animate={phase >= 2 ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}}
-          transition={{ duration: 0.8 }}
-          className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight mb-4 relative">
-          <span className="text-white">Vision</span>
-          <span className="text-sky-400 bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500">Inspect</span>
-          <span className="text-white"> AI</span>
-        </motion.h1>
+        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 shadow-2xl mb-6 min-h-[160px] text-xs">
+          {bootLogs.slice(0, bootStep).map((log, idx) => (
+            <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-sky-400/90 mb-1.5 flex justify-between">
+              <span>{log.split(' ')[0]} {log.split(' ')[1]}</span>
+              <span className="text-emerald-400 font-bold">{log.split(' ').pop()}</span>
+            </motion.div>
+          ))}
+          {bootStep < bootLogs.length && (
+            <div className="text-slate-500 animate-pulse">INITIATING SENSOR SUBSYSTEMS...</div>
+          )}
+        </div>
 
-        <motion.p initial={{ opacity: 0 }} animate={phase >= 2 ? { opacity: 1 } : {}} transition={{ duration: 0.5, delay: 0.3 }}
-          className="text-sm text-slate-400 tracking-wide mb-8">Manufacturing Defect Detection & Quality Inspection</motion.p>
-
-        <motion.div initial={{ opacity: 0 }} animate={phase >= 3 ? { opacity: 1 } : {}}
-          className="w-48 h-1 bg-slate-800 rounded-full mx-auto overflow-hidden">
-          <motion.div initial={{ width: '0%' }} animate={phase >= 3 ? { width: '100%' } : {}}
-            transition={{ duration: 1.2 }} className="h-full bg-gradient-to-r from-sky-500 to-blue-500 rounded-full" />
-        </motion.div>
-        <motion.p initial={{ opacity: 0 }} animate={phase >= 3 ? { opacity: 0.5 } : {}}
-          className="text-[10px] font-mono text-slate-600 mt-3 tracking-widest">INITIALIZING INSPECTION ENGINE...</motion.p>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-slate-400">
+            <span>SYSTEM INITIALIZATION</span>
+            <span className="text-sky-400 font-bold">{progress}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+            <motion.div style={{ width: `${progress}%` }} className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-full" />
+          </div>
+          <div className="text-center pt-2">
+            <span className="text-[10px] text-emerald-400 tracking-widest uppercase font-bold">
+              {progress === 100 ? 'INSPECTION ENGINE READY' : 'CALIBRATING OPTICAL SENSORS...'}
+            </span>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
 };
 
-/* ─── Animated Counter ─── */
+/* ─── 3D CARD WITH MOUSE TILT EFFECT ─── */
+const TiltCard = ({ children, onClick, className }) => {
+  const [rotateX, setRotateX] = useState(0);
+  const [rotateY, setRotateY] = useState(0);
+
+  const handleMouseMove = (e) => {
+    const card = e.currentTarget.getBoundingClientRect();
+    const centerX = card.left + card.width / 2;
+    const centerY = card.top + card.height / 2;
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+
+    const rX = (-mouseY / (card.height / 2)) * 4;
+    const rY = (mouseX / (card.width / 2)) * 4;
+
+    setRotateX(rX);
+    setRotateY(rY);
+  };
+
+  const handleMouseLeave = () => {
+    setRotateX(0);
+    setRotateY(0);
+  };
+
+  return (
+    <motion.div
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      animate={{ rotateX, rotateY }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      style={{ transformStyle: "preserve-3d" }}
+      className={className}>
+      {children}
+    </motion.div>
+  );
+};
+
+/* ─── ANIMATED COUNTER ─── */
 const AnimatedCounter = ({ value, label, suffix = '', icon: Icon, color = 'sky', delay = 0, isFloat = false }) => {
   const [count, setCount] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -215,49 +286,37 @@ export default function LandingPage({ onNavigateToAuth }) {
       <motion.div initial={{ opacity: 0 }} animate={!showIntro ? { opacity: 1 } : { opacity: 0 }} transition={{ duration: 0.5 }}
         className="min-h-screen bg-[#020617] text-slate-100 font-sans relative overflow-x-hidden selection:bg-sky-500/30 selection:text-sky-200">
 
-        {/* ═══ HERO WITH HUD & FACTORY BG ═══ */}
+        {/* ═══ HERO SECTION ═══ */}
         <div className="relative min-h-screen overflow-hidden flex flex-col justify-between">
           <motion.div style={{ y: yBg }} className="absolute inset-0 z-0 pointer-events-none">
             <img src={factoryBg} alt="Factory background" className="w-full h-full object-cover opacity-25 filter contrast-125 brightness-75" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/50 via-[#020617]/80 to-[#020617]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/70 via-[#020617]/85 to-[#020617]" />
           </motion.div>
 
-          {/* HUD Tech Reticle Overlay */}
+          {/* Background Grid Accent & Ambient Light */}
           <div className="absolute inset-0 z-[2] pointer-events-none overflow-hidden">
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(56,189,248,0.2) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
             
-            {/* Animated Laser Reticle Line */}
+            {/* Subtle Scanning Laser Line */}
             <motion.div 
               animate={{ y: ['0%', '100%', '0%'] }} 
               transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
               className="w-full h-[1px] bg-gradient-to-r from-transparent via-sky-400 to-transparent opacity-40 shadow-[0_0_15px_#38bdf8]" 
             />
-
-            <div className="absolute top-20 left-10 hidden lg:block font-mono text-[9px] text-sky-500/40 space-y-1">
-              <div>// LATENCY: 12ms</div>
-              <div>// AI DEPLOYED: WRN-50-2</div>
-              <div>// SENSOR: 4K-VISION-01</div>
-            </div>
-
-            <div className="absolute bottom-20 right-10 hidden lg:block font-mono text-[9px] text-sky-500/40 text-right space-y-1">
-              <div>ACCURACY: 90.7% //</div>
-              <div>MVTEC AD COMPLIANT //</div>
-              <div>HUD MODE: ACTIVE //</div>
-            </div>
           </div>
 
           <div className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] bg-sky-500/10 blur-[160px] rounded-full pointer-events-none" />
           <div className="absolute bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none" />
 
           {/* Header */}
-          <header className="relative z-20 border-b border-slate-800/60 bg-[#020617]/60 backdrop-blur-2xl px-6 md:px-10 py-4 flex items-center justify-between">
+          <header className="relative z-20 border-b border-slate-800/80 bg-[#020617]/90 backdrop-blur-2xl px-6 md:px-10 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3 group cursor-pointer">
               <div className="relative p-2 bg-sky-500/10 rounded-xl border border-sky-500/30 group-hover:border-sky-400 transition-colors">
                 <Cpu className="h-6 w-6 text-sky-400 group-hover:rotate-180 transition-transform duration-700" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-sky-200 font-mono leading-none">VISIONINSPECT AI</span>
-                <span className="text-[8px] font-mono text-slate-500 tracking-[0.3em] mt-1">QUALITY INTELLIGENCE PLATFORM</span>
+                <span className="text-xl font-black tracking-wider text-white font-mono leading-none">VISIONINSPECT AI</span>
+                <span className="text-[9px] font-mono text-sky-400 tracking-[0.25em] mt-1 font-semibold">VISION SENSOR // ACTIVE</span>
               </div>
             </div>
 
@@ -277,19 +336,31 @@ export default function LandingPage({ onNavigateToAuth }) {
           {/* Hero Content */}
           <motion.section style={{ opacity: opacityHero, scale: scaleHero }} className="relative z-10 max-w-7xl mx-auto px-6 pt-20 md:pt-32 pb-24 text-center flex flex-col justify-center items-center">
             <motion.div initial="hidden" animate="visible" variants={stagger}>
-              <motion.div variants={fadeUp} className="inline-flex items-center space-x-2 bg-slate-900/80 border border-sky-500/30 px-4 py-2 rounded-full text-xs font-mono text-sky-400 mb-8 backdrop-blur-md shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+              <motion.div variants={fadeUp} className="inline-flex items-center space-x-2 bg-slate-900/90 border border-sky-500/40 px-4 py-2 rounded-full text-xs font-mono text-sky-400 mb-8 backdrop-blur-md shadow-[0_0_15px_rgba(56,189,248,0.15)]">
                 <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute h-full w-full rounded-full bg-sky-400 opacity-75" /><span className="relative rounded-full h-2.5 w-2.5 bg-sky-500" /></span>
-                <span className="tracking-[0.15em]">MVTEC AD — 15 CATEGORY ANOMALY DETECTION</span>
+                <span className="tracking-[0.15em]">ANALYSIS MODULE // READY — MVTEC AD</span>
               </motion.div>
 
-              <motion.h1 variants={fadeUp} className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight max-w-5xl mx-auto leading-[1.05] mb-6">
-                <span className="text-white drop-shadow-md">Manufacturing Defect Detection.</span><br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-400 drop-shadow-[0_0_35px_rgba(56,189,248,0.3)]">Reimagined with AI.</span>
-              </motion.h1>
+              {/* Title */}
+              <motion.div variants={fadeUp} className="mb-6">
+                <motion.h1 
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight max-w-5xl mx-auto leading-[1.05] relative">
+                  
+                  <span className="text-white block">
+                    Manufacturing Defect Detection.
+                  </span>
+
+                  <span className="relative inline-block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-300">
+                    Reimagined with AI.
+                  </span>
+                </motion.h1>
+              </motion.div>
 
               <motion.p variants={fadeUp} className="text-base md:text-lg text-slate-300 max-w-3xl mx-auto mb-10 font-light leading-relaxed">
                 Deploy <span className="text-sky-300 font-semibold border-b border-sky-500/40">WideResNet-50-2 PatchCore</span> inference to detect surface cracks, contamination, and structural defects across{' '}
-                <span className="text-sky-400 font-semibold">15 product categories</span> — with real-time heatmaps and severity scoring.
+                <span className="text-sky-400 font-semibold">15 product categories</span> - with real-time heatmaps and severity scoring.
               </motion.p>
 
               <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -313,7 +384,7 @@ export default function LandingPage({ onNavigateToAuth }) {
             </motion.div>
           </motion.section>
 
-          {/* Scroll Down Indicator */}
+          {/* Scroll Indicator */}
           <div className="pb-10 flex flex-col items-center gap-2 z-10 pointer-events-none">
             <span className="text-[8px] font-mono text-slate-500 tracking-[0.3em]">SCROLL TO EXPLORE</span>
             <div className="w-px h-8 bg-gradient-to-b from-sky-500 to-transparent" />
@@ -330,11 +401,11 @@ export default function LandingPage({ onNavigateToAuth }) {
           </div>
         </section>
 
-        {/* ═══ PIPELINE WITH ANIMATED CONNECTOR FLOW ═══ */}
+        {/* ═══ PIPELINE ═══ */}
         <section id="pipeline" className="max-w-7xl mx-auto px-6 py-28 z-10 relative">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
             <motion.div variants={fadeUp} className="inline-flex items-center space-x-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-3.5 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-[0.2em] mb-4 shadow-[0_0_15px_rgba(129,140,248,0.15)]">
-              <Workflow className="w-3.5 h-3.5" /> AI Inspection Pipeline
+              <Workflow className="w-3.5 h-3.5" /> DEFECT ENGINE // ONLINE
             </motion.div>
             <motion.h2 variants={fadeUp} className="text-3xl md:text-5xl font-black text-white">End-to-End Processing</motion.h2>
             <motion.p variants={fadeUp} className="text-sm text-slate-400 mt-3 max-w-2xl mx-auto">From image capture to automated quality decision in under 500ms</motion.p>
@@ -409,15 +480,14 @@ export default function LandingPage({ onNavigateToAuth }) {
         {/* ═══ COMMAND CENTER ROLES ═══ */}
         <section className="max-w-7xl mx-auto px-6 py-20 z-10 relative">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.div variants={fadeUp} className="text-[10px] font-mono text-sky-400/80 uppercase tracking-[0.3em] mb-3">WORKSPACE ACCESS</motion.div>
+            <motion.div variants={fadeUp} className="text-[10px] font-mono text-sky-400/80 uppercase tracking-[0.3em] mb-3">QUALITY GATE // PASS</motion.div>
             <motion.h2 variants={fadeUp} className="text-3xl md:text-5xl font-black text-white">Choose Your Command Center</motion.h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {roles.map((item, idx) => (
-              <motion.div key={idx} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.12 }}
-                whileHover={{ y: -10, scale: 1.02 }} onClick={() => onNavigateToAuth(item.role)}
-                className={`relative p-8 rounded-3xl cursor-pointer group overflow-hidden bg-slate-900/60 border border-slate-800 backdrop-blur-md transition-all duration-500 ${item.borderHover}`}>
+              <TiltCard key={idx} onClick={() => onNavigateToAuth(item.role)}
+                className={`relative p-8 rounded-3xl cursor-pointer group overflow-hidden bg-slate-900/60 border border-slate-800 backdrop-blur-md transition-all duration-300 ${item.borderHover}`}>
                 
                 <div className={`absolute top-0 right-0 w-44 h-44 bg-gradient-to-br ${item.gradient} opacity-10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:opacity-25 transition-opacity`} />
                 
@@ -440,12 +510,12 @@ export default function LandingPage({ onNavigateToAuth }) {
                   <span className="tracking-wider">ENTER PORTAL</span>
                   <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </div>
-              </motion.div>
+              </TiltCard>
             ))}
           </div>
         </section>
 
-        {/* ═══ MVTec CATEGORIES  ═══ */}
+        {/* ═══ MVTEC CATEGORIES GRID ═══ */}
         <section className="max-w-7xl mx-auto px-6 py-20 z-10 relative">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.div variants={fadeUp} className="inline-flex items-center space-x-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-[0.2em] mb-4 shadow-[0_0_15px_rgba(251,191,36,0.15)]">
@@ -503,7 +573,6 @@ export default function LandingPage({ onNavigateToAuth }) {
         <AnimatePresence>
           {selectedCategory && (
             <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-              {/* Backdrop overlay click to dismiss */}
               <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
@@ -517,14 +586,23 @@ export default function LandingPage({ onNavigateToAuth }) {
                 animate={{ opacity: 1, scale: 1, y: 0 }} 
                 exit={{ opacity: 0, scale: 0.9, y: 20 }} 
                 transition={{ type: "spring", duration: 0.5 }}
-                className="relative z-10 w-full max-w-md bg-[#0a101f] border border-sky-500/40 rounded-2xl p-6 shadow-[0_0_50px_rgba(56,189,248,0.25)] font-mono">
+                className="relative z-10 w-full max-w-md bg-[#0a101f] border border-sky-500/40 rounded-2xl p-6 shadow-[0_0_50px_rgba(56,189,248,0.25)] font-mono overflow-hidden">
                 
-                {/* Modal Header */}
-                <div className="flex items-start justify-between mb-6">
+                <motion.div 
+                  animate={{ y: ['0%', '1000%'] }} 
+                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-transparent via-sky-400 to-transparent opacity-50 pointer-events-none" 
+                />
+
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-2xl shadow-inner">
+                    <motion.div 
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                      className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-2xl shadow-inner">
                       {selectedCategory.emoji}
-                    </div>
+                    </motion.div>
                     <div>
                       <h3 className="text-xl font-black text-white capitalize tracking-wide">
                         {selectedCategory.name.replace('_', ' ')}
@@ -542,7 +620,14 @@ export default function LandingPage({ onNavigateToAuth }) {
                   </button>
                 </div>
 
-                {/* Telemetry Info Cards */}
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg mb-5 text-[10px] text-emerald-400">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Check className="w-3.5 h-3.5" />
+                    ANALYSIS COMPLETE
+                  </span>
+                  <span className="text-slate-400 font-mono">CONFIDENCE 99.2%</span>
+                </div>
+
                 <div className="space-y-3 mb-6">
                   <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl flex justify-between items-center">
                     <span className="text-[11px] text-slate-400 uppercase tracking-wider">DETECTABLE DEFECTS:</span>
@@ -566,7 +651,6 @@ export default function LandingPage({ onNavigateToAuth }) {
                   </div>
                 </div>
 
-                {/* Action Button */}
                 <button 
                   onClick={() => {
                     setSelectedCategory(null);
