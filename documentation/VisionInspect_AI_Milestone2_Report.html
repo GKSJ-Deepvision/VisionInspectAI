@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionInspect AI - Milestone 2 Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-navy: #0F2027;
+            --secondary-navy: #203A43;
+            --accent-teal: #2C5364;
+            --light-bg: #F8F9FA;
+            --border-color: #E9ECEF;
+            --text-main: #333333;
+            --text-light: #666666;
+            --white: #FFFFFF;
+            --success: #28a745;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            background-color: var(--white);
+            font-size: 11pt;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        h1 { font-size: 24pt; border-bottom: 2px solid var(--accent-teal); padding-bottom: 10px; }
+        h2 { font-size: 18pt; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        h3 { font-size: 14pt; }
+
+        p, li {
+            margin-bottom: 0.8em;
+            color: #444;
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: 1.5em;
+        }
+
+        .cover-page {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-navy), var(--secondary-navy), var(--accent-teal));
+            color: var(--white);
+            padding: 2em;
+            page-break-after: always;
+        }
+
+        .cover-page h1 {
+            color: var(--white);
+            border: none;
+            font-size: 36pt;
+            margin-bottom: 0.2em;
+        }
+
+        .cover-page h2 {
+            color: #E0E0E0;
+            border: none;
+            font-size: 18pt;
+            font-weight: 400;
+            margin-bottom: 2em;
+        }
+
+        .cover-details {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2em;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            text-align: left;
+            font-size: 14pt;
+        }
+
+        .cover-details p {
+            color: var(--white);
+            margin-bottom: 0.5em;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2em;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 10pt;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-navy);
+            color: var(--white);
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        /* Flowchart Styles */
+        .flowchart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 2em 0;
+            font-size: 10pt;
+        }
+
+        .fc-node {
+            background-color: var(--white);
+            border: 2px solid var(--accent-teal);
+            border-radius: 6px;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 500;
+            min-width: 200px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            z-index: 2;
+            position: relative;
+        }
+
+        .fc-node.highlight {
+            background-color: var(--light-bg);
+            border-color: var(--primary-navy);
+            font-weight: 600;
+        }
+
+        .fc-arrow {
+            width: 2px;
+            height: 30px;
+            background-color: var(--accent-teal);
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .fc-arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: -4px;
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: var(--accent-teal) transparent transparent transparent;
+        }
+
+        .fc-split {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .fc-split::before {
+            content: '';
+            position: absolute;
+            top: -22px;
+            left: calc(25% + 20px);
+            right: calc(25% + 20px);
+            height: 2px;
+            background-color: var(--accent-teal);
+        }
+
+        .fc-split-arm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .fc-split-arrow {
+            width: 2px;
+            height: 20px;
+            background-color: var(--accent-teal);
+            position: relative;
+        }
+        
+        .fc-split-arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: -4px;
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: var(--accent-teal) transparent transparent transparent;
+        }
+
+        .placeholder-box {
+            background-color: var(--light-bg);
+            border: 2px dashed #999;
+            border-radius: 8px;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-style: italic;
+            margin: 1.5em 0;
+            font-size: 12pt;
+        }
+
+        .status-check {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .toc {
+            background: var(--light-bg);
+            padding: 2em;
+            border-radius: 8px;
+            margin-bottom: 2em;
+        }
+
+        .toc h2 {
+            margin-top: 0;
+            border-bottom: none;
+        }
+
+        .toc ul {
+            list-style-type: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            margin-bottom: 0.5em;
+        }
+
+        .toc a {
+            text-decoration: none;
+            color: var(--accent-teal);
+            font-weight: 500;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        @media print {
+            body {
+                background: none;
+                font-size: 10pt;
+            }
+            .container {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            .cover-page {
+                background: var(--white);
+                color: var(--primary-navy);
+                border: 8px solid var(--primary-navy);
+                height: 95vh;
+            }
+            .cover-page h1, .cover-page h2 {
+                color: var(--primary-navy);
+            }
+            .cover-details {
+                background: none;
+                border: 2px solid var(--border-color);
+            }
+            .cover-details p {
+                color: var(--text-main);
+            }
+            @page {
+                margin: 2cm;
+                @bottom-center {
+                    content: counter(page);
+                    font-family: 'Inter', sans-serif;
+                    font-size: 9pt;
+                    color: #666;
+                }
+            }
+            h2 {
+                page-break-after: avoid;
+            }
+            table, .placeholder-box, .flowchart-container {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <h1>VisionInspect AI</h1>
+        <h2>Milestone 2 — Portable Multi-Category AI/ML Inference Runtime</h2>
+        <div class="cover-details">
+            <p><strong>Author:</strong> Himanshu Parhi, AI/ML Intern</p>
+            <p><strong>Organization:</strong> Infosys Springboard</p>
+            <p><strong>Team Repo:</strong> GKSJ-Deepvision/VisionInspectAI</p>
+            <p><strong>Branch:</strong> Himanshu-parhi-ai/ml</p>
+            <p><strong>Commit:</strong> 14cb519</p>
+            <p><strong>Date:</strong> August 8, 2026</p>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <!-- Table of Contents -->
+        <div class="toc page-break">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><a href="#summary">1. Executive Summary</a></li>
+                <li><a href="#context">2. Milestone 1 Context (Background)</a></li>
+                <li><a href="#objective">3. Milestone 2 Objective</a></li>
+                <li><a href="#categories">4. Supported Categories</a></li>
+                <li><a href="#pipeline">5. Complete Inference Pipeline</a></li>
+                <li><a href="#models">6. Detection Models</a></li>
+                <li><a href="#classification">7. Defect Classification System</a></li>
+                <li><a href="#scoring">8. Confidence & Severity Scoring</a></li>
+                <li><a href="#preprocessing">9. Image Preprocessing</a></li>
+                <li><a href="#explainability">10. Explainability Output</a></li>
+                <li><a href="#metrics">11. Recorded Metrics</a></li>
+                <li><a href="#source-files">12. Source Files</a></li>
+                <li><a href="#artifacts">13. Model Artifacts</a></li>
+                <li><a href="#tests">14. Test Suite</a></li>
+                <li><a href="#screenshots">15. Screenshots</a></li>
+                <li><a href="#git">16. Git & Portability</a></li>
+                <li><a href="#next">17. What's Next (Part 2 & Part 3)</a></li>
+            </ul>
+        </div>
+
+        <!-- 1. Executive Summary -->
+        <h2 id="summary" class="page-break">1. Executive Summary</h2>
+        <p>This milestone converts the original single-category (bottle-only) ML module into a production-grade, portable, multi-category manufacturing defect inspection runtime supporting all 15 MVTec AD categories. The intern's scope covers only the ML/AI module — frontend and backend integrations are handled by teammates.</p>
+        
+        <h4>Key Achievement Numbers:</h4>
+        <ul>
+            <li><strong>15</strong> product categories supported</li>
+            <li><strong>17</strong> ML source files authored/updated</li>
+            <li><strong>34</strong> automated tests passed</li>
+            <li><strong>~260 MB</strong> portable model payload</li>
+            <li><strong>85</strong> files changed, <strong>13,986</strong> lines added, <strong>580</strong> deletions</li>
+            <li>PaDiM image AUROC up to <strong>0.9968</strong> (bottle)</li>
+            <li>PatchCore F1 up to <strong>0.9670</strong> (cable)</li>
+        </ul>
+
+        <!-- 2. Milestone 1 Context -->
+        <h2 id="context">2. Milestone 1 Context (Background)</h2>
+        <p>Prior to this milestone, the foundation for the AI module was laid with the following achievements:</p>
+        <ul>
+            <li>Trained the initial bottle PaDiM model achieving an AUROC of 0.9976 and F1 score of 0.9764.</li>
+            <li>Built the core ML inference pipeline tailored for single-category detection.</li>
+            <li>Successfully integrated with the FastAPI backend to enable end-to-end inspection workflows.</li>
+            <li>Deployed the solution to Render (backend) and Vercel (frontend).</li>
+        </ul>
+        <p>This previous work served as the baseline that Milestone 2 drastically scales and robustifies.</p>
+
+        <!-- 3. Milestone 2 Objective -->
+        <h2 id="objective">3. Milestone 2 Objective</h2>
+        <p>The primary objective was to convert the bottle-only AI module into a portable, multi-category runtime that:</p>
+        <ul>
+            <li>Supports all 15 MVTec AD dataset categories.</li>
+            <li>Runs efficiently without requiring every large training checkpoint to be loaded into memory.</li>
+            <li>Provides comprehensive outputs: anomaly detection, localization, classification, severity scoring, and explainability.</li>
+            <li>Incorporates a graceful fallback mechanism when advanced models are unavailable or fail to load.</li>
+            <li>Is fully testable, highly portable, and immediately deployment-ready for cloud environments.</li>
+        </ul>
+
+        <!-- 4. Supported Categories -->
+        <h2 id="categories" class="page-break">4. Supported Categories</h2>
+        <p>The runtime now supports all 15 MVTec AD categories, utilizing specialized models best suited for their structural features.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Model Type</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>bottle</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>cable</td><td>PatchCore + OpenVINO</td><td><span class="status-check">✅</span> Trained + Calibrated</td></tr>
+                <tr><td>capsule</td><td>PaDiM + CNN ONNX</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>carpet</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>grid</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>hazelnut</td><td>PatchCore</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>leather</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>metal_nut</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>pill</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>screw</td><td>PatchCore</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>tile</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>toothbrush</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>transistor</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>wood</td><td>PaDiM + CNN ONNX</td><td><span class="status-check">✅</span> Trained</td></tr>
+                <tr><td>zipper</td><td>PaDiM</td><td><span class="status-check">✅</span> Trained</td></tr>
+            </tbody>
+        </table>
+
+        <!-- 5. Complete Inference Pipeline -->
+        <h2 id="pipeline" class="page-break">5. Complete Inference Pipeline</h2>
+        <p>The following flowchart illustrates the end-to-end inference logic for processing a single inspection request.</p>
+        
+        <div class="flowchart-container">
+            <div class="fc-node">Input Image + Category</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node">Image Validation</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node">Load Category Config</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node highlight">Advanced Detector Available?</div>
+            <div class="fc-arrow"></div>
+            
+            <div class="fc-split">
+                <div class="fc-split-arm">
+                    <div class="fc-node" style="border-color: var(--success)">YES: Run PaDiM / PatchCore / OpenVINO</div>
+                </div>
+                <div class="fc-split-arm">
+                    <div class="fc-node" style="border-color: #dc3545">NO: Run Portable Baseline</div>
+                </div>
+            </div>
+            
+            <div class="fc-arrow" style="margin-top: 20px;"></div>
+            <div class="fc-node">Anomaly Score</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node">Generate Residual Map</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node">Remove Noise &rarr; Binary Mask</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node highlight">Good or Defective?</div>
+            <div class="fc-arrow"></div>
+            
+            <div class="fc-split">
+                <div class="fc-split-arm">
+                    <div class="fc-node" style="border-color: #dc3545">If Defective: Classify Subtype</div>
+                    <div class="fc-arrow"></div>
+                    <div class="fc-node">Calculate Defect Area & Location</div>
+                    <div class="fc-arrow"></div>
+                    <div class="fc-node">Severity Score</div>
+                </div>
+            </div>
+            
+            <div class="fc-arrow" style="margin-top: 20px;"></div>
+            <div class="fc-node highlight">Pass / Review / Fail Decision</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node">Generate Heatmap &amp; Explainability Output</div>
+            <div class="fc-arrow"></div>
+            <div class="fc-node" style="background: var(--primary-navy); color: white;">Return Prediction</div>
+        </div>
+
+        <!-- 6. Detection Models -->
+        <h2 id="models" class="page-break">6. Detection Models</h2>
+        
+        <h3>6.1 PaDiM (Patch Distribution Modeling)</h3>
+        <ul>
+            <li><strong>Used for:</strong> 12 categories (bottle, carpet, grid, leather, etc.)</li>
+            <li><strong>Mechanism:</strong> Learns the statistical distribution of normal-image feature representations to identify structural deviations.</li>
+            <li><strong>Strengths:</strong> Highly accurate anomaly detection with robust spatial localization capabilities.</li>
+        </ul>
+
+        <h3>6.2 PatchCore</h3>
+        <ul>
+            <li><strong>Used for:</strong> cable, hazelnut, screw</li>
+            <li><strong>Mechanism:</strong> Utilizes a core-set memory bank approach for nearest-neighbor feature matching.</li>
+            <li><strong>Why:</strong> Internal benchmarks demonstrated superior performance over PaDiM specifically for these complex geometries.</li>
+        </ul>
+
+        <h3>6.3 Portable Baseline Detector</h3>
+        <ul>
+            <li><strong>Available for:</strong> ALL 15 categories (acts as a universal fallback)</li>
+            <li><strong>Components:</strong> Shared ResNet18 ONNX extractor + category-specific normal embedding bank + OpenCV residual localization.</li>
+            <li><strong>Logic:</strong> Flags a defect if the embedding anomaly score exceeds the threshold AND a localized defect region is verified in the binary mask. Operates entirely independently of heavy Anomalib checkpoints.</li>
+        </ul>
+
+        <h3>6.4 OpenVINO Runtime (Cable)</h3>
+        <ul>
+            <li>The cable category features a fully exported OpenVINO PatchCore implementation including <code>model.xml</code>, <code>model.bin</code>, a spatial calibrator, and a compact subtype classifier.</li>
+            <li>Includes automatic fallback to the portable baseline if the OpenVINO runtime fails to execute.</li>
+        </ul>
+
+        <!-- 7. Defect Classification System -->
+        <h2 id="classification">7. Defect Classification System</h2>
+        <p>The classification system executes <strong>only</strong> after the anomaly detector confirms the presence of a defect. It follows a strict priority chain:</p>
+        <p><strong>Priority Chain:</strong> CNN ONNX &rarr; Compact Forest &rarr; sklearn .pkl</p>
+        
+        <ul>
+            <li><strong>Capsule &amp; Wood:</strong> Fine-tuned ResNet18 CNN classifiers exported to ONNX format.</li>
+            <li><strong>Cable:</strong> Compact portable forest algorithm.</li>
+            <li><strong>Other Categories:</strong> Category-specific scikit-learn classifiers leveraging engineered features.</li>
+            <li><strong>Feature Engineering:</strong> Utilizes global embeddings, cropped defect embeddings, texture, gradient, color, mask geometry, shape, and ROI properties.</li>
+            <li><strong>Safety:</strong> If a classifier is missing or yields conflicting confidence, the system safely returns <code>unknown_defect</code> (it never invents an unverified label).</li>
+        </ul>
+
+        <!-- 8. Confidence & Severity Scoring -->
+        <h2 id="scoring" class="page-break">8. Confidence & Severity Scoring</h2>
+        
+        <h3>Confidence Tracking</h3>
+        <ul>
+            <li><strong>Detection Confidence:</strong> Certainty that the product is abnormal.</li>
+            <li><strong>Classification Confidence:</strong> Certainty regarding the specific defect subtype label.</li>
+            <li><em>Note:</em> These metrics remain strictly separate. A weak classifier cannot override strong anomaly evidence.</li>
+        </ul>
+
+        <h3>Severity Formula</h3>
+        <p>Severity is calculated using a weighted multi-factor approach:</p>
+        <p><strong>Severity = (Defect Size × 30%) + (Location × 25%) + (Defect Type × 25%) + (Confidence × 20%)</strong></p>
+        
+        <h4>Decision Rules:</h4>
+        <ul>
+            <li><strong>&ge; 60:</strong> Fail</li>
+            <li><strong>40 &ndash; 59.99:</strong> Review</li>
+            <li><strong>&lt; 40 with detected anomaly:</strong> Review (Prevents auto-passing a localized defect)</li>
+            <li><strong>&lt; 40 with no anomaly:</strong> Pass</li>
+        </ul>
+
+        <!-- 9. Image Preprocessing -->
+        <h2 id="preprocessing">9. Image Preprocessing</h2>
+        <p>The system utilizes an object-aware preprocessing pipeline to standardize inputs before inference:</p>
+        <ul>
+            <li>Foreground extraction and largest-component filtering</li>
+            <li>Bounding-box extraction &amp; tight cropping</li>
+            <li>Alignment using image spatial moments</li>
+            <li>Aspect-ratio-preserving resize with padding</li>
+            <li>CLAHE contrast enhancement</li>
+            <li>Multi-scale grayscale view generation</li>
+            <li>Defect-mask-based ROI cropping for secondary classification</li>
+        </ul>
+
+        <!-- 10. Explainability Output -->
+        <h2 id="explainability" class="page-break">10. Explainability Output</h2>
+        <p>To ensure trust and transparency for the admin/supervisor dashboard, every inspection returns a rich explainability payload:</p>
+        <ul>
+            <li>Active inference engine utilized</li>
+            <li>Fallback usage status and corresponding reason (if any)</li>
+            <li>Raw anomaly score and category threshold</li>
+            <li>Calibrated defect probability</li>
+            <li>Detection and classification confidence bounds</li>
+            <li>Defect area percentage</li>
+            <li>Heatmap intensity peak (P95)</li>
+            <li>Defect center coordinates</li>
+            <li>Detected image regions and critical-zone overlap</li>
+            <li>Severity component breakdown</li>
+            <li>Human-readable decision notes</li>
+        </ul>
+
+        <!-- 11. Recorded Metrics -->
+        <h2 id="metrics">11. Recorded Metrics</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pipeline</th>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Bottle PaDiM</td><td>Image AUROC</td><td>0.9968</td></tr>
+                <tr><td>Bottle PaDiM</td><td>Image F1</td><td>0.9764</td></tr>
+                <tr><td>Bottle Portable</td><td>AUROC</td><td>0.9913</td></tr>
+                <tr><td>Bottle Portable</td><td>F1</td><td>0.9764</td></tr>
+                <tr><td>Bottle Subtype</td><td>Macro F1</td><td>0.8719</td></tr>
+                <tr><td>Cable PatchCore</td><td>Image AUROC</td><td>0.9695</td></tr>
+                <tr><td>Cable PatchCore</td><td>Image F1</td><td>0.9274</td></tr>
+                <tr><td>Cable OpenVINO Calibrated</td><td>F1</td><td>0.9670</td></tr>
+                <tr><td>Cable Calibrated</td><td>Accuracy</td><td>0.9600</td></tr>
+                <tr><td>Cable Subtype</td><td>Macro F1</td><td>0.8529</td></tr>
+            </tbody>
+        </table>
+
+        <!-- 12. Source Files -->
+        <h2 id="source-files" class="page-break">12. Source Files</h2>
+        <p>The 17 authored/updated ML source files that encompass this milestone:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Responsibility</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>inference_pipeline.py</td><td>Main entrypoint orchestrating the entire detection and classification flow</td></tr>
+                <tr><td>anomaly_detector.py</td><td>Manages PaDiM and PatchCore model execution</td></tr>
+                <tr><td>portable_baseline.py</td><td>Implements the lightweight fallback detector using ONNX and OpenCV</td></tr>
+                <tr><td>openvino_runner.py</td><td>Handles execution of OpenVINO optimized models (e.g., for cable)</td></tr>
+                <tr><td>subtype_classifier.py</td><td>Executes the defect classification priority chain</td></tr>
+                <tr><td>image_preprocessing.py</td><td>Object-aware alignment, cropping, and contrast enhancement</td></tr>
+                <tr><td>feature_extraction.py</td><td>Extracts embeddings and engineered features for downstream classifiers</td></tr>
+                <tr><td>severity_scorer.py</td><td>Calculates the multi-factor severity score and final decision rules</td></tr>
+                <tr><td>explainability_engine.py</td><td>Generates human-readable notes, heatmaps, and confidence metrics</td></tr>
+                <tr><td>config_loader.py</td><td>Dynamically loads category-specific thresholds and model paths</td></tr>
+                <tr><td>mask_processing.py</td><td>Handles residual noise removal and binary mask generation</td></tr>
+                <tr><td>metrics_calculator.py</td><td>Evaluates model performance (AUROC, F1, Accuracy) during tests</td></tr>
+                <tr><td>onnx_manager.py</td><td>Wrapper for loading and executing ONNX models without PyTorch</td></tr>
+                <tr><td>heatmap_generator.py</td><td>Creates visual overlays of anomaly scores on original images</td></tr>
+                <tr><td>artifact_manager.py</td><td>Handles loading of .pkl, .npz, and metadata files</td></tr>
+                <tr><td>fallback_manager.py</td><td>Logic for gracefully downgrading to baseline models on failure</td></tr>
+                <tr><td>pipeline_types.py</td><td>Pydantic schemas and dataclasses for standardized input/output payloads</td></tr>
+            </tbody>
+        </table>
+
+        <!-- 13. Model Artifacts -->
+        <h2 id="artifacts">13. Model Artifacts</h2>
+        <p>Artifact distribution across the categories ensures efficient portability:</p>
+        <ul>
+            <li><strong>Every Category (15/15):</strong> <code>defect_classifier.pkl</code>, <code>normal_profile.npz</code>, <code>model_metadata.json</code></li>
+            <li><strong>Shared System Asset:</strong> <code>resnet18_features.onnx</code></li>
+            <li><strong>Special Assets:</strong>
+                <ul>
+                    <li>Cable: OpenVINO assets (<code>model.xml</code>, <code>model.bin</code>)</li>
+                    <li>Capsule &amp; Wood: <code>cnn_classifier.onnx</code></li>
+                </ul>
+            </li>
+            <li><strong>Registry:</strong> <code>category_model_registry.json</code> connects all assets and defines pipeline routing.</li>
+        </ul>
+
+        <!-- 14. Test Suite -->
+        <h2 id="tests" class="page-break">14. Test Suite</h2>
+        <p>Comprehensive unit and integration testing ensures production readiness. <strong>Result: 34 passed, 2 skipped (dataset-dependent).</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Test Focus</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Preprocessing</td><td>Validates image shapes, data types, foreground extraction, and mask-based cropping</td></tr>
+                <tr><td>Baseline Logic</td><td>Tests baseline score calculation, thresholding, and residual-noise filtering</td></tr>
+                <tr><td>Artifact Loading</td><td>Ensures normal-profile (.npz) and classifier (.pkl) artifacts load without corruption</td></tr>
+                <tr><td>Visuals</td><td>Verifies heatmap generation and untinted heatmap handling for normal images</td></tr>
+                <tr><td>ONNX Execution</td><td>Tests ResNet18 ONNX embeddings and CNN ONNX execution without requiring PyTorch</td></tr>
+                <tr><td>Parity</td><td>Checks portable forest parity against original scikit-learn implementations</td></tr>
+                <tr><td>Payload Structure</td><td>Validates backend-ready prediction structures and explainability outputs</td></tr>
+                <tr><td>Confidence &amp; Fallbacks</td><td>Tests separation of detector/subtype confidence and the unknown-defect fallback logic</td></tr>
+                <tr><td>Metrics &amp; Severity</td><td>Validates localization metrics, critical-zone geometry, and severity calculations</td></tr>
+                <tr><td>Environment</td><td>Verifies the absence of excluded heavy .pth runtime weights in the final payload</td></tr>
+            </tbody>
+        </table>
+
+        <!-- 15. Screenshots -->
+        <h2 id="screenshots" class="page-break">15. Screenshots</h2>
+        
+        <div class="placeholder-box">
+            Dashboard — Screenshot to be added
+        </div>
+        
+        <div class="placeholder-box">
+            Inspection Result — Screenshot to be added
+        </div>
+        
+        <div class="placeholder-box">
+            Analytics — Screenshot to be added
+        </div>
+
+        <!-- 16. Git & Portability -->
+        <h2 id="git">16. Git & Portability</h2>
+        <ul>
+            <li><strong>Git LFS:</strong> Tracks all large binaries (<code>.onnx</code>, <code>.npz</code>, <code>.pkl</code>, <code>.ckpt</code>, <code>.pth</code>, <code>model.bin</code>).</li>
+            <li><strong>Total Payload:</strong> ~260 MB, highly optimized for deployment.</li>
+            <li><strong>Teammate Setup Protocol:</strong> 
+                <code>git lfs install</code> &rarr; <code>git lfs pull</code> &rarr; <code>pip install -r requirements-ai.txt</code>
+            </li>
+            <li><strong>Cleanup:</strong> Obsolete heavyweight files removed: 
+                <ul>
+                    <li><code>models/checkpoints/padim_mvtec_bottle_v1.ckpt</code></li>
+                    <li><code>models/inference/resnet18-f37072fd.pth</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <!-- 17. What's Next -->
+        <h2 id="next">17. What's Next (Part 2 & Part 3)</h2>
+        <p>This report documents the core runtime payload and architecture. Subsequent deliverables include:</p>
+        <ul>
+            <li><strong>Part 2:</strong> Delivery of the training and calibration scripts used to generate these artifacts.</li>
+            <li><strong>Part 3:</strong> Updated Jupyter notebooks detailing exploratory data analysis and model selection reasoning.</li>
+        </ul>
+        <p><em>Note: These future deliverables are planned but explicitly not included in the scope of this Milestone 2 inference runtime release.</em></p>
+
+    </div>
+</body>
+</html>
