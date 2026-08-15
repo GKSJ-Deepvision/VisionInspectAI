@@ -190,17 +190,26 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
             cropped_img = pil_img.copy()
             bbox = [0, 0, pil_img.width, pil_img.height]
     else:
-        cropped_img = pil_img.copy()
-        bbox = [0, 0, pil_img.width, pil_img.height]
-        yolo_status = f"YOLO: Bypassed for category '{category}'"
+        from anomaly_detection.yolo_helper import _fallback_crop
+
+        cropped_img, bbox = _fallback_crop(pil_img)
+
+        yolo_status = (
+            f"YOLO: Bypassed for category '{category}' "
+            f"— using fallback crop"
+        )
 
     # ── 4. Autoencoder Reconstruction ───────────────────────────────────────
     device = torch.device(config.DEVICE)
     ae_model = load_autoencoder(category)
 
     # Use centralized category-aware transforms matching training
-    transform = get_category_transforms(category=category, split="test", image_size=config.IMAGE_SIZE)
-    input_tensor = transform(cropped_img).unsqueeze(0).to(device)  # (1, 3, 128, 128)
+    transform = get_category_transforms(
+        category=category,
+        split="test",
+        image_size=config.IMAGE_SIZE
+    )
+    input_tensor = transform(pil_img).unsqueeze(0).to(device)
 
     # Enable cuDNN benchmark for inference acceleration
     if torch.cuda.is_available():
