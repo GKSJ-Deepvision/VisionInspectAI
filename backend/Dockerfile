@@ -11,11 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt ./backend/requirements.txt
-COPY AI/requirements.txt ./AI/requirements.txt
-
-RUN pip install --no-cache-dir -r backend/requirements.txt
-RUN pip install --no-cache-dir -r AI/requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
 COPY AI/ ./AI/
@@ -26,4 +23,4 @@ WORKDIR /app/backend
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+CMD ["sh", "-c", "python download_models.py && python app.py"]

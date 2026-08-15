@@ -9,6 +9,9 @@ services:
       - ./backend/env
     environment:
       - DATABASE_PATH=/app/backend/instance/backend.db
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ./backend/instance:/app/backend/instance
       - ./backend/uploads:/app/backend/uploads
