@@ -11,6 +11,22 @@ from ml.padim_detector import openvino_spatial_features
 
 def test_inspect_image_returns_backend_ready_output(monkeypatch):
     expected_image = Path("sample.png")
+    spec = category_model_spec("bottle")
+    config = InferenceConfig(
+        category="bottle",
+        anomaly_model_kind=spec.model_kind,
+        use_padim_inference=False,
+        padim_inference_accelerator="cpu",
+        model_checkpoint_path=spec.checkpoint_path,
+        classifier_model_path=spec.classifier_path,
+        model_metadata_path=spec.metadata_path,
+        baseline_profile_path=spec.baseline_profile_path,
+        baseline_threshold=spec.baseline_score_threshold,
+        baseline_residual_threshold=spec.baseline_residual_threshold,
+        padim_score_threshold=spec.padim_score_threshold,
+        review_severity_threshold=40,
+        fail_severity_threshold=60,
+    )
 
     def fake_inspect_image_runtime(image_path, config):
         assert image_path == expected_image
@@ -33,6 +49,7 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
             "fallback_reason": None,
         }
 
+    monkeypatch.setattr("ml.predict.build_inference_config", lambda _category: config)
     monkeypatch.setattr("ml.inference.inspect_image", fake_inspect_image_runtime)
 
     result = predict.inspect_image(expected_image)

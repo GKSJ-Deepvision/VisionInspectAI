@@ -30,33 +30,35 @@ def default_demo_image() -> Path:
     raise FileNotFoundError("No MVTec bottle test image found under data/raw.")
 
 
-def _environment_flag(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def build_inference_config(category: str):
-    """Build a standalone ML configuration without importing the backend."""
+    """Use the application settings when available, otherwise build a standalone ML configuration."""
+    try:
+        from app.services.prediction_service import build_inference_config as build_backend_config
+    except ModuleNotFoundError as exc:
+        if exc.name and not exc.name.startswith("app"):
+            raise
+    else:
+        return build_backend_config(category)
+
     from ml.inference import InferenceConfig
     from ml.model_registry import category_model_spec, is_valid_checkpoint
 
     spec = category_model_spec(category)
+    if not spec.is_runnable:
+        raise RuntimeError(f"Portable runtime artifacts are unavailable for category: {spec.category}")
+
+    use_advanced = os.getenv("USE_PADIM_INFERENCE", "false").lower() in {"1", "true", "yes"}
+    use_openvino = os.getenv("USE_OPENVINO_INFERENCE", "false").lower() in {"1", "true", "yes"}
     openvino_available = bool(
         spec.openvino_path
         and spec.openvino_path.exists()
         and spec.openvino_path.with_suffix(".bin").exists()
     )
-    use_openvino = _environment_flag("USE_OPENVINO_INFERENCE", True) and openvino_available
-    advanced_available = is_valid_checkpoint(spec.checkpoint_path) or openvino_available
 
     return InferenceConfig(
         category=spec.category,
         anomaly_model_kind=spec.model_kind,
-        use_padim_inference=_environment_flag("USE_PADIM_INFERENCE") and advanced_available,
-        use_openvino_inference=use_openvino,
-        openvino_inference_device=os.getenv("OPENVINO_INFERENCE_DEVICE", "CPU"),
+        use_padim_inference=use_advanced and (is_valid_checkpoint(spec.checkpoint_path) or openvino_available),
         padim_inference_accelerator=os.getenv("PADIM_INFERENCE_ACCELERATOR", "auto"),
         model_checkpoint_path=spec.checkpoint_path,
         classifier_model_path=spec.classifier_path,
@@ -68,14 +70,16 @@ def build_inference_config(category: str):
         padim_score_threshold=spec.padim_score_threshold,
         review_severity_threshold=40.0,
         fail_severity_threshold=60.0,
-        openvino_path=spec.openvino_path if use_openvino else None,
-        openvino_calibrator_path=spec.openvino_calibrator_path if use_openvino else None,
+        use_openvino_inference=use_openvino and openvino_available,
+        openvino_inference_device=os.getenv("OPENVINO_INFERENCE_DEVICE", "CPU"),
+        openvino_path=spec.openvino_path if use_openvino and openvino_available else None,
+        openvino_calibrator_path=spec.openvino_calibrator_path if use_openvino and openvino_available else None,
         compact_classifier_path=spec.compact_classifier_path,
     )
 
 
 def inspect_image(image_path: str | Path | None = None, category: str = "bottle") -> dict:
-    """Run the standalone AI pipeline without creating external output files."""
+    """Run the backend-compatible AI pipeline without creating external output files."""
     from ml.inference import inspect_image as inspect_image_runtime
 
     selected_image = Path(image_path) if image_path else default_demo_image()

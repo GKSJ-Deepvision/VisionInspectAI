@@ -31,8 +31,8 @@ Product image and category
 
 ### Advanced anomaly detection
 
-- PaDiM is the trained anomaly detector for most categories.
-- PatchCore is selected for `cable`, `hazelnut`, and `screw`, where benchmark comparison showed stronger performance.
+- PaDiM is selected for `bottle`, `carpet`, `grid`, `leather`, `metal_nut`, `tile`, `toothbrush`, and `wood`.
+- PatchCore is selected for `cable`, `capsule`, `hazelnut`, `pill`, `screw`, `transistor`, and `zipper`, where category benchmarking favored its anomaly representation.
 - Training checkpoints are intentionally excluded because they are large training artifacts and are not required by the portable runtime.
 
 ### Portable anomaly detection
@@ -46,8 +46,14 @@ Product image and category
 
 - Category-specific classifiers predict the defect subtype only after anomaly detection marks an image as defective.
 - Classifiers use ResNet18 embeddings or category-specific visual and texture features.
-- Capsule and wood include fine-tuned CNN classifiers exported to ONNX.
-- Portable classifier artifacts are stored as `.pkl`, `.npz`, or `.onnx` files.
+- Portable classifier artifacts are stored as `.pkl` and `.npz` files, with the shared ResNet18 feature extractor stored as ONNX.
+- Strict subtype scores are reported separately from Good/Defective detection scores; categories with limited subtype samples are not presented as having artificial 90%+ performance.
+
+### Current evaluation position
+
+- All 15 category detectors exceed 90% image-level accuracy, F1, and AUROC for Good/Defective detection in the current evaluation artifacts.
+- Pill has 94.01% detector accuracy and 96.45% F1, while its balanced accuracy is 88.61% because the normal and defective classes remain uneven.
+- Subtype classification exceeds 90% accuracy for cable, hazelnut, metal nut, tile, transistor, and the single-subtype toothbrush category. Other categories require more labeled subtype data rather than test-set threshold tuning.
 
 ## Repository Structure
 
@@ -63,6 +69,10 @@ pyproject.toml       Test and lint configuration
 ```
 
 The inherited team `frontend/` directory is not owned or modified by this AI/ML branch.
+
+`ml/predict.py` uses FastAPI runtime settings when the full application is present. In this
+AI/ML-only branch it automatically builds the same category-specific inference configuration
+from the model registry, so command-line inference and tests do not require backend source code.
 
 ## Dataset Setup
 
@@ -96,39 +106,39 @@ Git LFS is required because the portable ONNX, OpenVINO, NumPy, and scikit-learn
 
 ## Notebook Sequence
 
-1. `01_digital_image_basics.ipynb`
-2. `02_opencv_numpy_matplotlib.ipynb`
-3. `03_image_preprocessing.ipynb`
-4. `04_mvtec_dataset_understanding.ipynb`
-5. `05_dataset_loader.ipynb`
-6. `06_baseline_defect_detection.ipynb`
-7. `07_anomalib_model_training.ipynb`
-8. `08_defect_classification.ipynb`
-9. `09_severity_scoring.ipynb`
-10. `10_model_evaluation_results.ipynb`
+1. `01_system_and_dataset_overview.ipynb` - system contract, dataset structure, health checks, and all 15 categories
+2. `02_portable_baseline_detector.ipynb` - ResNet18 normal-memory scoring and OpenCV residual localization
+3. `03_advanced_anomaly_detectors.ipynb` - PaDiM, PatchCore, OpenVINO, model selection, and fallback behavior
+4. `04_defect_subtype_classification.ipynb` - category-specific subtype models, probabilities, and confusion matrix
+5. `05_localization_and_explainability.ipynb` - heatmaps, masks, geometry, ground truth, and localization metrics
+6. `06_severity_and_qa_decision.ipynb` - weighted severity calculation and Pass/Review/Fail policy
+7. `07_training_benchmarking_and_calibration.ipynb` - offline training, comparison, promotion, and threshold protocols
+8. `08_multicategory_end_to_end_inference.ipynb` - complete portable inference across every category
+9. `09_model_evaluation_and_limitations.ipynb` - detector, localization, and classifier metrics with limitations
+10. `10_artifacts_testing_and_integration.ipynb` - artifact integrity, backend-ready output, latency, and pytest evidence
 
-The notebooks display their important images, tables, metrics, prediction dictionaries, and validation evidence inline. They do not require generated report folders for presentation evidence.
+The notebooks use real MVTec images and the same `ml/` functions used by application inference. Important images, tables, metrics, prediction dictionaries, and validation evidence are displayed inline. Notebook execution does not create report, chart, screenshot, or result files.
 
 ## Training and Evaluation Tools
 
 ```bash
 # Train category anomaly models and portable reference profiles
-python scripts/train_category_models.py --category bottle
+python scripts/train_category_models.py --categories bottle
 
 # Train category defect subtype classifiers
-python scripts/train_category_classifiers.py --category bottle
+python scripts/train_category_classifiers.py --categories bottle
 
 # Compare PaDiM and PatchCore candidates
-python scripts/benchmark_category_models.py --category cable
+python scripts/benchmark_category_models.py --categories cable
 
 # Calibrate category thresholds and portable runtime artifacts
-python scripts/calibrate_category_thresholds.py --category cable
+python scripts/calibrate_category_thresholds.py --categories cable
 
-# Export supported anomaly models to OpenVINO
-python scripts/export_openvino.py --category cable
+# Export every available advanced anomaly checkpoint to OpenVINO
+python scripts/export_openvino.py
 
 # Train and export fine-tuned CNN subtype classifiers
-python scripts/train_finetuned_cnn_classifiers.py --category capsule
+python scripts/train_finetuned_cnn_classifiers.py --categories capsule
 ```
 
 Run a script with `--help` before training to inspect its complete arguments.
