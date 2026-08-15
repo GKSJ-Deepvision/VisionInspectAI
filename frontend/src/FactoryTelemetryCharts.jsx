@@ -36,17 +36,39 @@ export default function FactoryTelemetryCharts() {
   const fetchData = async () => {
     try {
       const [trends, severity, defects, quality] = await Promise.all([
-        axios.get(`${API_BASE}/api/analytics/defect-trends`).catch(() => ({ data: fallbackTrends })),
-        axios.get(`${API_BASE}/api/analytics/severity-distribution`).catch(() => ({ data: fallbackSeverity })),
-        axios.get(`${API_BASE}/api/analytics/defect-types`).catch(() => ({ data: fallbackDefects })),
-        axios.get(`${API_BASE}/api/analytics/production-quality`).catch(() => ({ data: fallbackQuality }))
+        axios.get(`${API_BASE}/api/analytics/defect-trends`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/severity-distribution`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/defect-types`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/production-quality`).catch(() => null)
       ]);
-      setTrendData(trends.data);
-      setSeverityData(severity.data);
-      setDefectTypeData(defects.data);
-      setQualityData(quality.data);
+      // API returns wrapped objects like { status, trends: [...] } — extract the array
+      const extractArray = (res, key, fallback) => {
+        if (!res || !res.data) return fallback;
+        const d = res.data;
+        if (Array.isArray(d)) return d;
+        if (d[key] && Array.isArray(d[key])) return d[key];
+        // Try to find any array property
+        for (const v of Object.values(d)) {
+          if (Array.isArray(v)) return v;
+        }
+        return fallback;
+      };
+      setTrendData(extractArray(trends, 'trends', fallbackTrends).map(d => ({
+        time: d.time || d.date || '', passed: d.passed ?? 0, failed: d.failed ?? d.defects ?? 0
+      })));
+      setSeverityData(extractArray(severity, 'distribution', fallbackSeverity).map(d => ({
+        name: d.name || d.severity_level || '', value: d.value ?? d.count ?? 0
+      })));
+      setDefectTypeData(extractArray(defects, 'defect_types', fallbackDefects).map(d => ({
+        name: d.name || d.defect_type || '', count: d.count ?? 0
+      })));
+      setQualityData(extractArray(quality, 'quality', fallbackQuality));
     } catch (err) {
       console.error("Telemetry fetch error", err);
+      setTrendData(fallbackTrends);
+      setSeverityData(fallbackSeverity);
+      setDefectTypeData(fallbackDefects);
+      setQualityData(fallbackQuality);
     } finally {
       setLoading(false);
     }

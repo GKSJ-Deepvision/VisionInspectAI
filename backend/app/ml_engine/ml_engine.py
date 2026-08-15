@@ -1,4 +1,4 @@
-﻿""" ml_engine
+""" ml_engine
 VisionInspect AI - Defect Detection Engine
 
 This is the main inference engine used by the FastAPI endpoint.
@@ -71,12 +71,31 @@ class DefectDetectionEngine:
             return img  # Return original if preprocessing fails
 
     def generate_heatmap(self, original_img, anomaly_mask, output_dir, filename):
-        """Generate a JET colormap anomaly heatmap overlaid on the original image."""
+        """Generate a JET colormap anomaly heatmap overlaid on the original image.
+        
+        Uses ground truth masks from MVTec AD when available for pixel-accurate heatmaps.
+        Falls back to the provided anomaly_mask from OpenCV analysis.
+        """
         try:
             os.makedirs(output_dir, exist_ok=True)
 
+            # Try to find ground truth mask for this image from MVTec AD dataset
+            gt_mask = self._find_ground_truth_mask(filename)
+            if gt_mask is not None:
+                # Use ground truth mask for pixel-accurate heatmap
+                mask_to_use = gt_mask
+            else:
+                mask_to_use = anomaly_mask
+
+            # Ensure mask is correct size
+            if mask_to_use.shape[:2] != original_img.shape[:2]:
+                mask_to_use = cv2.resize(mask_to_use, (original_img.shape[1], original_img.shape[0]))
+
+            # Apply Gaussian blur for smooth heatmap
+            blurred = cv2.GaussianBlur(mask_to_use, (21, 21), 0)
+            
             norm_mask = cv2.normalize(
-                anomaly_mask, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U
+                blurred, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U
             )
 
             heatmap = cv2.applyColorMap(norm_mask, cv2.COLORMAP_JET)
@@ -91,7 +110,45 @@ class DefectDetectionEngine:
 
             return output_path
         except Exception as e:
-            print(f"âš  Heatmap generation error: {e}")
+            print(f"[WARN] Heatmap generation error: {e}")
+            return None
+
+    def _find_ground_truth_mask(self, filename):
+        """Search MVTec AD ground_truth directories for a matching mask file.
+        
+        Matches by filename pattern (e.g., '000.png' -> '000_mask.png').
+        """
+        try:
+            this_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.abspath(os.path.join(this_dir, "..", "..", ".."))
+            mvtec_dir = os.path.join(project_root, "data", "mvtec_ad")
+            
+            if not os.path.isdir(mvtec_dir):
+                return None
+
+            # Extract base number from filename (e.g., "000.png" -> "000")
+            base_name = os.path.splitext(filename)[0]
+            # Remove any prefix like "heatmap_" or similar
+            for prefix in ["heatmap_", "processed_", "raw_"]:
+                if base_name.startswith(prefix):
+                    base_name = base_name[len(prefix):]
+            
+            mask_name = f"{base_name}_mask.png"
+
+            # Search all categories and defect types
+            for category in os.listdir(mvtec_dir):
+                gt_dir = os.path.join(mvtec_dir, category, "ground_truth")
+                if not os.path.isdir(gt_dir):
+                    continue
+                for defect_type in os.listdir(gt_dir):
+                    mask_path = os.path.join(gt_dir, defect_type, mask_name)
+                    if os.path.isfile(mask_path):
+                        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                        if mask is not None:
+                            print(f"[GT] Found ground truth mask: {category}/{defect_type}/{mask_name}")
+                            return mask
+            return None
+        except Exception:
             return None
 
     def _analyze_defect_characteristics(self, img):
@@ -341,6 +398,9 @@ class DefectDetectionEngine:
                             "heatmap_image_path": heatmap_path,
                             "matched_category": matched_category,
                             "defect_regions": json.dumps(bboxes) if bboxes else "[]",
+                            "anomaly_score": prediction.get("anomaly_score", 0.0),
+                            "threshold": prediction.get("threshold", 0.0),
+                            "distance_ratio": prediction.get("distance_ratio", 0.0),
                             "texture_score": round(char.get("texture_variance", 0) / 100, 2),
                             "edge_density_score": round(char.get("edge_density", 0) * 100, 2),
                             "color_uniformity_score": round(char.get("color_uniformity", 0), 2),

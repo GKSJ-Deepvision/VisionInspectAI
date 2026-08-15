@@ -36,7 +36,7 @@ export default function App() {
   const handleAuthSuccess = (userSession) => {
     setIsTransitioning(true);
     setTimeout(() => {
-      setCurrentUser(userSession);
+      setCurrentUser({ ...userSession, registeredRole: userSession.role });
       setCurrentView('DASHBOARD');
       setIsTransitioning(false);
       addToast(`Welcome back, ${userSession.role}`, 'success');
@@ -117,12 +117,19 @@ export default function App() {
 
               <select
                 value={currentUser?.role || 'ENGINEER'}
-                onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value })}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  if (newRole === 'OWNER' && currentUser?.registeredRole !== 'OWNER') {
+                    addToast('Owner access restricted. Only the Factory Owner can access this dashboard.', 'error');
+                    return;
+                  }
+                  setCurrentUser({ ...currentUser, role: newRole });
+                }}
                 className="bg-slate-900 border border-slate-700 text-sky-400 font-mono text-xs rounded-lg py-1.5 px-3 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer transition-all hover:bg-slate-800"
               >
                 <option value="CLIENT">Role: Operator</option>
                 <option value="ENGINEER">Role: Engineer</option>
-                <option value="OWNER">Role: Owner</option>
+                {currentUser?.registeredRole === 'OWNER' && <option value="OWNER">Role: Owner</option>}
               </select>
 
               <button 

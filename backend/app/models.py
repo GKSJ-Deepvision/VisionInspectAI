@@ -99,10 +99,16 @@ class InspectionRecord(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     
-    # 🚀 UNIVERSAL SANITIZER
+    # UNIVERSAL SANITIZER
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             if hasattr(value, 'value'):
                 value = value.value
             if hasattr(self.__class__, key):
                 setattr(self, key, value)
+
+    @property
+    def id(self):
+        return self.inspection_id
+
+Inspection = InspectionRecord
