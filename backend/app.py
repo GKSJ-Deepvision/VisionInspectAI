@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from PIL import Image
 import io
 import json
-from datetime import datetime
 
+from backend.auth.jwt_handler import get_current_user
 from backend.routes.auth import router as auth_router
 from backend.routes.upload import router as upload_router
 from backend.routes.dataset import router as dataset_router
@@ -16,11 +16,8 @@ from backend.routes.statistics import router as statistics_router
 
 from backend.models.database import engine, Base, get_db
 from backend.models.inspection_history import InspectionHistory
-from backend.models.report_storage import ReportStorage
-from backend.models.batch_inspection import BatchInspection
-from backend.models.inspection_workflow import InspectionWorkflow
+from backend.routes.inspection import router as inspection_router
 
-from backend.services.database_service import save_inspection
 from backend.report import generate_report
 
 from anomaly_detection.inference import predict_defect
@@ -59,6 +56,7 @@ app.include_router(augmentation_router)
 app.include_router(severity_router)
 app.include_router(statistics_router)
 app.include_router(auth_router)
+app.include_router(inspection_router)
 
 
 # ------------------------------------------------------------------
@@ -445,6 +443,7 @@ def get_production_report(
 def get_report(
     inspection_id: int,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
     format: str = Query(
         "json",
         pattern="^(json|markdown|html)$"
@@ -462,6 +461,14 @@ def get_report(
         raise HTTPException(
             status_code=404,
             detail="Inspection report not found."
+        )
+    if (
+    current_user.get("role") != "admin"
+    and entry.username != current_user["sub"]
+    ):
+        raise HTTPException(
+        status_code=403,
+        detail="You are not allowed to access this inspection."
         )
 
     if format == "json":
@@ -538,292 +545,4 @@ def serialize_inspection(entry: InspectionHistory):
             if entry.created_at
             else None
         ),
-    }    
-
-# ------------------------------------------------------------------
-# Authenticated inspection endpoint
-# ------------------------------------------------------------------
-
-@app.post("/inspect")
-async def inspect_image(
-    file: UploadFile = File(...),
-    category: str = Form("bottle"),
-    enable_yolo: bool = Form(True),
-    username: str = Form("default"),
-):
-    try:
-        category = normalize_category(category)
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
-
-        prediction_result = predict_defect(
-            image,
-            category=category.lower(),
-            enable_yolo=enable_yolo,
-        )
-
-        # Save inspection in database
-        inspection_id = save_inspection(
-    username=username.strip() or "default",
-    image_name=file.filename or "uploaded_image",
-    category=prediction_result.get("category", category.lower()),
-    defect=prediction_result.get("defect_class", "unknown"),
-    result=prediction_result.get("defect_result", "UNKNOWN"),
-    confidence=float(
-        prediction_result.get("confidence_score", 0)
-    ),
-    anomaly_score=float(
-        prediction_result.get("anomaly_score", 0)
-    ),
-    severity_score=float(
-        prediction_result.get("severity_score", 0)
-    ),
-    severity_level=prediction_result.get(
-        "severity_level",
-        "Unknown"
-    ),
-
-    # New inspection metadata
-    threshold=(
-    float(prediction_result["threshold"])
-    if prediction_result.get("threshold") is not None
-    else None
-    ),
-    recommended_action=prediction_result.get(
-        "recommended_action"
-    ),
-    class_probabilities=json.dumps(
-        prediction_result.get(
-            "class_probabilities",
-            {}
-        )
-    ),
-    severity_breakdown=json.dumps(
-        prediction_result.get(
-            "severity_breakdown",
-            {}
-        )
-    ),
-    quality_report=json.dumps(
-        prediction_result.get(
-            "quality_report",
-            {}
-        )
-    ),
-    processing_time_ms=float(
-        prediction_result.get(
-            "processing_time_ms",
-            0
-        )
-    ),
-)
-
-        prediction_result["inspection_id"] = inspection_id
-
-        report = generate_report(prediction_result)
-
-        prediction_result.pop("original_image", None)
-
-        return {
-            "inspection_result": prediction_result,
-            "inspection_report": report,
-        }
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Inspection failed: {str(e)}",
-        )
-
-@app.get("/history")
-def get_history(
-    db: Session = Depends(get_db)
-):
-    records = (
-        db.query(InspectionHistory)
-        .order_by(InspectionHistory.created_at.desc())
-        .all()
-    )
-
-    return [
-        serialize_inspection(entry)
-        for entry in records
-    ]
-
-# ------------------------------------------------------------------
-# Stored reports
-# ------------------------------------------------------------------
-
-@app.get("/reports")
-def get_reports(
-    db: Session = Depends(get_db)
-):
-    return (
-        db.query(ReportStorage)
-        .order_by(ReportStorage.created_at.desc())
-        .all()
-    )
-
-
-# ------------------------------------------------------------------
-# Database analytics
-# ------------------------------------------------------------------
-
-@app.get("/analytics")
-def get_database_analytics(
-    db: Session = Depends(get_db)
-):
-    records = (
-        db.query(InspectionHistory)
-        .all()
-    )
-
-    total = len(records)
-
-    defects = sum(
-        1
-        for entry in records
-        if entry.result == "REJECT"
-    )
-
-    normal = total - defects
-
-    return {
-        "total_images": total,
-        "defect_count": defects,
-        "normal_count": normal,
-    }
-
-
-# ------------------------------------------------------------------
-# Batch inspection records
-# ------------------------------------------------------------------
-
-@app.get("/batches")
-def get_batches(
-    db: Session = Depends(get_db)
-):
-    return (
-        db.query(BatchInspection)
-        .order_by(BatchInspection.created_at.desc())
-        .all()
-    )
-
-# ------------------------------------------------------------------
-# Supervisor inspection workflow
-# ------------------------------------------------------------------
-
-@app.post("/supervisor/inspections/{inspection_id}/approve-rework")
-def approve_rework(
-    inspection_id: int,
-    db: Session = Depends(get_db),
-):
-    inspection = (
-        db.query(InspectionHistory)
-        .filter(InspectionHistory.id == inspection_id)
-        .first()
-    )
-
-    if not inspection:
-        raise HTTPException(
-            status_code=404,
-            detail="Inspection not found",
-        )
-    if inspection.result != "REJECT":
-        raise HTTPException(
-        status_code=400,
-        detail="Rework can only be approved for rejected inspections.",
-    )
-
-    workflow = (
-        db.query(InspectionWorkflow)
-        .filter(
-            InspectionWorkflow.inspection_id == inspection_id
-        )
-        .first()
-    )
-
-    if workflow:
-        workflow.status = "REWORK_APPROVED"
-        workflow.action_by = "factory_supervisor"
-        workflow.action_at = datetime.utcnow()
-    else:
-        workflow = InspectionWorkflow(
-            inspection_id=inspection_id,
-            status="REWORK_APPROVED",
-            action_by="factory_supervisor",
-            action_at=datetime.utcnow(),
-        )
-        db.add(workflow)
-
-    db.commit()
-    db.refresh(workflow)
-
-    return {
-        "message": "Rework approved",
-        "inspection_id": inspection_id,
-        "status": workflow.status,
-    }
-
-
-@app.post("/supervisor/inspections/{inspection_id}/escalate")
-def escalate_inspection(
-    inspection_id: int,
-    db: Session = Depends(get_db),
-):
-    inspection = (
-        db.query(InspectionHistory)
-        .filter(InspectionHistory.id == inspection_id)
-        .first()
-    )
-
-    if not inspection:
-        raise HTTPException(
-            status_code=404,
-            detail="Inspection not found",
-        )
-    if inspection.result != "REJECT":
-        raise HTTPException(
-        status_code=400,
-        detail="Only rejected inspections can be escalated.",
-    )
-
-    workflow = (
-        db.query(InspectionWorkflow)
-        .filter(
-            InspectionWorkflow.inspection_id == inspection_id
-        )
-        .first()
-    )
-
-    if workflow:
-        workflow.status = "ESCALATED"
-        workflow.action_by = "factory_supervisor"
-        workflow.action_at = datetime.utcnow()
-    else:
-        workflow = InspectionWorkflow(
-            inspection_id=inspection_id,
-            status="ESCALATED",
-            action_by="factory_supervisor",
-            action_at=datetime.utcnow(),
-        )
-        db.add(workflow)
-
-    db.commit()
-    db.refresh(workflow)
-
-    return {
-        "message": "Inspection escalated",
-        "inspection_id": inspection_id,
-        "status": workflow.status,
-    }
-
-@app.get("/supervisor/workflows")
-def get_supervisor_workflows(
-    db: Session = Depends(get_db),
-):
-    return (
-        db.query(InspectionWorkflow)
-        .order_by(InspectionWorkflow.created_at.desc())
-        .all()
-    )
+    } 

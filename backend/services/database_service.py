@@ -6,6 +6,8 @@ from backend.models.analytics_storage import AnalyticsStorage
 from backend.models.report_storage import ReportStorage
 from backend.models.batch_inspection import BatchInspection
 
+import json
+
 
 def save_inspection(
     username,
@@ -24,6 +26,9 @@ def save_inspection(
     quality_report=None,
     processing_time_ms=None,
 ):
+    class_probabilities = json.dumps(class_probabilities)
+    severity_breakdown = json.dumps(severity_breakdown, default=float)
+    quality_report = json.dumps(quality_report, default=float)
     db: Session = SessionLocal()
 
     try:

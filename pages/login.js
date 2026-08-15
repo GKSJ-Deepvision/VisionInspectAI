@@ -2,26 +2,54 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import CornerMarks from '../components/CornerMarks';
+import { loginUser } from "../lib/api";
 
 export default function Login() {
   const router = useRouter();
   const [role, setRole] = useState('quality_engineer');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!username || !password) {
-      setError('Enter your ID and password to continue.');
-      return;
-    }
-    // TODO: replace with real POST /auth/login once backend endpoint is ready.
-    const mockToken = btoa(JSON.stringify({ username, role, iat: Date.now() }));
-    localStorage.setItem('vi_token', mockToken);
-    localStorage.setItem('vi_role', role);
-    router.push('/dashboard');
+  async function handleSubmit(e) {
+  e.preventDefault();
+
+  setError("");
+
+  if (!email || !password) {
+    setError("Enter your email and password to continue.");
+    return;
   }
+
+  try {
+    const data = await loginUser(
+      email,
+      password,
+      role
+    );
+
+    localStorage.setItem(
+      "vi_token",
+      data.access_token
+    );
+
+    localStorage.setItem(
+      "vi_role",
+      data.role
+    );
+
+    localStorage.setItem(
+      "vi_username",
+      data.email
+    );
+
+    router.push("/dashboard");
+  } catch (err) {
+    setError(
+      err.message || "Unable to sign in."
+    );
+  }
+}
 
   return (
     <div className="min-h-screen bg-graphite bg-blueprint bg-grid flex items-center justify-center font-body px-4">
@@ -42,7 +70,10 @@ export default function Login() {
             Inspection Console Sign-In
           </h1>
           <p className="text-sm text-muted mt-2">
-            Restricted access — quality engineers and factory supervisors only.
+            {role === "factory_supervisor"
+              ? "Restricted administrator access — authorized factory supervisors only."
+              : "Secure access for quality engineers."
+            }
           </p>
         </div>
 
@@ -79,13 +110,13 @@ export default function Login() {
 
           <div>
             <label className="block text-xs font-mono uppercase tracking-wide text-muted mb-2">
-              Employee ID
+              Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. QE-1042"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. you@company.com"
               className="w-full bg-graphite border border-gridline px-3 py-2 text-ink text-sm focus:outline-none focus:border-signal"
             />
           </div>
@@ -114,7 +145,7 @@ export default function Login() {
         </form>
 
         <p className="text-xs text-muted mt-6 font-mono">
-          v0.2 — frontend integration in progress, backend wiring pending.
+          Authorized personnel only · VisionInspect AI
         </p>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import SeverityBadge from './SeverityBadge';
+import { getInspectionReport } from '../lib/api';
 
 function ImageTile({ label, preview, processed }) {
   return (
@@ -49,6 +50,16 @@ export default function InspectionResult({ preview, result, isLoading }) {
         <h2 className="font-display text-lg text-ink">
           Inspection Result
         </h2>
+
+        <div className="flex items-center gap-3"></div>
+          {result?.inspectionId && (
+            <button
+              onClick={handleDownloadPDF}
+              className="text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors"
+            >
+              Download PDF
+            </button>
+          )}
 
         {isLoading && (
           <span className="flex items-center gap-2 text-xs font-mono text-muted uppercase">
@@ -360,4 +371,21 @@ export default function InspectionResult({ preview, result, isLoading }) {
       )}
     </div>
   );
+
+  async function handleDownloadPDF() {
+  try {
+    const blob = await getInspectionReport(result.inspectionId);
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `inspection-report-${result.inspectionId}.pdf`;
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to download inspection PDF:', error);
+  }
+  }
 }
