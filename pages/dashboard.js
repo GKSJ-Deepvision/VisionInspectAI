@@ -86,12 +86,25 @@ export default function Dashboard() {
   }
 
   async function handleRun() {
-  if (!file) return;
+  console.log('[INSPECT DEBUG] handleRun called');
+  console.log('[INSPECT DEBUG] file:', file);
+  console.log('[INSPECT DEBUG] category:', selectedCategory);
+  console.log(
+    '[INSPECT DEBUG] token exists:',
+    !!localStorage.getItem('vi_token')
+  );
+
+  if (!file) {
+    console.log('[INSPECT DEBUG] STOPPED: file is null');
+    return;
+  }
 
   setIsLoading(true);
 
   try {
+    console.log('[INSPECT DEBUG] calling runInspection...');
     const result = await runInspection(file, selectedCategory);
+    console.log('[INSPECT DEBUG] runInspection returned:', result);
     setLatestResult(result);
 
     // Refresh both history and analytics after inspection
