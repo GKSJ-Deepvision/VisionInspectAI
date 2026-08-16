@@ -36,23 +36,33 @@ export default function FactoryTelemetryCharts() {
   const fetchData = async () => {
     try {
       const [trends, severity, defects, quality] = await Promise.all([
-        axios.get(`${API_BASE}/api/analytics/defect-trends`).catch(() => ({ data: fallbackTrends })),
-        axios.get(`${API_BASE}/api/analytics/severity-distribution`).catch(() => ({ data: fallbackSeverity })),
-        axios.get(`${API_BASE}/api/analytics/defect-types`).catch(() => ({ data: fallbackDefects })),
-        axios.get(`${API_BASE}/api/analytics/production-quality`).catch(() => ({ data: fallbackQuality }))
+        axios.get(`${API_BASE}/api/analytics/defect-trends`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/severity-distribution`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/defect-types`).catch(() => null),
+        axios.get(`${API_BASE}/api/analytics/production-quality`).catch(() => null)
       ]);
-
-      // Safe Array Extraction Guards to prevent chartData.slice crash
-      const ensureArray = (res, fallback) => {
-        if (Array.isArray(res?.data)) return res.data;
-        if (Array.isArray(res?.data?.data)) return res.data.data;
+      // API returns wrapped objects like { status, trends: [...] } — extract the array
+      const extractArray = (res, key, fallback) => {
+        if (!res || !res.data) return fallback;
+        const d = res.data;
+        if (Array.isArray(d)) return d;
+        if (d[key] && Array.isArray(d[key])) return d[key];
+        // Try to find any array property
+        for (const v of Object.values(d)) {
+          if (Array.isArray(v)) return v;
+        }
         return fallback;
       };
-
-      setTrendData(ensureArray(trends, fallbackTrends));
-      setSeverityData(ensureArray(severity, fallbackSeverity));
-      setDefectTypeData(ensureArray(defects, fallbackDefects));
-      setQualityData(ensureArray(quality, fallbackQuality));
+      setTrendData(extractArray(trends, 'trends', fallbackTrends).map(d => ({
+        time: d.time || d.date || '', passed: d.passed ?? 0, failed: d.failed ?? d.defects ?? 0
+      })));
+      setSeverityData(extractArray(severity, 'distribution', fallbackSeverity).map(d => ({
+        name: d.name || d.severity_level || '', value: d.value ?? d.count ?? 0
+      })));
+      setDefectTypeData(extractArray(defects, 'defect_types', fallbackDefects).map(d => ({
+        name: d.name || d.defect_type || '', count: d.count ?? 0
+      })));
+      setQualityData(extractArray(quality, 'quality', fallbackQuality));
     } catch (err) {
       console.error("Telemetry fetch error", err);
       setTrendData(fallbackTrends);
@@ -73,7 +83,7 @@ export default function FactoryTelemetryCharts() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="glass-card p-3 rounded-xl text-xs font-mono border-slate-700 shadow-2xl z-50 relative bg-slate-900/90 backdrop-blur-md">
+        <div className="glass-card p-3 rounded-xl text-xs font-mono border-slate-700 shadow-2xl z-50 relative">
           <p className="text-slate-300 font-bold mb-2 pb-1 border-b border-slate-700">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="flex items-center mt-1">
@@ -86,12 +96,6 @@ export default function FactoryTelemetryCharts() {
     }
     return null;
   };
-
-  // Safe data guarantees for Recharts components
-  const safeTrendData = Array.isArray(trendData) ? trendData : fallbackTrends;
-  const safeSeverityData = Array.isArray(severityData) ? severityData : fallbackSeverity;
-  const safeDefectTypeData = Array.isArray(defectTypeData) ? defectTypeData : fallbackDefects;
-  const safeQualityData = Array.isArray(qualityData) ? qualityData : fallbackQuality;
 
   return (
     <div className="space-y-6 text-slate-100 font-sans max-w-7xl mx-auto">
@@ -124,7 +128,7 @@ export default function FactoryTelemetryCharts() {
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }} 
           transition={{ duration: 0.5, type: 'spring' }} 
-          className="lg:col-span-8 glass-card p-6 rounded-2xl flex flex-col bg-slate-900/60 border border-slate-800/80"
+          className="lg:col-span-8 glass-card p-6 rounded-2xl flex flex-col"
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold flex items-center text-white">
@@ -150,7 +154,7 @@ export default function FactoryTelemetryCharts() {
             )}
             <ResponsiveContainer width="100%" height="100%">
               {activeChart === 'line' ? (
-                <LineChart data={safeTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="time" stroke="#475569" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#475569" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }} axisLine={false} tickLine={false} dx={-10} />
@@ -160,7 +164,7 @@ export default function FactoryTelemetryCharts() {
                   <Line type="monotone" dataKey="failed" stroke="#fb7185" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }} />
                 </LineChart>
               ) : activeChart === 'area' ? (
-                <AreaChart data={safeQualityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={qualityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorGradeA" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4}/>
@@ -181,13 +185,13 @@ export default function FactoryTelemetryCharts() {
                   <Area type="monotone" dataKey="gradeC" stackId="1" stroke="#fb7185" fill="#fb7185" fillOpacity={0.4} />
                 </AreaChart>
               ) : activeChart === 'bar' ? (
-                <BarChart data={safeDefectTypeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={defectTypeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" stroke="#475569" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#475569" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }} axisLine={false} tickLine={false} dx={-10} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                   <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]} barSize={30}>
-                    {safeDefectTypeData.map((entry, index) => (
+                    {defectTypeData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -196,8 +200,8 @@ export default function FactoryTelemetryCharts() {
                 <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <Tooltip content={<CustomTooltip />} />
                   <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace', color: '#cbd5e1' }} />
-                  <Pie data={safeSeverityData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
-                    {safeSeverityData.map((entry, index) => (
+                  <Pie data={severityData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
+                    {severityData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -207,7 +211,7 @@ export default function FactoryTelemetryCharts() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-4 glass-card p-6 rounded-2xl flex flex-col justify-between bg-slate-900/60 border border-slate-800/80">
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-4 glass-card p-6 rounded-2xl flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold flex items-center text-white mb-6"><BarChart3 className="h-5 w-5 mr-2 text-amber-400" />Quick Summary</h3>
             <div className="space-y-4">

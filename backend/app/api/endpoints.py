@@ -1,4 +1,4 @@
-﻿import os
+import os
 import shutil
 import traceback
 from typing import List
@@ -25,7 +25,7 @@ try:
     from app.ml_engine import DefectDetectionEngine
 except ImportError:
     try:
-        from app.ml_engine import DefectDetectionEngine
+        from .ml_engine import DefectDetectionEngine
     except ImportError:
         try:
             from ml_engine import DefectDetectionEngine
@@ -286,8 +286,37 @@ def get_recent_inspections(db: Session = Depends(get_db)):
         return {"status": "SUCCESS", "inspections": []}
 
 
-
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  INSPECTION ENDPOINTS
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+@router.get('/inspections/history')
+def get_inspection_history(role: str = 'ALL', limit: int = 100, db: Session = Depends(get_db)):
+    query = db.query(db_models.Inspection).order_by(db_models.Inspection.created_at.desc())
+    if limit:
+        query = query.limit(limit)
+    inspections = query.all()
+    return {
+        'status': 'SUCCESS',
+        'total': len(inspections),
+        'inspections': [{
+            'id': str(i.id),
+            'inspection_id': getattr(i, 'inspection_id', str(i.id)),
+            'product_sku': i.product_sku or '',
+            'pass_fail_decision': i.pass_fail_decision,
+            'confidence_score': i.confidence_score,
+            'severity_score': i.severity_score or 0,
+            'severity_level': getattr(i, 'severity_level', 'NONE') or 'NONE',
+            'defect_type': i.defect_type or 'None',
+            'matched_category': i.matched_category or 'Unknown',
+            'processing_latency_ms': i.processing_latency_ms or 0,
+            'created_at': str(i.created_at) if i.created_at else '',
+            'heatmap_image_path': i.heatmap_image_path or '',
+            'raw_image_path': getattr(i, 'raw_image_path', '') or '',
+            'recommendation': getattr(i, 'recommendation', '') or '',
+            'original_filename': os.path.basename(getattr(i, 'raw_image_path', '') or ''),
+        } for i in inspections]
+    }
 
 
 @router.get("/inspections")
@@ -505,6 +534,15 @@ async def inspect_component(
             "heatmap_image_path": ml_results.get("heatmap_image_path"),
             "defect_type": ml_results.get("defect_type", "None"),
             "matched_category": ml_results.get("matched_category", "unknown"),
+            "raw_image_path": raw_path,
+            "anomaly_score": ml_results.get("anomaly_score", 0.0),
+            "threshold": ml_results.get("threshold", 0.0),
+            "distance_ratio": ml_results.get("distance_ratio", 0.0),
+            "size_score": ml_results.get("size_score", 0.0),
+            "location_score": ml_results.get("location_score", 0.0),
+            "type_score": ml_results.get("type_score", 0.0),
+            "defect_regions": ml_results.get("defect_regions", "[]"),
+            "original_filename": file.filename,
         }
     except Exception as fatal_err:
         print(f"âš  Fatal inspect error: {fatal_err}\n{traceback.format_exc()}")

@@ -1,0 +1,13 @@
+==============================
+VisionInspect AI - Owner Access
+==============================
+
+Owner Login Credentials:
+  Email    : Vasu@gmail.com
+  Password : vasu
+  Role     : OWNER
+
+==============================
+Note: Only 1 owner account is permitted in the system.
+Other users cannot register as OWNER once this account exists.
+==============================

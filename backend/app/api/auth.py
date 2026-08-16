@@ -43,6 +43,11 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="This corporate email is already registered in SQLite.")
     
+    if req.role.strip().upper() == 'OWNER':
+        existing_owner = db.query(db_models.User).filter(db_models.User.role == 'OWNER').first()
+        if existing_owner:
+            raise HTTPException(status_code=403, detail='Factory Owner account already exists. Only one owner is permitted.')
+
     new_user = db_models.User(
         full_name=req.full_name.strip(),
         email=clean_email,
