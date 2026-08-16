@@ -1,0 +1,92 @@
+
+VisionInspect AI
+Manufacturing Defect Detection & Quality Inspection System
+Database Design & Implementation Module
+Milestone 1 — Progress Report
+
+Prepared by: Arnab Ghosal
+Team: VisionInspectAI Team-2
+Date: July 2026
+ Table of Contents
+1. Project Description
+2. Environment & Tools Setup
+3. Database Design & Exploration
+4. Implementation
+5. Severity Scoring Logic
+6. Testing & Verification
+7. Integration with Backend
+8. Conclusion & Next Steps
+ 1. Project Description
+VisionInspect AI is an AI-powered manufacturing quality inspection platform designed to automatically detect product defects from images, classify defect types, assign severity scores, and generate pass/fail quality decisions. The platform is built for use by manufacturing industries, production plants, and quality assurance teams to reduce manual inspection effort and improve product quality using computer vision and artificial intelligence.
+This document covers the Database Design & Implementation module, which was the primary responsibility assigned for Milestone 1. The database is the backbone that stores user accounts, inspection records, detected defects, severity scores, and final quality decisions, and connects the AI inspection pipeline to the web application used by quality engineers and factory supervisors.
+In addition to the database module, dataset preprocessing was completed earlier for five assigned product categories from the MVTec AD dataset — hazelnut, leather, metal_nut, pill, and screw — covering image resizing, denoising, and normalization.
+2. Environment & Tools Setup
+The database module was developed and tested locally before integration with the Flask backend. The following tools and technologies were used:
+Component	Tool / Technology
+Database Engine	PostgreSQL
+Database Admin Tool	pgAdmin 4
+Backend Framework	Flask (Python)
+ORM (Object-Relational Mapping)	SQLAlchemy
+Environment Configuration	python-dotenv (.env file)
+Version Control	Git & GitHub
+
+PostgreSQL was selected over MongoDB (the alternative listed in the project's tech stack) because the platform's data — users, inspections, defects, and quality decisions — is highly structured and relational in nature, with clear one-to-many relationships between entities. A relational database allows these relationships to be enforced directly at the schema level using foreign keys, which reduces the risk of inconsistent data as the system grows.
+3. Database Design & Exploration
+Before writing any code, the platform's workflow was mapped out to identify what data needed to be stored at each stage:
+●	A user (quality engineer or factory supervisor) logs in and uploads a product image.
+●	An inspection record is created for that image.
+●	The AI model analyzes the image and detects zero or more defects.
+●	Each defect is scored on size, location, defect type, and detection confidence.
+●	A final quality decision (Pass / Fail / Rework) is generated for the inspection.
+●	Aggregated statistics are compiled for the analytics dashboard.
+Based on this workflow, five tables were designed:
+Table	Purpose
+users	Stores login accounts and roles (quality engineer, factory supervisor, admin)
+inspections	One row per uploaded product image, including status and category
+defects	One row per defect detected within an inspection, with severity scoring fields
+quality_decisions	Final Pass / Fail / Rework decision for each inspection
+reports	Aggregated daily statistics for the analytics dashboard
+
+Entity Relationship Summary:
+users (1) ---- (many) inspections (1) ---- (many) defects
+inspections (1) ---- (1) quality_decisions
+reports is a standalone table used for dashboard analytics.
+4. Implementation
+4.1 schema.sql
+The raw SQL script that creates all five tables directly in PostgreSQL, including primary keys, foreign key relationships, and value constraints (e.g. severity scores restricted to a 0–100 range). This script can be run once using pgAdmin's Query Tool or the psql command line to set up the entire database structure.
+4.2 models.py
+SQLAlchemy model classes that mirror each table as a Python object. This allows the Flask backend to query and update the database using Python code (for example, Inspection.query.filter_by(category='hazelnut').all()) instead of writing raw SQL for every operation. The Defect model also includes helper methods that implement the severity scoring formula directly in code.
+4.3 connection.py
+Handles the connection between the Flask application and the PostgreSQL database using SQLAlchemy. Database credentials are read from environment variables (.env file) rather than hardcoded, which allows the same code to point to a local database during development and a cloud-hosted database after deployment, without any code changes.
+4.4 DATABASE_SCHEMA.md
+A documentation file describing every table, field, and relationship in plain language, along with setup instructions, intended to help any team member understand and work with the database without needing to read the raw SQL.
+5. Severity Scoring Logic
+The defects table and the accompanying model logic implement the severity scoring framework defined in the project specification. Each detected defect is scored across four weighted parameters:
+Parameter	Weight
+Defect Size	30%
+Defect Location (critical vs. cosmetic area)	25%
+Defect Type (severity of the defect category)	25%
+Detection Confidence	20%
+
+Overall formula:
+Severity Score = (Size x 30%) + (Location x 25%) + (Defect Type x 25%) + (Confidence x 20%)
+The resulting score maps to a severity level, which determines the recommended action:
+Score Range	Severity Level	Recommended Action
+80 - 100	Critical	Reject product, trigger inspection workflow
+60 - 79	High	Repair or rework recommended
+40 - 59	Medium	Inspection review required
+0 - 39	Low	Product generally acceptable
+6. Testing & Verification
+The schema was tested locally by creating a PostgreSQL database named visioninspect_db using pgAdmin 4, and executing schema.sql through the Query Tool. All five tables (users, inspections, defects, quality_decisions, reports) were created successfully with no errors, confirmed via the Query Tool output: "CREATE TABLE — Query returned successfully."
+The completed module, along with its documentation, was committed and pushed to the team's shared GitHub repository (GKSJ-Deepvision/VisionInspectAI) under a dedicated branch, as shown below.
+ 
+Figure 1: Database module files pushed to GitHub repository
+7. Integration with Backend
+The database module was handed off to the backend team for integration with the Flask application's authentication, upload, and inspection routes. connection.py and models.py were designed so that integration requires only importing the db object and the relevant model classes — no changes to the underlying schema are needed for standard CRUD (create, read, update, delete) operations.
+A discussion is in progress with the team regarding role-based access control — specifically, whether the Factory Supervisor role should have permission to upload new inspection images, or be restricted to viewing inspection results and reports. This will be finalized with guidance from the mentor.
+8. Conclusion & Next Steps
+The database design and implementation for VisionInspect AI has been completed for Milestone 1. Five relational tables were designed and created in PostgreSQL, covering the platform's complete data flow from user login through defect detection to final quality decisions. Supporting Python code (models and connection layer) and full documentation were also produced to enable smooth integration with the Flask backend.
+Next steps for upcoming milestones include:
+●	Deploying the database to a managed cloud PostgreSQL provider (e.g. Supabase or Render).
+●	Finalizing role-based access permissions in coordination with the backend team.
+●	Testing the database under real inspection data once the AI model integration is complete.
