@@ -1,0 +1,3 @@
+# VisionInspectAI
+
+VisionInspectAI is an AI-powered manufacturing defect detection and quality inspection system developed as part of the Infosys Springboard Virtual Internship. The project leverages deep learning–based anomaly detection using the MVTec AD dataset to automatically identify defects in industrial products. It provides a user-friendly web interface for image upload, defect analysis, and result visualization, helping improve inspection accuracy while reducing manual effort.
