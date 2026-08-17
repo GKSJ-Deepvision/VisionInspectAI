@@ -28,7 +28,7 @@ Logs in a user.
   ```json
   {
     "email": "admin@visioninspect.ai",
-    "password": "[REDACTED_PASSWORD]"
+    "password": "<your_password>"
   }
   ```
 
