@@ -88,11 +88,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: visioninspect_cloudflared
     restart: always
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-dummy_token}
-    environment:
-      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    command: tunnel --url http://backend:8000
     depends_on:
-      - frontend
       - backend
 
 volumes:
