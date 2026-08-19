@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 load_dotenv(BASE_DIR / ".env")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'visioninspect.db'}"
 
 if DATABASE_URL:
     from sqlalchemy.engine import make_url
@@ -26,11 +26,6 @@ if DATABASE_URL:
         "database =", db_url.database,
     )
 
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not configured. "
-        "Add it to the project .env file."
-    )
 
 
 connect_args = {}

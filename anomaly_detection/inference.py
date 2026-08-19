@@ -10,20 +10,48 @@ import torch.nn.functional as F
 from torchvision import transforms
 
 from anomaly_detection import config
-from anomaly_detection.model import AnomalyAutoencoder
+from anomaly_detection.model import AnomalyAutoencoder, PaDiM
 from anomaly_detection.classifier import DefectClassifier, CATEGORY_DEFECT_CLASSES
 from anomaly_detection.preprocessor import validate_and_preprocess_image, get_category_transforms
 from anomaly_detection.severity import calculate_severity_score
 from anomaly_detection.yolo_helper import crop_product
 
 # ── Global Model Caches ─────────────────────────────────────────────────────
+_PADIM_CACHE       = {}   # category → PaDiM model
 _AUTOENCODER_CACHE = {}   # category → model
 _CLASSIFIER_CACHE  = {}   # category → (model, class_list)
 
 
 # ── Model Loaders ───────────────────────────────────────────────────────────
 
+def load_padim(category: str) -> PaDiM:
+    """Loads and caches the PaDiM model for the given category."""
+    category = category.lower()
+    if category in _PADIM_CACHE:
+        return _PADIM_CACHE[category]
+
+    model = PaDiM(
+        backbone=config.PADIM_BACKBONE,
+        layer_names=config.PADIM_LAYERS,
+        d_dim=config.PADIM_DIM,
+        sigma=config.PADIM_SIGMA,
+        epsilon=config.PADIM_EPSILON,
+        device=config.DEVICE
+    )
+
+    weights_path = config.MODEL_DIR / f"padim_{category}.pth"
+    if weights_path.exists():
+        model.load(weights_path)
+    else:
+        print(f"[inference] Warning: No PaDiM weights found for '{category}' at {weights_path}")
+
+    _PADIM_CACHE[category] = model
+    return model
+
+load_padim_model = load_padim
+
 def load_autoencoder(category: str) -> AnomalyAutoencoder:
+
     """Loads and caches the AnomalyAutoencoder for the given category."""
     category = category.lower()
     if category in _AUTOENCODER_CACHE:
@@ -45,6 +73,9 @@ def load_autoencoder(category: str) -> AnomalyAutoencoder:
     model.eval()
     _AUTOENCODER_CACHE[category] = model
     return model
+
+load_autoencoder_model = load_autoencoder
+
 
 
 def load_classifier_model(category: str):
@@ -312,43 +343,62 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
        2
     )
     
+    orig_b64 = pil_to_base64_uri(pil_img)
+    crop_b64 = pil_to_base64_uri(cropped_img)
+    recon_b64 = pil_to_base64_uri(reconstructed_pil)
+    heat_b64 = pil_to_base64_uri(heatmap_pil)
+    over_b64 = pil_to_base64_uri(overlay_pil)
+
     return {
-    "category": category,
+        "category": category,
 
-    "is_anomaly": is_anomaly,
-    "defect_result": defect_result,
-    "defect_class": predicted_class,
-    "confidence_score": class_confidence,
+        "is_anomaly": is_anomaly,
+        "defect_result": defect_result,
+        "defect_class": predicted_class,
+        "confidence_score": class_confidence,
 
-    "anomaly_score": round(anomaly_score, 6),
-    "threshold": round(threshold, 6),
+        "anomaly_score": round(anomaly_score, 6),
+        "threshold": round(threshold, 6),
 
-    "severity_score": round(
-        severity_dict["severity_score"],
-        2
-    ),
-    "severity_level": severity_dict["severity_level"],
-    "recommended_action": severity_dict["recommended_action"],
+        "severity_score": round(
+            severity_dict["severity_score"],
+            2
+        ),
+        "severity_level": severity_dict["severity_level"],
+        "recommended_action": severity_dict["recommended_action"],
 
-    "yolo_status": yolo_status,
-    "bbox": bbox,
+        "yolo_status": yolo_status,
+        "bbox": bbox,
 
-    "class_probabilities": class_probs,
+        "class_probabilities": class_probs,
 
-    "quality_report": quality_report,
+        "quality_report": quality_report,
 
-    "severity_breakdown": severity_dict["breakdown"],
+        "severity_breakdown": severity_dict["breakdown"],
 
-    "processing_time_ms": processing_time_ms,
+        "processing_time_ms": processing_time_ms,
 
-    # -----------------------------------------
-    # Generated inspection images
-    # -----------------------------------------
-    "images": {
-        "original": pil_to_base64_uri(pil_img),
-        "cropped": pil_to_base64_uri(cropped_img),
-        "reconstructed": pil_to_base64_uri(reconstructed_pil),
-        "heatmap": pil_to_base64_uri(heatmap_pil),
-        "overlay": pil_to_base64_uri(overlay_pil),
-    },
-}
+        # -----------------------------------------
+        # Top-level Base64 images
+        # -----------------------------------------
+        "original_image": orig_b64,
+        "cropped_image": crop_b64,
+        "reconstructed_image": recon_b64,
+        "heatmap_image": heat_b64,
+        "overlay_image": over_b64,
+        "mask_image": over_b64,
+
+        # -----------------------------------------
+        # Nested image dict for frontend
+        # -----------------------------------------
+        "images": {
+            "original": orig_b64,
+            "cropped": crop_b64,
+            "reconstructed": recon_b64,
+            "heatmap": heat_b64,
+            "overlay": over_b64,
+            "defect_overlay": over_b64,
+            "defect_crop": crop_b64,
+            "mask": over_b64
+        },
+    }

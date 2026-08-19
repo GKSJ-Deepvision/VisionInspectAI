@@ -85,8 +85,8 @@ outputs/
 
 visioninspect.db
 
-VisionInspectAI_*.docx
-Project_Report.docx
+# Documentation files (tracked)
+# VisionInspectAI_*.docx
 
 models/*.pth
 backend/models/*.db

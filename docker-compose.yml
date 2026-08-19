@@ -1,0 +1,56 @@
+﻿version: '3.8'
+
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: visioninspect_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: visioninspect_user
+      POSTGRES_PASSWORD: visioninspect_password
+      POSTGRES_DB: visioninspect_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./DataBase/postgresql_database_schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U visioninspect_user -d visioninspect_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: visioninspect_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://visioninspect_user:visioninspect_password@postgres_db:5432/visioninspect_ai
+      - JWT_SECRET=visioninspect_super_secret_jwt_key_2026
+      - MVTEC_DATASET_DIR=/app/mvtec_anomaly_detection
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    volumes:
+      - ./outputs:/app/outputs
+      - ../mvtec_anomaly_detection:/app/mvtec_anomaly_detection:ro
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: visioninspect_frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

@@ -275,3 +275,11 @@ class AnomalyAutoencoder(nn.Module):
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
+    def compute_anomaly_map(self, x, use_ssim=True):
+        recon = self.forward(x)
+        diff = torch.abs(x - recon)
+        anomaly_map = diff.mean(dim=1, keepdim=True)
+        score = anomaly_map.mean()
+        return recon, anomaly_map, score
+
+
