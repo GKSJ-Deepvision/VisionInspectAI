@@ -1,8 +1,9 @@
 export default function DefectBreakdown({ rows }) {
   const counts = rows.reduce((acc, row) => {
-    acc[row.prediction] = (acc[row.prediction] || 0) + 1;
-    return acc;
-  }, {});
+  const prediction = row.prediction || 'Unknown';
+  acc[prediction] = (acc[prediction] || 0) + 1;
+  return acc;
+}, {});
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const max = entries.length ? entries[0][1] : 1;
 

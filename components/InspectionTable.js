@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import SeverityBadge from './SeverityBadge';
 import { downloadCSV } from '../lib/csv';
+import { downloadInspectionHistoryPdf } from '../lib/api';
 
 export default function InspectionTable({ rows }) {
   const [query, setQuery] = useState('');
@@ -10,8 +11,12 @@ export default function InspectionTable({ rows }) {
     return rows.filter((row) => {
       const matchesQuery =
         !query ||
-        row.productCategory?.toLowerCase().includes(query.toLowerCase()) ||
-        row.prediction?.toLowerCase().includes(query.toLowerCase());
+        (row.productCategory || '')
+          .toLowerCase()
+          .includes(query.toLowerCase()) ||
+        (row.prediction || '')
+          .toLowerCase()
+          .includes(query.toLowerCase());
       const matchesDecision = decisionFilter === 'all' || row.decision === decisionFilter;
       return matchesQuery && matchesDecision;
     });
@@ -29,6 +34,14 @@ export default function InspectionTable({ rows }) {
     ]);
   }
 
+  async function handlePdfDownload() {
+    try {
+      await downloadInspectionHistoryPdf();
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+    }
+  }
+
   return (
     <div className="bg-panel border border-gridline">
       <div className="flex flex-col gap-3 px-4 sm:px-6 py-4 border-b border-gridline">
@@ -43,7 +56,7 @@ export default function InspectionTable({ rows }) {
             placeholder="Search category or defect…"
             className="w-full sm:w-auto bg-graphite border border-gridline px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-signal"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <select
               value={decisionFilter}
               onChange={(e) => setDecisionFilter(e.target.value)}
@@ -59,6 +72,13 @@ export default function InspectionTable({ rows }) {
               className="flex-1 sm:flex-none text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
             >
               Export CSV
+            </button>
+            <button
+              onClick={handlePdfDownload}
+              disabled={!rows.length}
+              className="flex-1 sm:flex-none text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              Download PDF
             </button>
           </div>
         </div>

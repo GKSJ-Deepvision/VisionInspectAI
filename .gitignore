@@ -82,3 +82,15 @@ outputs/
 # Exported Models
 # ============================================
 *.onnx
+
+visioninspect.db
+
+VisionInspectAI_*.docx
+Project_Report.docx
+
+models/*.pth
+backend/models/*.db
+
+*.sqlite3
+# Local database backup
+visioninspect_backup.db
