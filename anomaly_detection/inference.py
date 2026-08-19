@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import torch
+import time
 import torch.nn.functional as F
 from torchvision import transforms
 
@@ -151,6 +152,7 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
 
     Returns a dict with result, images (base64), scores, and metadata.
     """
+    start_time = time.perf_counter()
     category = category.lower()
 
     # ── 1. Input Parsing & Auto Category Detection ───────────────────────────
@@ -188,17 +190,26 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
             cropped_img = pil_img.copy()
             bbox = [0, 0, pil_img.width, pil_img.height]
     else:
-        cropped_img = pil_img.copy()
-        bbox = [0, 0, pil_img.width, pil_img.height]
-        yolo_status = f"YOLO: Bypassed for category '{category}'"
+        from anomaly_detection.yolo_helper import _fallback_crop
+
+        cropped_img, bbox = _fallback_crop(pil_img)
+
+        yolo_status = (
+            f"YOLO: Bypassed for category '{category}' "
+            f"— using fallback crop"
+        )
 
     # ── 4. Autoencoder Reconstruction ───────────────────────────────────────
     device = torch.device(config.DEVICE)
     ae_model = load_autoencoder(category)
 
     # Use centralized category-aware transforms matching training
-    transform = get_category_transforms(category=category, split="test", image_size=config.IMAGE_SIZE)
-    input_tensor = transform(cropped_img).unsqueeze(0).to(device)  # (1, 3, 128, 128)
+    transform = get_category_transforms(
+        category=category,
+        split="test",
+        image_size=config.IMAGE_SIZE
+    )
+    input_tensor = transform(pil_img).unsqueeze(0).to(device)
 
     # Enable cuDNN benchmark for inference acceleration
     if torch.cuda.is_available():
@@ -286,7 +297,7 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
     reconstructed_pil = tensor_to_pil(reconstructed_tensor)
     reconstructed_pil = reconstructed_pil.resize(cropped_img.size)
 
-        # ── 10. Update Statistics ───────────────────────────────────────────────
+    # ── 10. Update Statistics ───────────────────────────────────────────────
 
     if defect_result == "PASS":
         update_statistics("Good")
@@ -294,6 +305,11 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
         update_statistics("Defective")
 
     # ── 11. Return Result ───────────────────────────────────────────────────
+
+    processing_time_ms = round(
+        (time.perf_counter() - start_time) * 1000,
+        2
+    )
 
     return {
         "category": category,
@@ -310,5 +326,16 @@ def predict_defect(image_input, category: str = "bottle", enable_yolo: bool = Tr
         "bbox": bbox,
         "class_probabilities": class_probs,
         "quality_report": quality_report,
-        "severity_breakdown": severity_dict["breakdown"]
+        "severity_breakdown": severity_dict["breakdown"],
+        "processing_time_ms": processing_time_ms,
+
+        # Generated inspection images
+        "images": {
+            "original": pil_to_base64_uri(pil_img),
+            "cropped": pil_to_base64_uri(cropped_img),
+            "reconstructed": pil_to_base64_uri(reconstructed_pil),
+            "heatmap": pil_to_base64_uri(heatmap_pil),
+            "overlay": pil_to_base64_uri(overlay_pil),
+        },
     }
+

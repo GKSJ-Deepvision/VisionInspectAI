@@ -175,11 +175,12 @@
 
         const startTime = performance.now();
 
+                    const resp = await fetch('http://127.0.0.1:8000/predict', {
+                method: 'POST',
+                body: formData
+            });
         try {
-            const resp = await fetch('http://127.0.0.1:8000/inspect', {
-    method: 'POST',
-    body: formData
-});
+
             const data = await resp.json();
             const elapsed = Math.round(performance.now() - startTime);
 
