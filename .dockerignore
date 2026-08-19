@@ -1,0 +1,17 @@
+.venv
+.git
+.gitignore
+frontend
+docs
+*.docx
+__pycache__
+*.pyc
+.pytest_cache
+.ipynb_checkpoints
+node_modules
+npm-debug.log
+.env
+.env.*
+AI/outputs/Patchcore/**/images/
+AI/outputs/evaluation/
+AI/outputs/predictions/
