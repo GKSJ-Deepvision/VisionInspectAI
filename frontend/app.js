@@ -176,7 +176,10 @@
         const startTime = performance.now();
 
         try {
-            const resp = await fetch('/predict', { method: 'POST', body: formData });
+            const resp = await fetch('http://127.0.0.1:8000/predict', {
+                method: 'POST',
+                body: formData
+            });
             const data = await resp.json();
             const elapsed = Math.round(performance.now() - startTime);
 
@@ -186,7 +189,7 @@
                 return;
             }
 
-            renderResults(data, category, elapsed);
+            renderResults(data.inspection_result || data, category, elapsed);
         } catch (err) {
             console.error('API Error:', err);
             showError('Cannot connect to backend server. Please verify http://127.0.0.1:8000 is running.');
@@ -201,8 +204,12 @@
 
     // ── Render Results Dashboard ──────────────────────────────────────────────
     function renderResults(data, category, clientElapsedMs) {
-        resultsPanel.classList.remove('hidden');
-        emptyState.classList.add('hidden');
+
+    // Backend response mapping
+    data = data.inspection_result || data;
+
+    resultsPanel.classList.remove('hidden');
+    emptyState.classList.add('hidden');
 
         // ── 5 Visual Images ──
         imgOriginal.src      = data.images?.original      || data.original_image      || '';
@@ -329,4 +336,4 @@
         }
     }
 
-})();
+})(); this is app.js adat change whereever you want and give me the code i will replace it

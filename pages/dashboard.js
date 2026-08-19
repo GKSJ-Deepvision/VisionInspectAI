@@ -6,12 +6,17 @@ import InspectionTable from '../components/InspectionTable';
 import DefectBreakdown from '../components/DefectBreakdown';
 import SupervisorOverview from '../components/SupervisorOverview';
 import Toast from '../components/Toast';
-import { runInspection } from '../lib/api';
+import {
+  runInspection,
+  getInspectionHistory,
+  getAnalytics,
+} from '../lib/api';
 
 export default function Dashboard() {
   const router = useRouter();
   const [role, setRole] = useState(null);
   const [rows, setRows] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [file, setFile] = useState(null);
 
   const [selectedCategory, setSelectedCategory] = useState('bottle');
@@ -31,6 +36,48 @@ export default function Dashboard() {
     setRole(localStorage.getItem('vi_role') || 'quality_engineer');
   }, [router]);
 
+  useEffect(() => {
+  if (!role) return;
+
+  loadDashboardData();
+}, [role]);
+
+  async function loadDashboardData() {
+  try {
+    const [history, analyticsData] = await Promise.all([
+      getInspectionHistory(),
+      getAnalytics(),
+    ]);
+
+    setRows(
+      history.map((item) => ({
+        inspectionId: item.id,
+        fileName: item.image_name,
+        productCategory: item.category,
+        prediction: item.defect,
+        confidence: (() => {
+          const value = Number(item.confidence ?? 0);
+          return Math.round(value <= 1 ? value * 100 : value);
+        })(),
+        severityScore: item.severity_score,
+        severityLevel: item.severity_level,
+        decision: item.result === 'PASS' ? 'Pass' : 'Reject',
+        anomalyScore: item.anomaly_score,
+        threshold: item.threshold,
+        recommendedAction: item.recommended_action,
+        classProbabilities: item.class_probabilities,
+        severityBreakdown: item.severity_breakdown,
+        qualityReport: item.quality_report,
+        processingTime: item.processing_time_ms,
+      }))
+    );
+
+    setAnalytics(analyticsData);
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error);
+  }
+}
+
   function handleFileChange(selectedFile, previewUrl) {
     setFile(selectedFile);
     setFileName(selectedFile.name);
@@ -39,27 +86,34 @@ export default function Dashboard() {
   }
 
   async function handleRun() {
-    if (!file) return;
-    setIsLoading(true);
-    try {
-      const result = await runInspection(file, selectedCategory);
-      setLatestResult(result);
-      setRows((prev) => [{ fileName, ...result }, ...prev]);
+  if (!file) return;
 
-      if (result.severityLevel === 'Critical') {
-        setToast({
-          message: `Critical defect detected — ${result.prediction} (severity ${result.severityScore})`,
-          level: 'critical',
-        });
-      } else if (result.decision === 'Pass') {
-        setToast({ message: `Inspection passed — ${result.prediction || 'no defect'}`, level: 'ok' });
-      }
-    } catch (err) {
-      console.error('Inspection failed:', err);
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+
+  try {
+    const result = await runInspection(file, selectedCategory);
+    setLatestResult(result);
+
+    // Refresh both history and analytics after inspection
+    await loadDashboardData();
+
+    if (result.severityLevel === 'Critical') {
+      setToast({
+        message: `Critical defect detected — ${result.prediction} (severity ${result.severityScore})`,
+        level: 'critical',
+      });
+    } else if (result.decision === 'Pass') {
+      setToast({
+        message: `Inspection passed — ${result.prediction || 'no defect'}`,
+        level: 'ok',
+      });
     }
+  } catch (err) {
+    console.error('Inspection failed:', err);
+  } finally {
+    setIsLoading(false);
   }
+}
 
   function handleLogout() {
     localStorage.removeItem('vi_token');
@@ -110,18 +164,18 @@ export default function Dashboard() {
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-panel border border-gridline p-4">
                 <p className="text-xs font-mono text-muted uppercase">Inspections Run</p>
-                <p className="font-display text-2xl text-ink mt-1">{rows.length}</p>
+                <p className="font-display text-2xl text-ink mt-1">{analytics?.total_images ?? 0}</p>
               </div>
               <div className="bg-panel border border-gridline p-4">
                 <p className="text-xs font-mono text-muted uppercase">Passed</p>
                 <p className="font-display text-2xl text-ok mt-1">
-                  {rows.filter((r) => r.decision === 'Pass').length}
+                  {analytics?.normal_count ?? 0}
                 </p>
               </div>
               <div className="bg-panel border border-gridline p-4">
                 <p className="text-xs font-mono text-muted uppercase">Rejected</p>
                 <p className="font-display text-2xl text-signal mt-1">
-                  {rows.filter((r) => r.decision === 'Reject').length}
+                  {analytics?.defect_count ?? 0}
                 </p>
               </div>
             </div>
