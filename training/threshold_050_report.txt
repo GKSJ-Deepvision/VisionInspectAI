@@ -1,0 +1,27 @@
+Threshold : 0.50
+
+Overall Accuracy : 86.88%
+
+Defective:
+Precision : 64.10%
+Recall : 70.42%
+F1-Score : 67.11%
+
+No_Defect:
+Precision : 92.89%
+Recall : 90.74%
+F1-Score : 91.81%
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   Defective     0.6410    0.7042    0.6711       142
+   No_Defect     0.9289    0.9074    0.9181       605
+
+    accuracy                         0.8688       747
+   macro avg     0.7850    0.8058    0.7946       747
+weighted avg     0.8742    0.8688    0.8711       747
+
+Confusion Matrix:
+[[100  42]
+ [ 56 549]]

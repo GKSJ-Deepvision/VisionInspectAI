@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -14,198 +14,421 @@ from datetime import datetime
 
 import os
 import shutil
-import cv2
+
 
 app = FastAPI()
 
-# ------------------ Routers ------------------ #
+
+# =========================================================
+# ROUTERS
+# =========================================================
 
 app.include_router(auth_router)
 app.include_router(history_router)
 app.include_router(dashboard_router)
 
-# ------------------ CORS ------------------ #
+
+# =========================================================
+# CORS
+# =========================================================
 
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
     ],
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
 
-# ------------------ Folders ------------------ #
+
+# =========================================================
+# FOLDERS
+# =========================================================
 
 UPLOAD_FOLDER = "../uploads"
 PROCESSED_FOLDER = "../processed"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
 
-# ------------------ Serve Processed Images ------------------ #
+os.makedirs(
+    PROCESSED_FOLDER,
+    exist_ok=True
+)
+
+
+# =========================================================
+# SERVE PROCESSED IMAGES
+# =========================================================
 
 app.mount(
     "/processed",
-    StaticFiles(directory=PROCESSED_FOLDER),
+    StaticFiles(
+        directory=PROCESSED_FOLDER
+    ),
     name="processed"
 )
 
-# ------------------ Home ------------------ #
+
+# =========================================================
+# HOME
+# =========================================================
 
 @app.get("/")
 def home():
+
     return {
-        "message": "VisionInspect AI Backend Running"
+        "message":
+            "VisionInspect AI Backend Running"
     }
 
-# ------------------ Upload Image ------------------ #
+
+# =========================================================
+# UPLOAD IMAGE
+# =========================================================
 
 @app.post("/upload")
-async def upload_image(file: UploadFile = File(...)):
+async def upload_image(
+    file: UploadFile = File(...),
 
-    print("========== UPLOAD RECEIVED ==========")
+    username: str = Header(
+        None,
+        alias="X-Username"
+    ),
+
+    role: str = Header(
+        None,
+        alias="X-Role"
+    )
+):
+
+    print("======================================")
+    print("UPLOAD RECEIVED")
     print("Filename:", file.filename)
+    print("Username:", username)
+    print("Role:", role)
+    print("======================================")
 
-    # Save Uploaded Image
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # =====================================================
+    # USER VALIDATION
+    # =====================================================
 
-    print("Saved at:", file_path)
+    if not username:
 
-    # Image Preprocessing
-    result = preprocess_image(file_path, PROCESSED_FOLDER)
-
-    if result is None:
         return {
             "success": False,
-            "message": "Image could not be processed"
+            "message":
+                "User session not found. Please login again."
         }
 
-    print("Preprocessing Done")
 
-   # ---------------- YOLO Object Detection ---------------- #
+    # =====================================================
+    # SAVE UPLOADED IMAGE
+    # =====================================================
 
-    detections = predict_objects(file_path)
+    file_path = os.path.join(
+        UPLOAD_FOLDER,
+        file.filename
+    )
 
-    print("Detections:", detections)
+    with open(
+        file_path,
+        "wb"
+    ) as buffer:
 
-    # Highest confidence detection only
+        shutil.copyfileobj(
+            file.file,
+            buffer
+        )
+
+
+    print(
+        "Image saved:",
+        file_path
+    )
+
+
+    # =====================================================
+    # IMAGE PREPROCESSING
+    # =====================================================
+
+    result = preprocess_image(
+        file_path,
+        PROCESSED_FOLDER
+    )
+
+
+    if result is None:
+
+        return {
+            "success": False,
+            "message":
+                "Image could not be processed"
+        }
+
+
+    print(
+        "Preprocessing completed"
+    )
+
+
+    # =====================================================
+    # YOLO
+    # =====================================================
+
+    yolo_result = predict_objects(
+        file_path
+    )
+
+
+    detections = yolo_result.get(
+        "detections",
+        []
+    )
+
+
+    detected_category = yolo_result.get(
+        "category",
+        "Unknown"
+    )
+
+
+    print(
+        "Detections:",
+        detections
+    )
+
+
+    print(
+        "Detected Category:",
+        detected_category
+    )
+
+
+    # =====================================================
+    # BEST DETECTION
+    # =====================================================
+
     best_detection = None
 
+
     if len(detections) > 0:
+
         best_detection = max(
             detections,
             key=lambda x: x["confidence"]
         )
 
+
+    # =====================================================
+    # DEFECT CLASSIFICATION
+    # =====================================================
+
     if best_detection is None:
 
+        # -------------------------------------------------
+        # NO DEFECT
+        # -------------------------------------------------
+
         defect = "No Defect"
-        category = "No Defect"
+
+        # IMPORTANT:
+        # Category is NOT changed to "No Defect".
+        # It comes from YOLO category prediction.
+
+        category = detected_category
+
         severity = "Low"
-        risk = "Low"
+
+        risk = "No Defect"
+
         confidence = 100
 
+
     else:
+
+        # -------------------------------------------------
+        # DEFECTIVE
+        # -------------------------------------------------
 
         defect = "Defective"
 
         category = best_detection["class"]
+
         confidence = best_detection["confidence"]
 
+
+        # -------------------------------------------------
+        # SEVERITY + RISK
+        # -------------------------------------------------
+
         if confidence >= 80:
+
             severity = "High"
+
             risk = "High Risk"
 
         elif confidence >= 50:
+
             severity = "Medium"
+
             risk = "Medium Risk"
 
         else:
+
             severity = "Low"
+
             risk = "Low Risk"
 
-    # ---------------- Detection Result ---------------- #
 
-    if len(detections) == 0:
+    # =====================================================
+    # FALLBACK CATEGORY
+    # =====================================================
 
-        defect = "No Defect"
-        category = "No Defect"
-        severity = "Low"
-        risk = "Low"
-        confidence = 100
+    if not category:
 
-    else:
+        category = "Unknown"
 
-        best = detections[0]
 
-        defect = "Defective"
+    print("======================================")
+    print("FINAL INSPECTION RESULT")
+    print("Prediction:", defect)
+    print("Category:", category)
+    print("Severity:", severity)
+    print("Risk:", risk)
+    print("Confidence:", confidence)
+    print("======================================")
 
-        category = best["class"]
-        confidence = best["confidence"]
 
-        if confidence >= 80:
-            severity = "High"
-            risk = "High Risk"
-
-        elif confidence >= 50:
-            severity = "Medium"
-            risk = "Medium Risk"
-
-        else:
-            severity = "Low"
-            risk = "Low Risk"
-
-    # ---------------- Save History ---------------- #
+    # =====================================================
+    # SAVE HISTORY
+    # =====================================================
 
     history_collection.insert_one({
+
+        # USER
+        "username": username,
+
+        "role": role,
+
+        # FILE
         "filename": file.filename,
+
         "status": "Completed",
-        "width": result["width"],
-        "height": result["height"],
-        "channels": result["channels"],
-        "processed_size": "256 × 256",
-        "defect": defect,
-        "category": category,
-        "severity": severity,
-        "risk": risk,
-        "confidence": confidence,
-        "detections": detections,
-        "date": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+
+        # IMAGE
+        "width":
+            result["width"],
+
+        "height":
+            result["height"],
+
+        "channels":
+            result["channels"],
+
+        "processed_size":
+            "256 × 256",
+
+        # INSPECTION
+        "defect":
+            defect,
+
+        "category":
+            category,
+
+        "severity":
+            severity,
+
+        "risk":
+            risk,
+
+        "confidence":
+            confidence,
+
+        # ALL DETECTIONS
+        "detections":
+            detections,
+
+        # DATE
+        "date":
+            datetime.now().strftime(
+                "%d-%m-%Y %I:%M %p"
+            )
     })
 
-    # ---------------- Response ---------------- #
+
+    print(
+        "History saved for:",
+        username
+    )
+
+
+    # =====================================================
+    # RESPONSE
+    # =====================================================
 
     return {
 
-    "success": True,
-    "message": "Image uploaded and processed successfully",
+        "success":
+            True,
 
-    "filename": file.filename,
+        "message":
+            "Image uploaded and processed successfully",
 
-    "original_width": result["width"],
-    "original_height": result["height"],
+        "filename":
+            file.filename,
 
-    "channels": result["channels"],
+        # IMAGE INFORMATION
+        "original_width":
+            result["width"],
 
-    "processed_size": "256 × 256",
+        "original_height":
+            result["height"],
 
-    "defect": defect,
-    "category": category,
-    "severity": severity,
-    "risk": risk,
-    "confidence": confidence,
+        "channels":
+            result["channels"],
 
-    "detections": [] if best_detection is None else [best_detection],
+        "processed_size":
+            "256 × 256",
 
-    "preprocessing": [
-        "Image Resized",
-        "Converted to Grayscale",
-        "Noise Removed using Gaussian Blur"
-    ]
-}
+        # INSPECTION
+        "defect":
+            defect,
+
+        "category":
+            category,
+
+        "severity":
+            severity,
+
+        "risk":
+            risk,
+
+        "confidence":
+            confidence,
+
+        # DETECTIONS
+        "detections":
+            detections,
+
+        # PREPROCESSING
+        "preprocessing": [
+
+            "Image Resized",
+
+            "Converted to Grayscale",
+
+            "Noise Removed using Gaussian Blur"
+
+        ]
+    }

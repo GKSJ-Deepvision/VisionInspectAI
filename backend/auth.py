@@ -36,7 +36,9 @@ class UpdateProfile(BaseModel):
 @router.post("/login")
 def login(data: LoginData):
 
-    user = users_collection.find_one({"username": data.username})
+    user = users_collection.find_one(
+        {"username": data.username}
+    )
 
     if not user:
         return {
@@ -63,6 +65,30 @@ def login(data: LoginData):
 @router.post("/signup")
 def signup(data: SignupData):
 
+    # ==========================================
+    # Factory Supervisor Restriction
+    # Only ONE Factory Supervisor is allowed
+    # ==========================================
+
+    if data.role == "Factory Supervisor":
+
+        existing_supervisor = users_collection.find_one(
+            {"role": "Factory Supervisor"}
+        )
+
+        if existing_supervisor:
+            return {
+                "success": False,
+                "message": (
+                    "Factory Supervisor account already exists. "
+                    "Only one Factory Supervisor account is allowed."
+                )
+            }
+
+    # ==========================================
+    # Username Validation
+    # ==========================================
+
     existing_user = users_collection.find_one(
         {"username": data.username}
     )
@@ -72,6 +98,10 @@ def signup(data: SignupData):
             "success": False,
             "message": "Username already exists"
         }
+
+    # ==========================================
+    # Create User
+    # ==========================================
 
     users_collection.insert_one({
         "username": data.username,

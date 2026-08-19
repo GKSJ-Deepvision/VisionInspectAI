@@ -196,7 +196,6 @@ function Settings() {
                 className="w-full bg-[#111827] border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-emerald-500"
               >
                 <option>Quality Engineer</option>
-                <option>Factory Supervisor</option>
               </select>
 
             </div>
@@ -291,53 +290,6 @@ function Settings() {
 
         </div>
 
-        {/* System Information */}
-
-        <div className="bg-[#1F2937] rounded-2xl p-8 shadow-lg">
-
-          <div className="flex items-center gap-3 mb-6">
-
-            <Server className="text-blue-400" />
-
-            <h2 className="text-2xl font-bold">
-              System Information
-            </h2>
-
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-
-            <div className="bg-[#111827] rounded-xl p-4">
-              <p className="text-gray-400">Frontend</p>
-              <h3 className="font-semibold mt-2">
-                React + Tailwind CSS
-              </h3>
-            </div>
-
-            <div className="bg-[#111827] rounded-xl p-4">
-              <p className="text-gray-400">Backend</p>
-              <h3 className="font-semibold mt-2">
-                FastAPI
-              </h3>
-            </div>
-
-            <div className="bg-[#111827] rounded-xl p-4">
-              <p className="text-gray-400">Dataset</p>
-              <h3 className="font-semibold mt-2">
-                MVTec AD Dataset
-              </h3>
-            </div>
-
-            <div className="bg-[#111827] rounded-xl p-4">
-              <p className="text-gray-400">Version</p>
-              <h3 className="font-semibold mt-2">
-                VisionInspect AI v1.0
-              </h3>
-            </div>
-
-          </div>
-
-        </div>
 
         {/* Save Button */}
 

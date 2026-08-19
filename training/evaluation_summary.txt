@@ -1,0 +1,18 @@
+VisionInspect AI - Model Evaluation
+====================================
+
+Keras Test Accuracy : 86.88%
+Threshold 0.50 Accuracy : 86.88%
+Threshold 0.50 Precision : 92.89%
+Threshold 0.50 Recall : 90.74%
+Threshold 0.50 F1-Score : 91.81%
+
+Tuned Threshold : 0.30
+Tuned Accuracy : 89.16%
+Tuned Precision : 89.34%
+Tuned Recall : 98.35%
+Tuned F1-Score : 93.63%
+
+Confusion Matrix:
+[[ 71  71]
+ [ 10 595]]
