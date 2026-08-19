@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import SeverityBadge from './SeverityBadge';
 import { downloadCSV } from '../lib/csv';
+import { downloadInspectionHistoryPdf } from '../lib/api';
 
 export default function InspectionTable({ rows }) {
   const [query, setQuery] = useState('');
@@ -9,9 +10,13 @@ export default function InspectionTable({ rows }) {
   const filtered = useMemo(() => {
     return rows.filter((row) => {
       const matchesQuery =
-        !query ||
-        row.productCategory.toLowerCase().includes(query.toLowerCase()) ||
-        row.prediction.toLowerCase().includes(query.toLowerCase());
+  !query ||
+  (row.productCategory || '')
+    .toLowerCase()
+    .includes(query.toLowerCase()) ||
+  (row.prediction || '')
+    .toLowerCase()
+    .includes(query.toLowerCase());
       const matchesDecision = decisionFilter === 'all' || row.decision === decisionFilter;
       return matchesQuery && matchesDecision;
     });
@@ -28,6 +33,14 @@ export default function InspectionTable({ rows }) {
       { key: 'decision', label: 'Decision' },
     ]);
   }
+
+  async function handlePdfDownload() {
+  try {
+    await downloadInspectionHistoryPdf();
+  } catch (error) {
+    console.error('Failed to download PDF:', error);
+  }
+}
 
   return (
     <div className="bg-panel border border-gridline">
@@ -57,6 +70,13 @@ export default function InspectionTable({ rows }) {
           >
             Export CSV
           </button>
+          <button
+  onClick={handlePdfDownload}
+  disabled={!rows.length}
+  className="text-xs font-mono border border-gridline px-3 py-1.5 text-muted hover:border-signal hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+>
+  Download PDF
+</button>
         </div>
       </div>
 
