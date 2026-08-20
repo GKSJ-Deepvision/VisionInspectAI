@@ -2,34 +2,19 @@ from pymongo import MongoClient
 import os
 
 
-# =========================================================
-# MONGODB CONNECTION
-# =========================================================
-
+# MongoDB Connection
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
     "mongodb://localhost:27017/"
 )
 
-
-client = MongoClient(
-    MONGODB_URI,
-    tls=True,
-    serverSelectionTimeoutMS=30000
-)
+client = MongoClient(MONGODB_URI)
 
 
-# =========================================================
-# DATABASE
-# =========================================================
-
+# Database
 db = client["VisionInspectAI"]
 
 
-# =========================================================
-# COLLECTIONS
-# =========================================================
-
+# Collections
 users_collection = db["users"]
-
 history_collection = db["inspection_history"]
