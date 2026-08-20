@@ -1,5 +1,15 @@
 # VisionInspect AI — Premium Defect Detection Console
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen?style=for-the-badge&logo=vercel)](https://industrial-ai-defect-inspection-platform-git-main-ritesh-6267.vercel.app)
+[![Group Repository](https://img.shields.io/badge/GitHub-Group%20Repo-blue?style=for-the-badge&logo=github)](https://github.com/GKSJ-Deepvision/VisionInspectAI/tree/Ritesh-Bande)
+[![Personal Repository](https://img.shields.io/badge/GitHub-Personal%20Repo-black?style=for-the-badge&logo=github)](https://github.com/ritesh-bande/Industrial-AI-Defect-Inspection-Platform)
+
+### 🌐 Quick Links & Live Application
+
+- 🚀 **Live Web App**: [https://industrial-ai-defect-inspection-platform-git-main-ritesh-6267.vercel.app](https://industrial-ai-defect-inspection-platform-git-main-ritesh-6267.vercel.app)
+- 👥 **Group GitHub Repository (`Ritesh-Bande` branch)**: [https://github.com/GKSJ-Deepvision/VisionInspectAI/tree/Ritesh-Bande](https://github.com/GKSJ-Deepvision/VisionInspectAI/tree/Ritesh-Bande)
+- 💻 **Personal GitHub Repository (`main` branch)**: [https://github.com/ritesh-bande/Industrial-AI-Defect-Inspection-Platform](https://github.com/ritesh-bande/Industrial-AI-Defect-Inspection-Platform)
+
 VisionInspect AI is an enterprise-grade manufacturing quality control system powered by Computer Vision and AI. It automates product scanning, localizes defect regions, computes severity heatmaps, tracks rework processes, and generates comprehensive factory analytics.
 
 ## Features
