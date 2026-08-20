@@ -23,27 +23,52 @@ export default function LoginPage() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  // Demo accounts accepted when backend is offline
+  const DEMO_ACCOUNTS = [
+    { email: "admin@visioninspect.ai", password: "Admin@12345" },
+    { email: "operator@visioninspect.ai", password: "Operator@12345" },
+    { email: "riteshbande992@gmail.com", password: "Admin@12345" },
+    { email: "demo@visioninspect.ai", password: "Demo@12345" },
+  ];
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
     setSuccess("");
+
+    // --- Client-side validation ---
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!form.password || form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
 
-    // Store auth token immediately to prevent any UI delay
-    setAuthToken("demo_authenticated_session_2026");
-
-    // Fire login request in background
-    login({ email: form.email, password: form.password }).catch(() => {});
-
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
+    try {
+      // Try real backend first
+      await login({ email: form.email, password: form.password });
+      setAuthToken("authenticated_session_" + Date.now());
+      window.location.href = "/dashboard";
+    } catch {
+      // Backend offline — check against known demo accounts
+      const match = DEMO_ACCOUNTS.find(
+        (a) => a.email.toLowerCase() === form.email.toLowerCase() && a.password === form.password
+      );
+      if (match) {
+        setAuthToken("demo_authenticated_session_2026");
         window.location.href = "/dashboard";
+      } else {
+        setLoading(false);
+        setError("Invalid email or password. Please try again.");
       }
-    }, 150);
+    }
   }
 
   function handleSocialLogin(provider) {
-    // Simulated SSO action
     setError("");
     setSuccess(`Connecting with ${provider}...`);
     setAuthToken("demo_sso_authenticated_session_2026");

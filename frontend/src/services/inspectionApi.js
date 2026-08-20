@@ -1,4 +1,6 @@
 import { apiGet, apiPatch, apiPost } from "./api";
+import { analyseImage } from "./imageAnalysis";
+
 
 function appendMetadata(formData, metadata = {}) {
   Object.entries(metadata).forEach(([key, value]) => {
@@ -23,54 +25,36 @@ function batchFormData(files, metadata) {
   return appendMetadata(formData, metadata);
 }
 
-function mockInspectionResult(file, metadata = {}, idx = 0) {
-  const fname = (file?.name || "").toLowerCase();
-  const isDefect =
-    fname.includes("000") ||
-    fname.includes("defect") ||
-    fname.includes("crack") ||
-    fname.includes("scratch") ||
-    fname.includes("tear") ||
-    fname.includes("hole") ||
-    fname.includes("stain") ||
-    fname.includes("damage") ||
-    fname.includes("broken") ||
-    fname.includes("bad");
-  const defectType = fname.includes("crack")
-    ? "surface crack"
-    : fname.includes("tear")
-    ? "fabric tear"
-    : fname.includes("stain")
-    ? "surface stain"
-    : fname.includes("scratch")
-    ? "metal scratch"
-    : isDefect
-    ? "hole / tear defect"
-    : "none";
+/** Build a full inspection result object from canvas analysis */
+async function analyseToResult(file, metadata = {}, idx = 0) {
+  const analysis = await analyseImage(file);
+  const imageUrl = file ? URL.createObjectURL(file) : null;
 
   return {
     id: Date.now() + idx,
     filename: file?.name || `frame_${idx}.png`,
-    pass_fail: isDefect ? "Fail" : "Pass",
-    prediction: isDefect ? "Fail" : "Pass",
-    defect_type: defectType,
-    severity_level: isDefect ? "critical" : "none",
-    severity_score: isDefect ? 8.7 : 0.0,
-    score: isDefect ? 3.2 : 9.6,
-    confidence: 0.94,
-    anomaly_score: isDefect ? 8.7 : 0.4,
+    pass_fail: analysis.isDefect ? "Fail" : "Pass",
+    prediction: analysis.isDefect ? "Fail" : "Pass",
+    defect_type: analysis.defectType,
+    severity_level: analysis.severity_level,
+    severity_score: analysis.severity_score,
+    score: analysis.isDefect ? parseFloat((10 - analysis.anomalyScore).toFixed(2)) : parseFloat((10 - analysis.anomalyScore * 0.2).toFixed(2)),
+    confidence: analysis.confidence,
+    anomaly_score: analysis.anomalyScore,
     heatmap_url: null,
-    image_url: file ? URL.createObjectURL(file) : null,
+    image_url: imageUrl,
     batch_number: metadata.batch_number || "BAT-260820-01",
-    product_id: metadata.product_id || "bottle",
+    product_id: metadata.product_id || "product",
     production_line: metadata.production_line || "line_1",
     shift: metadata.shift || "Shift A",
     operator_name: "Quality Engineer",
     review_status: "ai_completed",
     created_at: new Date().toISOString(),
-    explainability: isDefect
-      ? { decision_threshold: 0.75, defect_area_percent: 18.4, heatmap_intensity_p95: 0.89 }
-      : { decision_threshold: 0.75, defect_area_percent: 0.0, heatmap_intensity_p95: 0.05 },
+    explainability: {
+      decision_threshold: 0.75,
+      defect_area_percent: analysis.isDefect ? parseFloat((analysis.anomalyScore * 2.1).toFixed(1)) : 0.0,
+      heatmap_intensity_p95: analysis.isDefect ? parseFloat((analysis.anomalyScore / 10 + 0.1).toFixed(2)) : 0.04,
+    },
   };
 }
 
@@ -99,36 +83,26 @@ export function uploadInspection(file, metadata = {}) {
   return apiPost("/api/inspections/upload", imageFormData(file, metadata));
 }
 
-// AI Inspect — with offline fallback
+// AI Inspect — uses real backend when online, canvas analysis when offline
 export async function inspectImage(file, metadata = {}) {
   try {
     const inspection = await apiPost("/api/inspections/inspect", imageFormData(file, metadata));
-    // Correct any wrong backend prediction for known defective images
-    const fname = (file?.name || "").toLowerCase();
-    const isDefect =
-      fname.includes("000") || fname.includes("defect") || fname.includes("crack") ||
-      fname.includes("scratch") || fname.includes("tear") || fname.includes("hole") ||
-      fname.includes("stain") || fname.includes("damage") || fname.includes("broken") || fname.includes("bad");
-    if (isDefect && inspection?.prediction === "Pass") {
-      inspection.prediction = "Fail";
-      inspection.pass_fail = "Fail";
-      inspection.defect_type = inspection.defect_type || "surface defect";
-      inspection.severity_level = "critical";
-      inspection.severity_score = 8.7;
-      inspection.anomaly_score = 8.7;
-    }
+    // Trust the backend result — do NOT override with filename guessing
     return inspection;
   } catch {
-    return mockInspectionResult(file, metadata, 0);
+    // Backend offline → use real canvas pixel analysis
+    return analyseToResult(file, metadata, 0);
   }
 }
 
-// Batch Inspect — with offline fallback
+// Batch Inspect — with real canvas analysis fallback
 export async function inspectBatch(files, metadata = {}) {
   try {
     return await apiPost("/api/inspections/batch-inspect", batchFormData(files, metadata));
   } catch {
-    const items = Array.from(files).map((f, i) => mockInspectionResult(f, metadata, i));
+    const items = await Promise.all(
+      Array.from(files).map((f, i) => analyseToResult(f, metadata, i))
+    );
     const passed = items.filter((it) => it.pass_fail === "Pass").length;
     return {
       items,
@@ -142,6 +116,7 @@ export async function inspectBatch(files, metadata = {}) {
     };
   }
 }
+
 
 // List Inspections — with offline fallback
 export async function listInspections({
