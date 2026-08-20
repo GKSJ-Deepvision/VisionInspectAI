@@ -1,40 +1,27 @@
-# Stage 1: Build the React application
-FROM node:18-alpine AS builder
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package.json package-lock.json* ./
-RUN npm install
+# Install system dependencies required for OpenCV and Anomalib
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the rest of the application code
+COPY requirements.txt .
+
+# Install dependencies and explicitly install opencv headless
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir opencv-python-headless
+
+# Copy the entire backend folder, including the ai module and results (trained weights)
 COPY . .
 
-# Set the API base URL argument during the build process
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Ensure the uploads directory exists
+RUN mkdir -p /app/uploads
 
-# Build the Vite app for production
-RUN npm run build
+# Expose FastAPI port
+EXPOSE 8000
 
-# Stage 2: Serve the application using Nginx
-FROM nginx:alpine
-
-# Copy the built assets from the builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Configure Nginx for Single Page Application (SPA) routing
-RUN echo "server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files \$uri \$uri/ /index.html; \
-    } \
-}" > /etc/nginx/conf.d/default.conf
-
-# Expose port 80
-EXPOSE 80
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start Uvicorn
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
