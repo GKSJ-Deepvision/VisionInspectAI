@@ -66,7 +66,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             default_user = User(
                 username="Quality Engineer",
                 email="admin@visioninspect.ai",
-                hashed_password=get_password_hash(os.getenv("ADMIN_INITIAL_PASSWORD", "[REDACTED_PASSWORD]")),
+                hashed_password=get_password_hash(os.getenv("ADMIN_INITIAL_PASSWORD", "")),
                 role="admin"
             )
             db.add(default_user)

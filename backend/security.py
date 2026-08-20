@@ -1,8 +1,9 @@
+import os
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = "visioninspect_dev_secret_key_2026"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 Hours
 
