@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
 import { login, registerUser } from "../../services/authApi";
+import { setAuthToken } from "../../services/api";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({

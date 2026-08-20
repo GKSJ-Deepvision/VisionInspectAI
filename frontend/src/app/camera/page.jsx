@@ -23,21 +23,8 @@ export default function CameraPage() {
   const frameIndexRef = useRef(0);
 
   async function loadSamples() {
-    try {
-      const data = await getCameraSamples();
-      setSamples(data);
-    } catch (err) {
-      setSamples({
-        total: 12,
-        labels: { fabric_tear: 3, tile_crack: 3, leather_stain: 3, metal_scratch: 3 },
-        demo_controls: [
-          { label: "All Samples", value: "" },
-          { label: "Fabric Tear", value: "fabric_tear" },
-          { label: "Tile Crack", value: "tile_crack" },
-          { label: "Leather Stain", value: "leather_stain" }
-        ]
-      });
-    }
+    const data = await getCameraSamples();
+    setSamples(data);
   }
 
   async function inspectNextFrame(nextIndex = frameIndexRef.current) {
@@ -48,29 +35,6 @@ export default function CameraPage() {
       const inspection = await simulateCameraInspection({ frameIndex: nextIndex, label });
       setSelected(inspection);
       setFeed((current) => [inspection, ...current].slice(0, 12));
-      frameIndexRef.current = nextIndex + 1;
-      setFrameIndex(frameIndexRef.current);
-    } catch (err) {
-      const mockLabels = ["fabric_tear", "tile_crack", "leather_stain", "good_pass", "metal_scratch"];
-      const currentLabel = label || mockLabels[nextIndex % mockLabels.length];
-      const isDefect = !currentLabel.includes("good") && !currentLabel.includes("pass");
-      
-      const fallbackInspection = {
-        id: Date.now() + nextIndex,
-        source_label: currentLabel,
-        prediction: isDefect ? "Fail" : "Pass",
-        pass_fail: isDefect ? "Fail" : "Pass",
-        defect_type: isDefect ? currentLabel.replace("_", " ") : "none",
-        severity_level: isDefect ? "high" : "none",
-        severity_score: isDefect ? 8.2 : 0.0,
-        anomaly_score: isDefect ? 8.2 : 0.2,
-        confidence: 0.94,
-        image_url: "/static/uploads/seed_0_0.png",
-        heatmap_url: null,
-        created_at: new Date().toISOString()
-      };
-      setSelected(fallbackInspection);
-      setFeed((current) => [fallbackInspection, ...current].slice(0, 12));
       frameIndexRef.current = nextIndex + 1;
       setFrameIndex(frameIndexRef.current);
     } finally {

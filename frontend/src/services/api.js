@@ -82,7 +82,8 @@ export async function apiRequest(path, options = {}) {
 
   let response;
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+  // 3 second timeout — fail fast and let callers use fallback data
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 3000) : null;
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -93,10 +94,10 @@ export async function apiRequest(path, options = {}) {
     if (timeoutId) clearTimeout(timeoutId);
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
-    throw new ApiError(`Unable to connect to backend server at ${API_BASE_URL}. Please ensure the backend is running.`, {
+    throw new ApiError("Backend offline", {
       status: 0,
       code: "NETWORK_ERROR",
-      details: err.message
+      details: err.message,
     });
   }
 

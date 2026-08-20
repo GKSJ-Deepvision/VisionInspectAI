@@ -50,48 +50,12 @@ export default function UploadPage() {
     setMessage("");
     setFailure(null);
 
-    const fname = file.name.toLowerCase();
-    const isDefective = fname.includes("000") || fname.includes("defect") || fname.includes("crack") || fname.includes("scratch") || fname.includes("tear") || fname.includes("hole") || fname.includes("stain") || fname.includes("damage") || fname.includes("broken") || fname.includes("bad");
-
     try {
       const inspection = await inspectImage(file, metadata);
-      // If API returned pass for known defective image 000.png, refine prediction accuracy
-      if (isDefective && inspection?.prediction === "Pass") {
-        inspection.prediction = "Fail";
-        inspection.pass_fail = "Fail";
-        inspection.defect_type = "hole / tear defect";
-        inspection.severity_level = "critical";
-        inspection.severity_score = 8.7;
-        inspection.anomaly_score = 8.7;
-      }
       setResult(inspection);
       setMessage("Inspection completed successfully");
     } catch (err) {
-      setResult({
-        id: Date.now(),
-        filename: file.name,
-        pass_fail: isDefective ? "Fail" : "Pass",
-        prediction: isDefective ? "Fail" : "Pass",
-        defect_type: isDefective ? "hole / tear defect" : "none",
-        severity_level: isDefective ? "critical" : "none",
-        severity_score: isDefective ? 8.7 : 0.0,
-        score: isDefective ? 3.2 : 9.6,
-        confidence: 0.94,
-        anomaly_score: isDefective ? 8.7 : 0.4,
-        heatmap_url: null,
-        image_url: previewUrl,
-        batch_number: metadata.batch_number || "BAT-260816-10",
-        product_id: metadata.product_id || "bottle",
-        production_line: metadata.production_line || "line_1",
-        shift: metadata.shift || "Shift A",
-        operator_name: "Quality Engineer",
-        review_status: "ai_completed",
-        created_at: new Date().toISOString(),
-        explainability: isDefective 
-          ? { decision_threshold: 0.75, defect_area_percent: 18.4, heatmap_intensity_p95: 0.89 }
-          : { decision_threshold: 0.75, defect_area_percent: 0.0, heatmap_intensity_p95: 0.05 }
-      });
-      setMessage("Inspection completed");
+      setMessage("Inspection failed: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
