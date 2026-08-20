@@ -67,7 +67,7 @@ function SupervisorDashboard() {
       console.log("Supervisor Dashboard Role:", role);
 
       const res = await axios.get(
-        "http://localhost:8000/dashboard",
+        `${import.meta.env.VITE_API_URL}/dashboard`,
         {
           params: {
             username,
@@ -832,7 +832,7 @@ function SupervisorDashboard() {
                       </th>
 
                       <th className="py-3 text-left text-sm text-gray-400">
-                        Category
+                        Confidence
                       </th>
 
                       <th className="py-3 text-left text-sm text-gray-400">
@@ -878,8 +878,8 @@ function SupervisorDashboard() {
 
                         </td>
 
-                        <td className="py-4 text-sm text-gray-300">
-                          {item.category || "-"}
+                        <td className="py-4 text-sm">
+                          {item.confidence ?? 0}%
                         </td>
 
                         <td className="py-4">

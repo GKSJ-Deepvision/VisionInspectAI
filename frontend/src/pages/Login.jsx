@@ -39,7 +39,7 @@ function Login() {
       setLoading(true);
 
       const response = await axios.post(
-        "http://localhost:8000/login",
+        `${import.meta.env.VITE_API_URL}/login`,
         {
           username: formData.username,
           password: formData.password,

@@ -65,7 +65,7 @@ function Dashboard() {
       setLoading(true);
 
       const res = await axios.get(
-        "http://localhost:8000/dashboard",
+        `${import.meta.env.VITE_API_URL}/dashboard`,
         {
           params: {
             username: username,
@@ -749,15 +749,11 @@ function Dashboard() {
                       </th>
 
                       <th className="py-3 text-left">
-                        Defect
+                        Result
                       </th>
 
                       <th className="py-3 text-left">
                         Confidence
-                      </th>
-
-                      <th className="py-3 text-left">
-                        Category
                       </th>
 
                       <th className="py-3 text-left">
@@ -806,10 +802,6 @@ function Dashboard() {
 
                           <td className="py-4">
                             {item.confidence}%
-                          </td>
-
-                          <td className="py-4">
-                            {item.category}
                           </td>
 
                           <td className="py-4">

@@ -26,7 +26,7 @@ function Inspection() {
   const fetchHistory = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:8000/history",
+       `${import.meta.env.VITE_API_URL}/history`,
         {
           params: {
             search,
@@ -65,7 +65,7 @@ function Inspection() {
 
     try {
       const res = await axios.delete(
-        `http://localhost:8000/history/${id}`,
+        `${import.meta.env.VITE_API_URL}/history/${id}`,
         {
           params: {
             username,
@@ -98,7 +98,7 @@ function Inspection() {
 
   const exportCSV = () => {
     const url =
-      `http://localhost:8000/history/export` +
+      `${import.meta.env.VITE_API_URL}/history/export` +
       `?username=${encodeURIComponent(username)}` +
       `&role=${encodeURIComponent(role)}`;
 
@@ -319,7 +319,7 @@ function Inspection() {
                   w-[14%]
                 "
               >
-                Defect
+                Result
               </th>
 
 

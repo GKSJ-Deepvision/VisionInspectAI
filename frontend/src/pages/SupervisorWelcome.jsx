@@ -77,7 +77,7 @@ function SupervisorWelcome() {
       // -----------------------------------------------------
 
       const res = await axios.get(
-        "http://localhost:8000/dashboard",
+        `${import.meta.env.VITE_API_URL}/dashboard`,
         {
           params: {
             username,

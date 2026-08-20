@@ -30,7 +30,7 @@ function Settings() {
   const loadProfile = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:8000/user/${username}`
+        `${import.meta.env.VITE_API_URL}/user/${username}`
       );
 
       if (res.data.success) {
@@ -69,7 +69,7 @@ function Settings() {
 
     try {
       await axios.post(
-        "http://localhost:8000/update-profile",
+        `${import.meta.env.VITE_API_URL}/update-profile`,
         {
           username: profile.username,
           email: profile.email,
@@ -79,7 +79,7 @@ function Settings() {
 
       if (passwords.newPassword !== "") {
         await axios.post(
-          "http://localhost:8000/change-password",
+          `${import.meta.env.VITE_API_URL}/change-password`,
           {
             username: profile.username,
             currentPassword: passwords.currentPassword,

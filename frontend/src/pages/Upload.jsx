@@ -57,7 +57,7 @@ function Upload() {
       setLoading(true);
 
       const res = await axios.post(
-        "http://localhost:8000/upload",
+        `${import.meta.env.VITE_API_URL}/upload`,
         formData,
         {
           headers: {
@@ -94,7 +94,7 @@ function Upload() {
             res.data,
 
           processedImage:
-            `http://localhost:8000/processed/${res.data.filename}?t=${Date.now()}`,
+            `${import.meta.env.VITE_API_URL}/processed/${res.data.filename}?t=${Date.now()}`,
 
         },
       });

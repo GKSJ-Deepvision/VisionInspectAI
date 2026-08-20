@@ -368,8 +368,6 @@ def export_history(
 
             "Defect",
 
-            "Category",
-
             "Severity",
 
             "Risk",
@@ -417,11 +415,6 @@ def export_history(
 
                 item.get(
                     "defect",
-                    ""
-                ),
-
-                item.get(
-                    "category",
                     ""
                 ),
 

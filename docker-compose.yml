@@ -1,0 +1,67 @@
+services:
+
+  mongodb:
+    image: mongo:8
+    container_name: visioninspect-mongodb
+    restart: unless-stopped
+
+    volumes:
+      - mongodb_data:/data/db
+
+    networks:
+      - visioninspect-network
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+
+    container_name: visioninspect-backend
+    restart: unless-stopped
+
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/
+      TZ: Asia/Kolkata
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./uploads:/app/uploads
+      - ./processed:/app/processed
+
+    depends_on:
+      - mongodb
+
+    networks:
+      - visioninspect-network
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+      args:
+        VITE_API_URL: http://localhost:8000
+
+    container_name: visioninspect-frontend
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+
+    networks:
+      - visioninspect-network
+
+
+volumes:
+  mongodb_data:
+
+
+networks:
+  visioninspect-network:
+    driver: bridge

@@ -3,3 +3,15 @@ prepared_dataset/
 object_detection/yolo_dataset/
 processed/
 uploads/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Docker local files
+docker-compose.override.yml

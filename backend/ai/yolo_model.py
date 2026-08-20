@@ -2,16 +2,30 @@ from ultralytics import YOLO
 import cv2
 import os
 
+from dotenv import load_dotenv
+
+
+# =========================================================
+# LOAD ENVIRONMENT VARIABLES
+# =========================================================
+
+load_dotenv()
+
 
 # =========================================================
 # MODEL PATH
 # =========================================================
 
-MODEL_PATH = os.path.abspath(
+DEFAULT_MODEL_PATH = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
         "../../object_detection/runs/detect/train-2/weights/best.pt"
     )
+)
+
+MODEL_PATH = os.getenv(
+    "MODEL_PATH",
+    DEFAULT_MODEL_PATH
 )
 
 
