@@ -11,6 +11,7 @@ from ai.yolo_model import predict_objects
 from database import history_collection
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import os
 import shutil
@@ -41,8 +42,6 @@ app.add_middleware(
         "http://localhost",
         "http://127.0.0.1",
         "http://127.0.0.1:5173",
-    
-        "https://visioninspect-frontend.onrender.com",
     ],
 
     allow_credentials=True,
@@ -247,10 +246,7 @@ async def upload_image(
 
         defect = "No Defect"
 
-        # IMPORTANT:
-        # Category is NOT changed to "No Defect".
-        # It comes from YOLO category prediction.
-
+        # Category comes from YOLO category prediction
         category = detected_category
 
         severity = "Low"
@@ -326,10 +322,12 @@ async def upload_image(
 
         "role": role,
 
+
         # FILE
         "filename": file.filename,
 
         "status": "Completed",
+
 
         # IMAGE
         "width":
@@ -343,6 +341,7 @@ async def upload_image(
 
         "processed_size":
             "256 × 256",
+
 
         # INSPECTION
         "defect":
@@ -360,15 +359,20 @@ async def upload_image(
         "confidence":
             confidence,
 
+
         # ALL DETECTIONS
         "detections":
             detections,
 
-        # DATE
+
+        # DATE - INDIA STANDARD TIME
         "date":
-            datetime.now().strftime(
+            datetime.now(
+                ZoneInfo("Asia/Kolkata")
+            ).strftime(
                 "%d-%m-%Y %I:%M %p"
             )
+
     })
 
 
@@ -393,6 +397,7 @@ async def upload_image(
         "filename":
             file.filename,
 
+
         # IMAGE INFORMATION
         "original_width":
             result["width"],
@@ -405,6 +410,7 @@ async def upload_image(
 
         "processed_size":
             "256 × 256",
+
 
         # INSPECTION
         "defect":
@@ -422,9 +428,11 @@ async def upload_image(
         "confidence":
             confidence,
 
+
         # DETECTIONS
         "detections":
             detections,
+
 
         # PREPROCESSING
         "preprocessing": [
@@ -436,4 +444,5 @@ async def upload_image(
             "Noise Removed using Gaussian Blur"
 
         ]
+
     }
