@@ -42,6 +42,8 @@ app.add_middleware(
         "http://localhost",
         "http://127.0.0.1",
         "http://127.0.0.1:5173",
+    
+        "https://visioninspect-frontend.onrender.com",
     ],
 
     allow_credentials=True,
