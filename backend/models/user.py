@@ -10,12 +10,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # User's login email
-    username = Column(String, unique=True, nullable=False, index=True)
-
+    username = Column(String(255), unique=True, nullable=False, index=True)
     # Hashed password
-    password = Column(String, nullable=False)
-
+    password = Column(String(255), nullable=False)
     # quality_engineer / factory_supervisor
-    role = Column(String, default="quality_engineer", nullable=False)
-
+    role = Column(String(50), default="quality_engineer", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

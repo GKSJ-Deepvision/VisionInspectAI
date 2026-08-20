@@ -1,0 +1,51 @@
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: visioninspect
+      MYSQL_USER: visioninspect_user
+      MYSQL_PASSWORD: visioninspect_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # "db" here is the internal Docker network name — fine for backend-to-database
+      # traffic, since that request never leaves the Docker network.
+      DATABASE_URL: mysql+pymysql://visioninspect_user:visioninspect_pass@db:3306/visioninspect
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        # This one DOES need to be localhost — it's baked into JS that runs
+        # in the browser on your host machine, not inside Docker's network.
+        NEXT_PUBLIC_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:

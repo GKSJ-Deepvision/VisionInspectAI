@@ -1,0 +1,37 @@
+# Frontend — Next.js
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY pages/ ./pages/
+COPY components/ ./components/
+COPY lib/ ./lib/
+COPY styles/ ./styles/
+COPY public/ ./public/
+COPY next.config.js tailwind.config.js postcss.config.js ./
+
+# NEXT_PUBLIC_ vars are baked into the JS bundle at BUILD time, not runtime —
+# this must be a URL the browser (running on your host machine, outside Docker)
+# can actually reach, not an internal Docker service name.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

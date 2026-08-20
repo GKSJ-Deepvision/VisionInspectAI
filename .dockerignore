@@ -1,0 +1,13 @@
+node_modules
+.next
+venv
+.venv
+__pycache__
+*.pyc
+.git
+.env
+.env.*
+*.db
+mysql_data
+.DS_Store
+*.log
