@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: visioninspect_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: visioninspect
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - vision_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: visioninspect_backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/visioninspect
+      - APP_ENV=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - UPLOAD_DIR=/app/uploads
+      - ALLOWED_ORIGINS=*
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    networks:
+      - vision_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Defaults to the backend container internally, or can be overridden during build
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: visioninspect_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - vision_network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: visioninspect_tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - vision_network
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  vision_network:
+    driver: bridge
