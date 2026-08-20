@@ -5,7 +5,7 @@ import { getInspectionHistory } from '../services/api.js'
 
 const PAGE_SIZE = 50
 
-
+// Maps the "Date Range" dropdown to a cutoff Date (or null for All Time)
 function getDateCutoff(dateRange) {
   const now = new Date()
 
@@ -65,6 +65,9 @@ export default function History() {
   const isFactorySupervisor = user?.role === 'factory_supervisor'
 
 
+  // ============================================================
+  // LOAD HISTORY
+  // ============================================================
   useEffect(() => {
 
     async function loadHistory() {
@@ -116,6 +119,9 @@ export default function History() {
   }, [user?.token, limit])
 
 
+  // ============================================================
+  // STATISTICS (whole loaded dataset, not just the filtered view)
+  // ============================================================
 
   const total = history.length
 
@@ -134,7 +140,9 @@ export default function History() {
   ).length
 
 
-
+  // ============================================================
+  // DYNAMIC CATEGORY OPTIONS (only categories actually present)
+  // ============================================================
 
   const categoryOptions = useMemo(() => {
     const set = new Set()
@@ -145,7 +153,9 @@ export default function History() {
   }, [history])
 
 
- 
+  // ============================================================
+  // GROUP INSPECTORS (factory supervisor landing view)
+  // ============================================================
 
   const inspectors = useMemo(() => {
     if (!isFactorySupervisor) return []
@@ -184,7 +194,9 @@ export default function History() {
   }, [history, selectedInspector])
 
 
-
+  // ============================================================
+  // MAIN FILTER + SORT (detail table view)
+  // ============================================================
 
   const filteredHistory = useMemo(() => {
     const records = selectedInspector ? selectedInspectorHistory : history

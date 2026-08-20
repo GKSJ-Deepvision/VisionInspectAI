@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import Layout from "../components/Layout";
+import loginBg from "../assets/login-background.png";
 import UploadPanel from "../components/inspection/UploadPanel";
 import ImagePreviewGrid from "../components/inspection/ImagePreviewGrid";
 import InspectionResult from "../components/inspection/InspectionResult";
@@ -146,7 +147,13 @@ export default function Inspection() {
         show={loading}
       />
 
-      <div className="min-h-screen bg-gray-950">
+      <div
+        className="min-h-screen bg-cover bg-center"
+        style={{
+          backgroundImage:
+            `linear-gradient(rgba(5,10,25,.75),rgba(5,10,25,.82)),url(${loginBg})`
+        }}
+      >
 
         
         <div className="max-w-[1600px] mx-auto px-6 py-8">

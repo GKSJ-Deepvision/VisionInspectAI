@@ -1,0 +1,28 @@
+upload_models.py
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.db
+backend/env
+backend/uploads/
+backend/outputs/
+backend/instance/
+
+# AI
+AI/processed_dataset/
+AI/outputs/evaluation/
+AI/outputs/latest/
+AI/outputs/predictions/
+AI/src/**/__pycache__/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# General
+.env
+*.zip
+.vscode/
+*.log
