@@ -2,6 +2,12 @@
 
 > **Milestone 2 Official Release** — Unsupervised Convolutional Autoencoder Anomaly Detection, YOLO Object Crop Verification, SSIM Residual Heatmap Generation, and Interactive Quality Inspection Dashboard.
 
+## Live Demo
+
+[Visit VisionInspect AI]
+
+https://visioninspectai-1.onrender.com/
+
 ---
 
 ## 📋 Table of Contents
