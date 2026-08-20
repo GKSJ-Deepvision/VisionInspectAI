@@ -81,13 +81,19 @@ export async function apiRequest(path, options = {}) {
   }
 
   let response;
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...fetchOptions,
       headers,
+      signal: controller ? controller.signal : undefined,
     });
+    if (timeoutId) clearTimeout(timeoutId);
   } catch (err) {
-    throw new ApiError(`Unable to connect to backend server at ${API_BASE_URL}. Please ensure the backend is running (python backend/main.py).`, {
+    if (timeoutId) clearTimeout(timeoutId);
+    throw new ApiError(`Unable to connect to backend server at ${API_BASE_URL}. Please ensure the backend is running.`, {
       status: 0,
       code: "NETWORK_ERROR",
       details: err.message
