@@ -8,9 +8,18 @@ __pycache__/
 # Jupyter Notebook
 .ipynb_checkpoints/
 
-# Dataset
+# Dataset & ML Output
 dataset/
 src/results/
 src/predictions/
 *.ckpt
 *.pth
+
+# Node.js & React Frontend (CRITICAL ADDITIONS)
+node_modules/
+dist/
+npm-debug.log*
+
+# OS Generated Files
+.DS_Store
+Thumbs.db

@@ -124,12 +124,41 @@ def predict_image(category: str, image_path: str, save_heatmap: bool = True) -> 
         "pred_score": round(pred_score, 4),
     }
 
-    if save_heatmap and hasattr(pred, "anomaly_map") and pred.anomaly_map is not None:
+    has_map = hasattr(pred, "anomaly_map") and pred.anomaly_map is not None
+    if has_map:
+        area_pct, dist_from_center = _map_stats(pred.anomaly_map)
+        result["defect_area_pct"] = area_pct
+        result["dist_from_center"] = dist_from_center
+
+    if save_heatmap and has_map:
         heatmap_path = _save_heatmap(pred, image_path, category)
         result["heatmap_path"] = heatmap_path
 
     print(f"[predict] RESULT: {pred_label} (score={pred_score:.4f})")
     return result
+
+
+def _map_stats(anomaly_map):
+    import numpy as np
+
+    if hasattr(anomaly_map, "cpu"):
+        anomaly_map = anomaly_map.cpu().numpy()
+    anomaly_map = np.squeeze(anomaly_map)
+
+    mean, std = anomaly_map.mean(), anomaly_map.std()
+    mask = anomaly_map > (mean + 2 * std)
+
+    area_pct = float(mask.mean() * 100)
+
+    h, w = mask.shape
+    if mask.any():
+        ys, xs = np.where(mask)
+        cy, cx = ys.mean() / h, xs.mean() / w
+    else:
+        cy, cx = 0.5, 0.5
+    dist_from_center = float(((cy - 0.5) ** 2 + (cx - 0.5) ** 2) ** 0.5)
+
+    return round(area_pct, 2), round(dist_from_center, 4)
 
 
 def _save_heatmap(pred, image_path: str, category: str) -> str:
