@@ -90,24 +90,20 @@ $$\text{Image} \longrightarrow \text{Quality Gate} \longrightarrow \text{Reconst
 ## 🖥️ Product Walkthrough
 
 ### 🔍 AI Inspection & Heatmap Overlay
-<p align="center">
-  <img src="docs/assets/inspection-result.png" width="850" alt="AI Inspection Result">
-</p>
+
+![AI Inspection Result](https://github.com/user-attachments/assets/6eb0e46b-a711-478a-af1c-8990ec0537c2)
 
 ### 🔥 Defect Localization & SSIM Analysis
-<p align="center">
-  <img src="docs/assets/defect-heatmap.png" width="850" alt="Defect Heatmap">
-</p>
+
+![Defect Heatmap](https://github.com/user-attachments/assets/c7647215-732a-468d-93ad-8a9cf9f09144)
 
 ### 📊 Executive Analytics & Trends
-<p align="center">
-  <img src="docs/assets/analytics-dashboard.png" width="850" alt="Executive Dashboard">
-</p>
+
+![Executive Dashboard](https://github.com/user-attachments/assets/8475a54d-068f-413d-ab69-9cabb1f8c993)
 
 ### 👁️ Inspector Decision Overrides
-<p align="center">
-  <img src="docs/assets/inspector-override.png" width="850" alt="Decision Override Panel">
-</p>
+
+![Inspector Decision Override Panel](https://github.com/user-attachments/assets/fa53e25b-456d-4c03-838f-3c5a5b04afec)
 
 ---
 
