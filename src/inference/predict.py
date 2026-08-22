@@ -10,10 +10,13 @@ if not torch.cuda.is_available():
           "just slower than GPU.")
 
 # --------------------------------------------------------------------------
-# CONFIGURATION - matches train_patchcore.py paths
+# CONFIGURATION - Dynamic cross-platform paths (Windows + Linux/Docker)
 # --------------------------------------------------------------------------
-RESULTS_DIR = r"D:\Internship_Project\VisionInspectAI\src\results"
-HEATMAP_OUTPUT_DIR = r"D:\Internship_Project\VisionInspectAI\src\predictions"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # src/inference
+SRC_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))  # src
+
+RESULTS_DIR = os.getenv("RESULTS_DIR", os.path.join(SRC_DIR, "results"))
+HEATMAP_OUTPUT_DIR = os.getenv("HEATMAP_OUTPUT_DIR", os.path.join(SRC_DIR, "predictions"))
 
 os.makedirs(HEATMAP_OUTPUT_DIR, exist_ok=True)
 
@@ -111,8 +114,6 @@ def predict_image(category: str, image_path: str, save_heatmap: bool = True) -> 
 
     pred = predictions[0]
 
-    # anomalib's predict batch exposes these fields on the result object;
-    # field names have been stable across recent anomalib 2.x releases.
     pred_score = float(pred.pred_score.item()) if hasattr(pred.pred_score, "item") else float(pred.pred_score)
     pred_label_raw = pred.pred_label
     pred_label = "Defective" if bool(pred_label_raw) else "Normal"
@@ -171,7 +172,6 @@ def _save_heatmap(pred, image_path: str, category: str) -> str:
         anomaly_map = anomaly_map.cpu().numpy()
     anomaly_map = np.squeeze(anomaly_map)
 
-    # Normalize to 0-255 for a color heatmap
     normed = (anomaly_map - anomaly_map.min()) / (anomaly_map.max() - anomaly_map.min() + 1e-8)
     heatmap = cv2.applyColorMap((normed * 255).astype("uint8"), cv2.COLORMAP_JET)
 

@@ -1,153 +1,136 @@
+Here is a fully updated, professional version of your `README.md` that reflects the massive amount of work you have accomplished.
+
+I have moved the project from the "EDA and Setup" phase to a fully completed, full-stack, Dockerized application. It highlights your frontend, backend, AI integration, and the exact steps to run it.
+
+Copy this entire block and replace the contents of your current `README.md`:
+
+```markdown
 # VisionInspect AI
 
-VisionInspect AI is an AI-powered industrial quality inspection project that detects defects in manufacturing products using Computer Vision and Deep Learning.
+VisionInspect AI is a full-stack, AI-powered industrial quality inspection system designed to automate defect detection in manufacturing environments using Computer Vision and Deep Learning.
 
-The project uses the **MVTec Anomaly Detection (MVTec AD)** dataset to perform Exploratory Data Analysis (EDA), image preprocessing, and anomaly detection using the **PatchCore** model.
-
----
-
-## Project Goals
-
-- Perform Exploratory Data Analysis (EDA)
-- Build an image preprocessing pipeline
-- Implement PatchCore for anomaly detection
-- Generate anomaly heatmaps
-- Integrate the AI module into the complete application
+Leveraging the **MVTec Anomaly Detection (MVTec AD)** dataset, the system utilizes the **PatchCore** architecture to identify surface anomalies, generate severity scores, and render real-time defect heatmaps within a dedicated HUD telemetry dashboard.
 
 ---
 
-## Current Progress
+## 🚀 Key Features
 
-### ✅ Completed
-
-- Environment Setup
-- Datase
-- Exploratory Data Analysis (EDA)
-- Image Preprocessing
-
-### 🚧 In Progress
-
-- PatchCore Model Configuration
-
-### ⏳ Upcoming
-
-- Feature Extraction
-- Model Training
-- Model Evaluation
-- Prediction Pipeline
+- **Automated Defect Detection:** Unsupervised anomaly detection using PyTorch and the PatchCore model.
+- **Live Visual Matrix:** Real-time side-by-side comparison of the raw optical feed and the AI-generated defect heatmap overlay.
+- **Role-Based Access Control (RBAC):** Secure JWT authentication with distinct permission levels for Admins, Quality Engineers, and Factory Supervisors.
+- **Automated Severity Scoring:** Calculates the exact defect area percentage and spatial distance from the center to assign a severity grade (Low/Medium/High).
+- **Fully Containerized:** One-click cross-platform deployment using Docker and Docker Compose.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- Python
-- OpenCV
-- NumPy
-- Pandas
-- Matplotlib
-- Jupyter Notebook
-- Visual Studio Code
-- Git & GitHub
+**Frontend**
+- React & Vite
+- Tailwind CSS
 
-**Upcoming**
+**Backend**
+- Python 3
+- FastAPI & Uvicorn
+- SQLite & SQLAlchemy ORM
+- JWT Authentication
 
-- PyTorch
-- PatchCore
-- Anomalib
+**AI & Computer Vision**
+- PyTorch & Torchvision
+- Anomalib (PatchCore)
+- OpenCV & NumPy
+
+**DevOps & Infrastructure**
+- Docker & Docker Compose
+- Cloudflare Tunnels (Remote Access)
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```text
 VisionInspectAI/
 │
-├── dataset/
-│   └── mvtec_anomaly_detection/
-│
-├── output_charts/
-│
+├── dataset/                  # MVTec AD Dataset
 ├── src/
-│   └── notebooks/
-│       └── MVTec_AD_EDA.ipynb
+│   ├── backend/              # FastAPI application, auth, and SQLite DB
+│   ├── frontend/             # React/Vite telemetry dashboard
+│   ├── inference/            # PyTorch predictive logic & dynamic paths
+│   ├── notebooks/            # Original EDA & preprocessing scripts
+│   └── predictions/          # Generated heatmaps and fallback overlays
 │
+├── docker-compose.yml        # Multi-container orchestration
 ├── README.md
-├── requirements.txt
-├── .gitignore
-└── LICENSE
+└── .gitignore
+
 ```
 
 ---
 
-## Dataset
+## ⚙️ Installation & Deployment
 
-This project uses the **MVTec AD** dataset, which contains:
+This project is fully containerized. You do not need to install local Python environments or Node modules to run the application.
 
-- 15 industrial categories
-- Normal and defective images
-- Pixel-level ground truth masks
-- High-resolution RGB images
+### 1. Prerequisites
 
----
+Ensure you have the following installed on your machine:
 
-## Installation
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+* Git
 
-Clone the repository:
+### 2. Clone the Repository
 
 ```bash
 git clone <repository-url>
-```
-
-Move into the project directory:
-
-```bash
 cd VisionInspectAI
+
 ```
 
-Create a virtual environment:
+### 3. Run the Application
+
+Build and spin up the backend API and frontend dashboard simultaneously using Docker Compose:
 
 ```bash
-python -m venv .venv
+docker compose up --build
+
 ```
 
-Activate the virtual environment:
+### 4. Access the Dashboard
 
-**Windows**
+Once the terminal displays `Application startup complete`, open your browser and navigate to:
 
-```bash
-.venv\Scripts\activate
-```
+* **Frontend UI:** `http://localhost:5173`
+* **Backend API Docs (Swagger):** `http://localhost:8000/docs`
 
-**Linux / macOS**
-
-```bash
-source .venv/bin/activate
-```
-
-Install the required packages:
-
-```bash
-pip install -r requirements.txt
-```
+*(Note: Default demo accounts for `admin` and `supervisor` are automatically seeded upon database initialization for immediate testing).*
 
 ---
 
-## Roadmap
+## 📈 Project Roadmap & Status
 
-- [x] Environment Setup
-- [x] Dataset Exploration (EDA)
-- [x] Image Preprocessing
-- [ ] PatchCore Configuration
-- [ ] Feature Extraction
-- [ ] Model Training
-- [ ] Model Evaluation
-- [ ] Prediction
+* [x] Environment Setup & Dataset Exploration (EDA)
+* [x] Image Preprocessing & Feature Extraction
+* [x] PatchCore Model Training & Configuration
+* [x] FastAPI Backend Development & SQLite Integration
+* [x] React/Vite Frontend Dashboard Development
+* [x] Seamless AI Prediction Pipeline Integration
+* [x] Dynamic Cross-Platform Pathing & Base64 Image Rendering
+* [x] Docker Containerization & Deployment
 
 ---
 
-## Future Work
+## 📝 License
 
-- Complete PatchCore implementation
-- Train and evaluate the model
-- Generate anomaly heatmaps
-- Integrate backend and frontend
+This project is licensed under the MIT License.
+
+```
+
+### Next Steps:
+1. Copy the code above and paste it into your `README.md` file.
+2. Save the file (**`Ctrl + S`**).
+3. Run your Git commands to push this updated README to GitHub along with your other changes! 
+   * `git add .`
+   * `git commit -m "Update README to reflect final full-stack application and Docker instructions"`
+   * `git push`
+
+```

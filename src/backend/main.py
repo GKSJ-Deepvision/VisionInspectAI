@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import tempfile
+import base64
 from datetime import timedelta
 
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
@@ -10,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from database import Base, engine, get_db
+from database import Base, engine, get_db, SessionLocal
 from models import User, InspectionLog
 from schemas import UserCreate, UserOut, Token, InspectionOut, RoleUpdate
 from auth import (
@@ -18,20 +19,9 @@ from auth import (
     get_current_user, require_roles, ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
-# predict.py lives in src/inference/, backend/ is a sibling folder under src/
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "inference"))
 from predict import predict_image, find_checkpoint
 from severity import calculate_severity
-
-Base.metadata.create_all(bind=engine)
-
-PREDICTIONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "predictions")
-
-ALL_CATEGORIES = [
-    "bottle", "cable", "capsule", "carpet", "grid",
-    "hazelnut", "leather", "metal_nut", "pill", "screw",
-    "tile", "toothbrush", "transistor", "wood", "zipper",
-]
 
 app = FastAPI(title="VisionInspect AI API")
 
@@ -42,6 +32,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
+
+@app.on_event("startup")
+def seed_demo_users():
+    db = SessionLocal()
+    try:
+        admin_user = db.query(User).filter(User.username == "admin").first()
+        if not admin_user:
+            admin = User(
+                username="admin",
+                hashed_password=hash_password("admin123"),
+                role="admin"
+            )
+            db.add(admin)
+            db.commit()
+
+        supervisor_user = db.query(User).filter(User.username == "supervisor").first()
+        if not supervisor_user:
+            supervisor = User(
+                username="supervisor",
+                hashed_password=hash_password("supervisor123"),
+                role="factory_supervisor"
+            )
+            db.add(supervisor)
+            db.commit()
+    finally:
+        db.close()
+
+PREDICTIONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "predictions")
+
+ALL_CATEGORIES = [
+    "bottle", "cable", "capsule", "carpet", "grid",
+    "hazelnut", "leather", "metal_nut", "pill", "screw",
+    "tile", "toothbrush", "transistor", "wood", "zipper",
+]
 
 @app.post("/auth/register", response_model=UserOut)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
@@ -49,8 +74,6 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    # Role is never taken from the request body - public self-registration
-    # always lands as the lowest-privilege role. See schemas.UserCreate.
     user = User(
         username=user_in.username,
         hashed_password=hash_password(user_in.password),
@@ -61,7 +84,6 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
-
 @app.patch("/users/{user_id}/role", response_model=UserOut)
 def update_user_role(
     user_id: int,
@@ -69,10 +91,6 @@ def update_user_role(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles("admin")),
 ):
-    """Admin-only. The only way an account becomes admin / quality_engineer -
-    public registration always forces factory_supervisor (see /auth/register).
-    Bootstrapping the very first admin has to happen out-of-band (direct DB
-    edit or a one-off script), since no admin exists yet to grant that role."""
     valid_roles = {"admin", "quality_engineer", "factory_supervisor"}
     if role_in.role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {sorted(valid_roles)}")
@@ -86,7 +104,6 @@ def update_user_role(
     db.refresh(user)
     return user
 
-
 @app.post("/auth/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
@@ -99,17 +116,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     )
     return {"access_token": token, "token_type": "bearer"}
 
-
 @app.get("/auth/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
 
-
 @app.get("/categories")
 def get_categories(current_user: User = Depends(get_current_user)):
-    """Checks which categories actually have a trained checkpoint on disk,
-    rather than assuming all 15 exist - avoids the frontend offering a
-    category that hasn't finished training yet."""
     available, missing = [], []
     for cat in ALL_CATEGORIES:
         try:
@@ -118,7 +130,6 @@ def get_categories(current_user: User = Depends(get_current_user)):
         except FileNotFoundError:
             missing.append(cat)
     return {"available": available, "missing": missing, "total": len(ALL_CATEGORIES)}
-
 
 @app.post("/predict")
 async def predict(
@@ -137,12 +148,30 @@ async def predict(
 
     try:
         result = predict_image(category, tmp_path, save_heatmap=True)
+        
+        # --- THE ULTIMATE FALLBACK ---
+        # If the item passes and no anomaly map is generated, copy the original image!
+        if not result.get("heatmap_path") or not os.path.exists(result.get("heatmap_path", "")):
+            os.makedirs(PREDICTIONS_DIR, exist_ok=True)
+            fallback_name = f"fallback_{os.path.basename(tmp_path)}.png"
+            fallback_path = os.path.join(PREDICTIONS_DIR, fallback_name)
+            shutil.copy(tmp_path, fallback_path)
+            result["heatmap_path"] = fallback_path
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        os.remove(tmp_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
     heatmap_filename = os.path.basename(result["heatmap_path"]) if result.get("heatmap_path") else None
+
+    # --- THE BULLETPROOF BASE64 FIX ---
+    heatmap_data_uri = None
+    if result.get("heatmap_path") and os.path.exists(result["heatmap_path"]):
+        with open(result["heatmap_path"], "rb") as img_file:
+            b64_str = base64.b64encode(img_file.read()).decode("utf-8")
+            heatmap_data_uri = f"data:image/png;base64,{b64_str}"
 
     severity = None
     if result["pred_label"] == "Defective":
@@ -170,20 +199,14 @@ async def predict(
         "pred_label": result["pred_label"],
         "pred_score": result["pred_score"],
         "verdict": "FAIL" if result["pred_label"] == "Defective" else "PASS",
-        "heatmap_url": f"/heatmap/{heatmap_filename}" if heatmap_filename else None,
+        "heatmap_url": heatmap_data_uri,
     }
     if severity:
         response.update(severity)
     return response
 
-
 @app.get("/heatmap/{filename}")
 def get_heatmap(filename: str):
-    # Heatmap filenames are always generated internally as
-    # {category}_{base_name}_heatmap.png, so a legitimate request should
-    # never contain path separators. Reject anything where the basename
-    # doesn't match the raw value (e.g. "../../etc/passwd") before it ever
-    # touches the filesystem.
     if os.path.basename(filename) != filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
@@ -191,7 +214,6 @@ def get_heatmap(filename: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Heatmap not found")
     return FileResponse(path)
-
 
 @app.get("/history", response_model=list[InspectionOut])
 def get_history(
@@ -201,12 +223,10 @@ def get_history(
 ):
     query = db.query(InspectionLog).order_by(InspectionLog.id.desc())
     if current_user.role == "factory_supervisor":
-        pass  # supervisors can view all inspections, just not trigger new ones
+        pass  
     else:
-        # admin / quality_engineer roles only see their own inspection runs
         query = query.filter(InspectionLog.user_id == current_user.id)
     return query.limit(limit).all()
-
 
 @app.get("/health")
 def health():
