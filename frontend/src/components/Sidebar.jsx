@@ -23,7 +23,7 @@ function Sidebar() {
     }`;
 
   return (
-    <aside className="hidden md:flex w-64 min-h-screen bg-[#1F2937] border-r border-gray-700 flex-col">
+    <aside className="w-64 min-h-screen bg-[#1F2937] border-r border-gray-700 flex flex-col">
 
       {/* ================= LOGO ================= */}
 
