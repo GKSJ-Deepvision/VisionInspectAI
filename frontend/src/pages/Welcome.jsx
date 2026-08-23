@@ -495,7 +495,7 @@ function Welcome() {
 
               <div className="mt-7 pt-6 border-t border-gray-700 flex flex-col gap-4">
 
-                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-gray-300">
 
                   <CheckCircle2
                     size={16}
