@@ -26,7 +26,7 @@ function Inspection() {
   const fetchHistory = async () => {
     try {
       const res = await axios.get(
-       `${import.meta.env.VITE_API_URL}/history`,
+        `${import.meta.env.VITE_API_URL}/history`,
         {
           params: {
             search,
@@ -153,7 +153,7 @@ function Inspection() {
 
         {/* Right Controls */}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
 
           {/* Filter */}
 
@@ -163,6 +163,7 @@ function Inspection() {
               setFilter(e.target.value)
             }
             className="
+              w-full sm:w-auto
               bg-[#1F2937]
               border border-gray-700
               rounded-xl
@@ -193,7 +194,8 @@ function Inspection() {
           <button
             onClick={exportCSV}
             className="
-              flex items-center gap-2
+              w-full sm:w-auto
+              flex items-center justify-center gap-2
               bg-emerald-500
               hover:bg-emerald-600
               px-5
@@ -215,7 +217,6 @@ function Inspection() {
 
       </div>
 
-
       {/* =====================================================
           USER INFO
       ===================================================== */}
@@ -234,7 +235,6 @@ function Inspection() {
 
       </div>
 
-
       {/* =====================================================
           HISTORY TABLE
       ===================================================== */}
@@ -243,13 +243,14 @@ function Inspection() {
         className="
           bg-[#1F2937]
           rounded-2xl
-          p-6
+          p-3
+          sm:p-6
           shadow-lg
           overflow-x-auto
         "
       >
 
-        <table className="w-full table-fixed">
+        <table className="w-full min-w-[1000px] table-fixed">
 
           {/* =================================================
               TABLE HEADER
@@ -258,8 +259,6 @@ function Inspection() {
           <thead>
 
             <tr className="border-b border-gray-700">
-
-              {/* Filename */}
 
               <th
                 className="
@@ -274,9 +273,6 @@ function Inspection() {
                 Filename
               </th>
 
-
-              {/* Status */}
-
               <th
                 className="
                   py-4 px-3
@@ -289,9 +285,6 @@ function Inspection() {
               >
                 Status
               </th>
-
-
-              {/* Size */}
 
               <th
                 className="
@@ -306,9 +299,6 @@ function Inspection() {
                 Size
               </th>
 
-
-              {/* Defect */}
-
               <th
                 className="
                   py-4 px-3
@@ -321,9 +311,6 @@ function Inspection() {
               >
                 Result
               </th>
-
-
-              {/* Severity */}
 
               <th
                 className="
@@ -338,9 +325,6 @@ function Inspection() {
                 Severity
               </th>
 
-
-              {/* Risk */}
-
               <th
                 className="
                   py-4 px-3
@@ -353,9 +337,6 @@ function Inspection() {
               >
                 Risk
               </th>
-
-
-              {/* Confidence */}
 
               <th
                 className="
@@ -370,9 +351,6 @@ function Inspection() {
                 Confidence
               </th>
 
-
-              {/* Date */}
-
               <th
                 className="
                   py-4 px-3
@@ -385,9 +363,6 @@ function Inspection() {
               >
                 Date
               </th>
-
-
-              {/* Action */}
 
               <th
                 className="
@@ -406,7 +381,6 @@ function Inspection() {
 
           </thead>
 
-
           {/* =================================================
               TABLE BODY
           ================================================= */}
@@ -416,10 +390,6 @@ function Inspection() {
             {history.length > 0 ? (
 
               history.map((item) => {
-
-                // -------------------------------------------
-                // CHECK NO DEFECT
-                // -------------------------------------------
 
                 const isNoDefect =
                   item.defect === "No Defect";
@@ -436,9 +406,7 @@ function Inspection() {
                     "
                   >
 
-                    {/* =================================================
-                        FILENAME
-                    ================================================= */}
+                    {/* Filename */}
 
                     <td
                       className="
@@ -452,10 +420,7 @@ function Inspection() {
                       {item.filename || "—"}
                     </td>
 
-
-                    {/* =================================================
-                        STATUS
-                    ================================================= */}
+                    {/* Status */}
 
                     <td className="py-5 px-3">
 
@@ -479,10 +444,7 @@ function Inspection() {
 
                     </td>
 
-
-                    {/* =================================================
-                        SIZE
-                    ================================================= */}
+                    {/* Size */}
 
                     <td
                       className="
@@ -492,18 +454,13 @@ function Inspection() {
                         whitespace-nowrap
                       "
                     >
-
                       {item.width &&
                       item.height
                         ? `${item.width} × ${item.height}`
                         : "—"}
-
                     </td>
 
-
-                    {/* =================================================
-                        DEFECT
-                    ================================================= */}
+                    {/* Result */}
 
                     <td className="py-5 px-3">
 
@@ -532,10 +489,7 @@ function Inspection() {
 
                     </td>
 
-
-                    {/* =================================================
-                        SEVERITY
-                    ================================================= */}
+                    {/* Severity */}
 
                     <td className="py-5 px-3">
 
@@ -566,10 +520,7 @@ function Inspection() {
 
                     </td>
 
-
-                    {/* =================================================
-                        RISK
-                    ================================================= */}
+                    {/* Risk */}
 
                     <td className="py-5 px-3">
 
@@ -600,10 +551,7 @@ function Inspection() {
 
                     </td>
 
-
-                    {/* =================================================
-                        CONFIDENCE
-                    ================================================= */}
+                    {/* Confidence */}
 
                     <td
                       className="
@@ -614,19 +562,14 @@ function Inspection() {
                       "
                     >
 
-                      {item.confidence !==
-                        undefined &&
-                      item.confidence !==
-                        null
+                      {item.confidence !== undefined &&
+                      item.confidence !== null
                         ? `${item.confidence}%`
                         : "—"}
 
                     </td>
 
-
-                    {/* =================================================
-                        DATE
-                    ================================================= */}
+                    {/* Date */}
 
                     <td
                       className="
@@ -641,18 +584,13 @@ function Inspection() {
 
                     </td>
 
-
-                    {/* =================================================
-                        ACTION
-                    ================================================= */}
+                    {/* Action */}
 
                     <td className="py-5 px-3 text-center">
 
                       <button
                         onClick={() =>
-                          deleteHistory(
-                            item._id
-                          )
+                          deleteHistory(item._id)
                         }
                         className="
                           inline-flex
