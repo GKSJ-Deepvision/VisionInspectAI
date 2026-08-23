@@ -228,7 +228,9 @@ function Welcome() {
         </section>
 
 
-        {/* ================= INSPECTION CONSOLE ================= */}
+        {/* ================================================= */}
+        {/*              INSPECTION CONSOLE                    */}
+        {/* ================================================= */}
 
         <div
           className={`transition-all duration-700 ease-in-out overflow-hidden ${
@@ -343,6 +345,7 @@ function Welcome() {
 
                   </div>
 
+
                   <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1F2937]/95 border border-gray-600">
 
                     <ScanSearch
@@ -355,6 +358,7 @@ function Welcome() {
                     </span>
 
                   </div>
+
 
                   <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1F2937]/95 border border-gray-600">
 
@@ -489,9 +493,9 @@ function Welcome() {
 
               {/* ================= ACTION ================= */}
 
-              <div className="mt-7 pt-6 border-t border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="mt-7 pt-6 border-t border-gray-700 flex flex-col gap-4">
 
-                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs text-gray-500 text-center sm:text-left">
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
 
                   <CheckCircle2
                     size={16}
@@ -510,8 +514,6 @@ function Welcome() {
                   className="
                     group
                     w-full
-                    sm:w-auto
-                    min-h-[48px]
                     flex
                     items-center
                     justify-center
@@ -519,8 +521,7 @@ function Welcome() {
                     bg-emerald-500
                     hover:bg-emerald-600
                     px-5
-                    sm:px-7
-                    py-3.5
+                    py-4
                     rounded-xl
                     font-semibold
                     text-sm
@@ -528,7 +529,6 @@ function Welcome() {
                     duration-300
                     shadow-lg
                     shadow-emerald-500/10
-                    whitespace-nowrap
                   "
                 >
 
@@ -536,7 +536,7 @@ function Welcome() {
 
                   <ArrowRight
                     size={17}
-                    className="group-hover:translate-x-1 transition-transform shrink-0"
+                    className="group-hover:translate-x-1 transition-transform"
                   />
 
                 </button>
