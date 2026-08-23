@@ -233,10 +233,10 @@ function Welcome() {
         {/* ================================================= */}
 
         <div
-          className={`transition-all duration-700 ease-in-out overflow-hidden ${
+          className={`transition-all duration-700 ease-in-out ${
             open
-              ? "max-h-[1400px] opacity-100 scale-100 mb-16"
-              : "max-h-0 opacity-0 scale-[0.96]"
+              ? "max-h-[3000px] opacity-100 scale-100 mb-16"
+              : "max-h-0 opacity-0 scale-[0.96] overflow-hidden"
           }`}
         >
 
