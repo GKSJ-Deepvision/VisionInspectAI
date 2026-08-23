@@ -65,8 +65,6 @@ function Welcome() {
 
         <div className="h-full px-5 sm:px-8 lg:px-12 flex items-center justify-between">
 
-          {/* Logo */}
-
           <div className="flex items-center gap-3">
 
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -125,8 +123,6 @@ function Welcome() {
           }`}
         >
 
-          {/* Status Badge */}
-
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] sm:text-xs font-semibold tracking-wide">
 
             <span className="relative flex h-2 w-2">
@@ -184,17 +180,9 @@ function Welcome() {
                 className="group relative w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-[#1F2937] border border-emerald-500/30 hover:border-emerald-400/70 transition-all duration-500 shadow-2xl shadow-emerald-500/10"
               >
 
-                {/* Outer Ring */}
-
                 <div className="absolute inset-[-14px] rounded-full border border-emerald-500/10 group-hover:border-emerald-500/30 group-hover:scale-110 transition-all duration-700" />
 
-
-                {/* Rotating Ring */}
-
                 <div className="absolute inset-[-5px] rounded-full border-t-2 border-r border-emerald-400/80 animate-spin [animation-duration:4s]" />
-
-
-                {/* Inner Circle */}
 
                 <div className="absolute inset-8 rounded-full bg-emerald-500/10 flex flex-col items-center justify-center group-hover:bg-emerald-500/15 transition-colors">
 
@@ -209,17 +197,12 @@ function Welcome() {
 
                 </div>
 
-
-                {/* Status */}
-
                 <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#111827] border border-gray-700 text-[9px] text-emerald-400 whitespace-nowrap">
                   SYSTEM READY
                 </span>
 
               </button>
 
-
-              {/* Explore */}
 
               <button
                 onClick={() => {
@@ -245,9 +228,7 @@ function Welcome() {
         </section>
 
 
-        {/* ================================================= */}
-        {/*              INSPECTION CONSOLE                    */}
-        {/* ================================================= */}
+        {/* ================= INSPECTION CONSOLE ================= */}
 
         <div
           className={`transition-all duration-700 ease-in-out overflow-hidden ${
@@ -258,8 +239,6 @@ function Welcome() {
         >
 
           <section className="relative bg-[#1F2937] border border-gray-700 rounded-3xl shadow-2xl overflow-hidden">
-
-            {/* Console Glow */}
 
             <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 blur-3xl pointer-events-none" />
 
@@ -330,8 +309,6 @@ function Welcome() {
 
                 <div className="relative h-[290px] sm:h-[340px] rounded-2xl bg-[#111827] border border-gray-700 overflow-hidden">
 
-                  {/* Grid */}
-
                   <div
                     className="absolute inset-0 opacity-20"
                     style={{
@@ -341,13 +318,7 @@ function Welcome() {
                     }}
                   />
 
-
-                  {/* Moving Scan Line */}
-
                   <div className="absolute left-0 right-0 top-0 h-[2px] bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)] animate-[inspectionScan_3s_linear_infinite]" />
-
-
-                  {/* Product */}
 
                   <div className="absolute inset-0 flex items-center justify-center">
 
@@ -358,9 +329,6 @@ function Welcome() {
                         className="text-gray-400"
                       />
 
-
-                      {/* Bounding Box */}
-
                       <div className="absolute -right-7 top-7 w-24 h-20 border-2 border-red-400">
 
                         <span className="absolute -top-6 left-0 bg-red-500 text-white px-2 py-1 rounded text-[9px] font-bold">
@@ -369,17 +337,11 @@ function Welcome() {
 
                       </div>
 
-
-                      {/* Center Scan */}
-
                       <div className="absolute left-0 right-0 top-1/2 h-[2px] bg-emerald-400/80 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
 
                     </div>
 
                   </div>
-
-
-                  {/* Computer Vision */}
 
                   <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1F2937]/95 border border-gray-600">
 
@@ -393,9 +355,6 @@ function Welcome() {
                     </span>
 
                   </div>
-
-
-                  {/* Analysis Status */}
 
                   <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1F2937]/95 border border-gray-600">
 
@@ -439,8 +398,6 @@ function Welcome() {
 
                   </p>
 
-
-                  {/* ================= PIPELINE STEPS ================= */}
 
                   <div className="mt-6 space-y-3">
 
@@ -532,30 +489,54 @@ function Welcome() {
 
               {/* ================= ACTION ================= */}
 
-              <div className="mt-7 pt-6 border-t border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="mt-7 pt-6 border-t border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs text-gray-500 text-center sm:text-left">
 
                   <CheckCircle2
                     size={16}
-                    className="text-emerald-400"
+                    className="text-emerald-400 shrink-0"
                   />
 
-                  Ready for a new inspection
+                  <span>
+                    Ready for a new inspection
+                  </span>
 
                 </div>
 
 
                 <button
                   onClick={() => navigate("/upload")}
-                  className="group w-full sm:w-auto flex items-center justify-center gap-3 bg-emerald-500 hover:bg-emerald-600 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 shadow-lg shadow-emerald-500/10"
+                  className="
+                    group
+                    w-full
+                    sm:w-auto
+                    min-h-[48px]
+                    flex
+                    items-center
+                    justify-center
+                    gap-3
+                    bg-emerald-500
+                    hover:bg-emerald-600
+                    px-5
+                    sm:px-7
+                    py-3.5
+                    rounded-xl
+                    font-semibold
+                    text-sm
+                    transition-all
+                    duration-300
+                    shadow-lg
+                    shadow-emerald-500/10
+                    whitespace-nowrap
+                  "
                 >
 
                   Start New Inspection
 
                   <ArrowRight
                     size={17}
-                    className="group-hover:translate-x-1 transition-transform"
+                    className="group-hover:translate-x-1 transition-transform shrink-0"
                   />
 
                 </button>
@@ -567,7 +548,7 @@ function Welcome() {
           </section>
 
         </div>
-       
+
       </main>
 
 
@@ -622,8 +603,6 @@ function WorkflowStep({
       }`}
     >
 
-      {/* Number */}
-
       <div
         className={`w-6 shrink-0 text-[9px] font-mono transition-colors ${
           active
@@ -635,8 +614,6 @@ function WorkflowStep({
       </div>
 
 
-      {/* Icon */}
-
       <div
         className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-all duration-500 ${
           active
@@ -647,8 +624,6 @@ function WorkflowStep({
         {icon}
       </div>
 
-
-      {/* Text */}
 
       <div className="min-w-0">
 
@@ -662,14 +637,12 @@ function WorkflowStep({
           {title}
         </p>
 
-       <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-400 mt-1">
           {description}
         </p>
 
       </div>
 
-
-      {/* Active Indicator */}
 
       {active && (
 
