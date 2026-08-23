@@ -6,6 +6,7 @@ pandas==3.0.3
 pillow==12.2.0
 scikit-learn==1.6.1
 openvino==2026.2.1
+onnx==1.22.0
 
 # Training and advanced anomaly models
 anomalib==2.5.0

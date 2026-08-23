@@ -37,23 +37,26 @@ Product image and category
 
 ### Portable anomaly detection
 
-- A shared ResNet18 ONNX feature extractor generates image embeddings.
-- Each category stores a normal embedding memory and calibrated threshold in `normal_profile.npz` and `model_metadata.json`.
-- OpenCV residual analysis localizes suspicious regions and produces defect masks and heatmaps.
-- Cable additionally includes an exported OpenVINO PatchCore model and calibrated compact runtime.
+- A shared ResNet18 OpenVINO FP16 feature extractor generates spatial features without loading PyTorch in the deployed runtime.
+- All 15 categories include an OpenVINO detector export plus a category-specific normal profile, calibrator, threshold, metadata, and subtype classifier.
+- Category models are loaded lazily and runtime caches are bounded to control memory usage on constrained services.
+- OpenCV reference and residual analysis remains an interpretable baseline and fallback for difference maps, masks, and heatmaps.
+- Selected categories also include compact portable detector calibrators, while bottle and carpet include ONNX CNN subtype classifiers.
 
 ### Defect subtype classification
 
 - Category-specific classifiers predict the defect subtype only after anomaly detection marks an image as defective.
 - Classifiers use ResNet18 embeddings or category-specific visual and texture features.
-- Portable classifier artifacts are stored as `.pkl` and `.npz` files, with the shared ResNet18 feature extractor stored as ONNX.
+- Portable classifier artifacts are stored as `.pkl`, `.npz`, and selected `.onnx` files, with the shared ResNet18 feature extractor stored as OpenVINO FP16 XML/BIN.
 - Strict subtype scores are reported separately from Good/Defective detection scores; categories with limited subtype samples are not presented as having artificial 90%+ performance.
 
 ### Current evaluation position
 
-- All 15 category detectors exceed 90% image-level accuracy, F1, and AUROC for Good/Defective detection in the current evaluation artifacts.
-- Pill has 94.01% detector accuracy and 96.45% F1, while its balanced accuracy is 88.61% because the normal and defective classes remain uneven.
-- Subtype classification exceeds 90% accuracy for cable, hazelnut, metal nut, tile, transistor, and the single-subtype toothbrush category. Other categories require more labeled subtype data rather than test-set threshold tuning.
+- Mean Good/Defective F1 across all 15 categories is 94.67%; every category is at or above the 90% binary-F1 release target.
+- Mean subtype macro F1 is 78.45%, while the Render-compatible audit mean is 74.81%; binary detection and subtype classification are therefore reported separately.
+- Five subtype profiles currently satisfy the combined production gate: `hazelnut`, `leather`, `metal_nut`, `tile`, and `toothbrush`.
+- The remaining ten profiles stay confidence-gated and return `unknown_defect` plus Review when subtype evidence is insufficient.
+- Toothbrush contains one defect subtype, so its 100% subtype score is not presented as a multi-class comparison.
 
 ## Repository Structure
 
@@ -134,6 +137,10 @@ python scripts/benchmark_category_models.py --categories cable
 # Calibrate category thresholds and portable runtime artifacts
 python scripts/calibrate_category_thresholds.py --categories cable
 
+# Benchmark category candidates and promote only verified improvements
+python scripts/promote_category_benchmarks.py --categories cable
+python scripts/promote_optimal_classifiers.py
+
 # Export every available advanced anomaly checkpoint to OpenVINO
 python scripts/export_openvino.py
 
@@ -175,18 +182,16 @@ Severity score =
 
 ## Recorded Evaluation Highlights
 
-| Model or pipeline | Main result |
+| Measurement | Current committed result |
 | --- | ---: |
-| Bottle PaDiM image AUROC | 0.9968 |
-| Bottle PaDiM image F1 | 0.9764 |
-| Bottle portable detector AUROC | 0.9913 |
-| Bottle subtype classifier macro F1 | 0.8719 |
-| Cable PatchCore image AUROC | 0.9695 |
-| Cable PatchCore image F1 | 0.9274 |
-| Cable OpenVINO calibrated detector F1 | 0.9670 |
-| Cable defect subtype classifier macro F1 | 0.8529 |
+| Categories with portable OpenVINO exports | 15 / 15 |
+| Mean Good/Defective F1 | 94.67% |
+| Mean Good/Defective AUROC | 97.54% |
+| Mean subtype macro F1 | 78.45% |
+| Mean Render-compatible subtype macro F1 | 74.81% |
+| Production-gated subtype profiles | 5 / 15 |
 
-Metrics are read from the committed category metadata. They should be interpreted with their documented validation protocol; subtype results use the labelled MVTec defect folders and are separate from the official anomaly-detection benchmark.
+Metrics are read from each committed `model_metadata.json`. Binary detection, subtype classification, and Render-compatible audit values use separate fields and must not be combined into one accuracy claim.
 
 ## Testing
 
@@ -210,8 +215,8 @@ Committed:
 
 - AI/ML source code and notebooks
 - model metadata and calibrated portable artifacts
-- shared ONNX feature extractor
-- selected OpenVINO and ONNX runtimes
+- shared OpenVINO FP16 feature extractor
+- all 15 category OpenVINO exports and selected ONNX subtype runtimes
 - AI/ML scripts and tests
 
 Excluded:

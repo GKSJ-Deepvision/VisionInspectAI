@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
@@ -20,6 +21,7 @@ ROI_TEXTURE_FEATURE_MODE = "global_roi_texture"
 ROI_SHAPE_TEXTURE_FEATURE_MODE = "global_roi_shape_texture"
 ROI_PIXEL_TEXTURE_FEATURE_MODE = "global_roi_pixel_texture"
 HANDCRAFTED_ROI_SHAPE_FEATURE_MODE = "handcrafted_roi_shape_texture"
+PORTABLE_MODEL_CACHE_SIZE = max(1, min(int(os.getenv("CLASSIFIER_MODEL_CACHE_SIZE", "2")), 4))
 FEATURE_EXTRACTOR_NAME = "resnet18_imagenet1k_v1"
 GLOBAL_TEXTURE_EXTRACTOR_NAME = "resnet18_imagenet1k_v1_plus_texture"
 ROI_TEXTURE_EXTRACTOR_NAME = "resnet18_imagenet1k_v1_plus_roi_texture_geometry"
@@ -29,7 +31,10 @@ HANDCRAFTED_ROI_SHAPE_EXTRACTOR_NAME = "opencv_texture_gradient_color_mask_shape
 MASK_SHAPE_FEATURE_LENGTH = 284
 ROI_PIXEL_FEATURE_LENGTH = 3072
 DEFAULT_RESNET_WEIGHTS_PATH = Path(__file__).resolve().parents[1] / "models" / "inference" / "resnet18-f37072fd.pth"
-DEFAULT_RESNET_ONNX_PATH = Path(__file__).resolve().parents[1] / "models" / "inference" / "resnet18_features.onnx"
+DEFAULT_RESNET_ONNX_PATH = Path(__file__).resolve().parents[1] / "models" / "shared" / "resnet18_features.onnx"
+DEFAULT_RESNET_OPENVINO_PATH = (
+    Path(__file__).resolve().parents[1] / "models" / "shared" / "resnet18_features_fp16.xml"
+)
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
@@ -48,6 +53,32 @@ class OpenCVResNet18FeatureExtractor:
                 batch = np.stack([preprocess(image) for image in images[start : start + batch_size]])
                 self.net.setInput(batch.astype(np.float32, copy=False))
                 features.append(self.net.forward().reshape(len(batch), -1))
+        return np.vstack(features).astype(np.float32, copy=False)
+
+
+class OpenVINOResNet18FeatureExtractor:
+    """Run the shared FP16 feature extractor with a bounded OpenVINO CPU runtime."""
+
+    def __init__(self, model_path: str | Path):
+        import openvino as ov
+
+        core = ov.Core()
+        self.model = core.compile_model(
+            str(model_path),
+            "CPU",
+            {"INFERENCE_NUM_THREADS": "1", "NUM_STREAMS": "1", "PERFORMANCE_HINT": "LATENCY"},
+        )
+        self.input = self.model.input(0)
+        self.output = self.model.output(0)
+        self.lock = Lock()
+
+    def extract(self, images: list[Image.Image], preprocess, batch_size: int = 16) -> np.ndarray:
+        features: list[np.ndarray] = []
+        with self.lock:
+            for start in range(0, len(images), batch_size):
+                batch = np.stack([preprocess(image) for image in images[start : start + batch_size]])
+                result = self.model({self.input: batch.astype(np.float32, copy=False)})
+                features.append(np.asarray(result[self.output]).reshape(len(batch), -1))
         return np.vstack(features).astype(np.float32, copy=False)
 
 
@@ -72,6 +103,13 @@ def build_opencv_resnet18_feature_extractor(model_path: str | Path = DEFAULT_RES
     if not path.exists() or path.stat().st_size < 1_000_000:
         raise FileNotFoundError(f"Portable ResNet18 ONNX model not found: {path}")
     return OpenCVResNet18FeatureExtractor(path), imagenet_preprocess, "cpu"
+
+
+def build_openvino_resnet18_feature_extractor(model_path: str | Path = DEFAULT_RESNET_OPENVINO_PATH):
+    path = Path(model_path)
+    if not path.exists() or not path.with_suffix(".bin").exists():
+        raise FileNotFoundError(f"OpenVINO FP16 ResNet18 model not found: {path}")
+    return OpenVINOResNet18FeatureExtractor(path), imagenet_preprocess, "cpu"
 
 
 def get_device():
@@ -113,11 +151,13 @@ def extract_pil_features(
     device=None,
 ) -> np.ndarray:
     if feature_extractor is None or preprocess is None:
-        if DEFAULT_RESNET_ONNX_PATH.exists():
+        if DEFAULT_RESNET_OPENVINO_PATH.exists() and DEFAULT_RESNET_OPENVINO_PATH.with_suffix(".bin").exists():
+            feature_extractor, preprocess, device = build_openvino_resnet18_feature_extractor()
+        elif DEFAULT_RESNET_ONNX_PATH.exists():
             feature_extractor, preprocess, device = build_opencv_resnet18_feature_extractor()
         else:
             feature_extractor, preprocess, device = build_resnet18_feature_extractor(device)
-    if isinstance(feature_extractor, OpenCVResNet18FeatureExtractor):
+    if isinstance(feature_extractor, (OpenCVResNet18FeatureExtractor, OpenVINOResNet18FeatureExtractor)):
         return feature_extractor.extract(images, preprocess, batch_size=batch_size)
 
     import torch
@@ -591,12 +631,18 @@ def extract_handcrafted_roi_shape_features(
 
 
 def create_estimator(kind: str = "logistic", regularization: float = 1.0):
+    from sklearn.calibration import CalibratedClassifierCV
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
-    from sklearn.linear_model import LogisticRegression, SGDClassifier
+    from sklearn.linear_model import LogisticRegression, RidgeClassifier, SGDClassifier
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.svm import SVC
+    from sklearn.svm import SVC, LinearSVC
 
+    if kind == "linear_svc":
+        base = LinearSVC(C=regularization, random_state=42, max_iter=4000)
+        return CalibratedClassifierCV(estimator=base, method="sigmoid", cv=3)
+    if kind == "ridge":
+        return RidgeClassifier(alpha=regularization, random_state=42)
     if kind == "svc":
         return SVC(
             C=regularization,
@@ -679,11 +725,16 @@ def classifier_candidates(feature_count: int | None = None) -> dict[str, Pipelin
             "sgd_log_alpha0.001": create_classifier("sgd_log_loss", 0.001),
             "pca_logistic_c0.1": create_pca_classifier("logistic", 0.1),
             "pca_svc_rbf_c5": create_pca_classifier("svc", 5.0),
+            "linear_svc_c0.01": create_classifier("linear_svc", 0.01),
+            "linear_svc_c0.05": create_classifier("linear_svc", 0.05),
             "extra_trees": create_classifier("extra_trees"),
             "random_forest": create_classifier("random_forest"),
         }
 
     base_candidates = {
+        "linear_svc_c0.01": create_classifier("linear_svc", 0.01),
+        "linear_svc_c0.05": create_classifier("linear_svc", 0.05),
+        "linear_svc_c0.1": create_classifier("linear_svc", 0.1),
         "logistic_c0.01": create_classifier("logistic", 0.01),
         "logistic_c0.1": create_classifier("logistic", 0.1),
         "logistic_c1": create_classifier("logistic", 1.0),
@@ -1092,7 +1143,7 @@ def export_portable_forest(
     return output_path
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=PORTABLE_MODEL_CACHE_SIZE)
 def load_portable_forest(path_value: str, modified_ns: int) -> dict:
     del modified_ns
     path = Path(path_value)

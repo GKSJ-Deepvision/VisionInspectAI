@@ -29,5 +29,6 @@ models/local_checkpoints/
 models/categories/**/training_runs/
 models/categories/**/benchmark_runs/
 models/categories/**/promotion_runs/
+models/categories/**/cnn_defect_classifier*.pt
 *.ckpt
 *.pth

@@ -7,3 +7,4 @@
 *.pkl filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
 models/exported/**/model.bin filter=lfs diff=lfs merge=lfs -text
+models/shared/*.bin filter=lfs diff=lfs merge=lfs -text

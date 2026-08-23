@@ -11,17 +11,15 @@
   "padim_features": 256,
   "train_good_images": 391,
   "accelerator": "gpu",
-  "checkpoint_path": "models\\categories\\hazelnut\\patchcore_v1.ckpt",
-  "baseline_profile_path": "models\\categories\\hazelnut\\normal_profile.npz",
-  "trained_at": "2026-07-23T20:14:27.697095+00:00",
-  "metrics": [
-    {
-      "image_AUROC": 0.9949999451637268,
-      "image_F1Score": 0.9640287756919861,
-      "pixel_AUROC": 0.9881243109703064,
-      "pixel_F1Score": 0.6423696279525757
-    }
-  ],
+  "checkpoint_path": "models/categories/hazelnut/patchcore_v1.ckpt",
+  "baseline_profile_path": "models/categories/hazelnut/normal_profile.npz",
+  "trained_at": "2026-07-24T01:44:27.697095+05:30",
+  "metrics": {
+    "image_AUROC": 0.9949999451637268,
+    "image_F1Score": 0.9640287756919861,
+    "pixel_AUROC": 0.9881243109703064,
+    "pixel_F1Score": 0.6423696279525757
+  },
   "benchmark_comparison": {
     "baseline": {
       "name": "padim_current",
@@ -211,27 +209,96 @@
   "portable_detector": "resnet18_normal_memory_with_opencv_localization",
   "portable_train_good_images": 391,
   "baseline_threshold_calibration": {
-    "threshold": 0.06351,
-    "protocol": "5-fold stratified balanced-threshold validation on labelled MVTec test images; production threshold maximizes sensitivity plus specificity on all labelled images",
-    "folds": 5,
-    "fold_thresholds": [
-      0.062228,
-      0.06351,
-      0.06351,
-      0.06351,
-      0.072002
-    ],
-    "samples": 110,
-    "cv_accuracy": 0.8545,
-    "cv_precision": 0.95,
-    "cv_recall": 0.8143,
-    "cv_specificity": 0.925,
-    "cv_balanced_accuracy": 0.8696,
-    "cv_f1": 0.8769,
-    "auroc": 0.9414,
-    "detector": "resnet18_normal_memory",
+    "detector": "resnet18_residual_calibrator",
     "localization": "opencv_normalized_residual",
-    "residual_threshold": 0.607121
+    "protocol": "nested stratified cross-validation on labelled MVTec test images; each outer fold selects the calibrator and decision threshold using only its training partition; the production calibrator is fitted after out-of-fold evaluation",
+    "folds": 5,
+    "samples": 110,
+    "feature_count": 66,
+    "selected_classifier": "random_forest_sqrt_leaf1",
+    "candidate_scores": {
+      "logistic_c0.1": {
+        "threshold": 0.484519,
+        "balanced_accuracy": 0.8857,
+        "f1": 0.9037,
+        "auroc": 0.9507
+      },
+      "logistic_c1": {
+        "threshold": 0.407672,
+        "balanced_accuracy": 0.8929,
+        "f1": 0.9118,
+        "auroc": 0.9404
+      },
+      "logistic_c10": {
+        "threshold": 0.931642,
+        "balanced_accuracy": 0.8821,
+        "f1": 0.8837,
+        "auroc": 0.9321
+      },
+      "extra_trees_sqrt_leaf1": {
+        "threshold": 0.486667,
+        "balanced_accuracy": 0.9018,
+        "f1": 0.9286,
+        "auroc": 0.9671
+      },
+      "extra_trees_wide_leaf1": {
+        "threshold": 0.525,
+        "balanced_accuracy": 0.9054,
+        "f1": 0.9185,
+        "auroc": 0.9652
+      },
+      "extra_trees_sqrt_leaf2": {
+        "threshold": 0.525,
+        "balanced_accuracy": 0.9036,
+        "f1": 0.9091,
+        "auroc": 0.9661
+      },
+      "random_forest_sqrt_leaf1": {
+        "threshold": 0.525,
+        "balanced_accuracy": 0.9125,
+        "f1": 0.9265,
+        "auroc": 0.9614
+      }
+    },
+    "outer_selection_frequency": {
+      "extra_trees_sqrt_leaf2": 1,
+      "extra_trees_wide_leaf1": 1,
+      "random_forest_sqrt_leaf1": 3
+    },
+    "outer_thresholds": [
+      0.575,
+      0.5,
+      0.57,
+      0.5,
+      0.525
+    ],
+    "decision_threshold": 0.525,
+    "fallback_score_threshold": 0.063504,
+    "residual_threshold": 0.607121,
+    "cv_accuracy": 0.8909,
+    "cv_precision": 0.9265,
+    "cv_recall": 0.9,
+    "cv_specificity": 0.875,
+    "cv_balanced_accuracy": 0.8875,
+    "cv_f1": 0.913,
+    "auroc": 0.9618,
+    "confusion_matrix": [
+      [
+        35,
+        5
+      ],
+      [
+        7,
+        63
+      ]
+    ],
+    "defect_subtype_recall": {
+      "crack": 1.0,
+      "cut": 0.7059,
+      "hole": 1.0,
+      "print": 0.8824
+    },
+    "artifact": "models/categories/hazelnut/portable_detector_calibrator.npz"
   },
   "openvino_spatial_calibration": {
     "detector": "patchcore_openvino_spatial_calibrator",
@@ -476,6 +543,230 @@
       "source": "MVTec AD labelled test folders",
       "protocol": "defect-only subtype classification with stratified cross-validation using ground truth masks; not an official held-out MVTec anomaly-detection benchmark",
       "category": "hazelnut"
+    }
+  },
+  "deployed_subtype_validation": {
+    "accuracy": 0.8714,
+    "macro_f1": 0.8725,
+    "classification_report": {
+      "crack": {
+        "precision": 0.7777777777777778,
+        "recall": 0.7777777777777778,
+        "f1-score": 0.7777777777777778,
+        "support": 18.0
+      },
+      "cut": {
+        "precision": 0.8421052631578947,
+        "recall": 0.9411764705882353,
+        "f1-score": 0.8888888888888888,
+        "support": 17.0
+      },
+      "hole": {
+        "precision": 0.875,
+        "recall": 0.7777777777777778,
+        "f1-score": 0.8235294117647058,
+        "support": 18.0
+      },
+      "print": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 17.0
+      },
+      "accuracy": 0.8714285714285714,
+      "macro avg": {
+        "precision": 0.8737207602339181,
+        "recall": 0.8741830065359477,
+        "f1-score": 0.8725490196078431,
+        "support": 70.0
+      },
+      "weighted avg": {
+        "precision": 0.8723684210526315,
+        "recall": 0.8714285714285714,
+        "f1-score": 0.8704948646125117,
+        "support": 70.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        14,
+        2,
+        2,
+        0
+      ],
+      [
+        1,
+        16,
+        0,
+        0
+      ],
+      [
+        3,
+        1,
+        14,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        17
+      ]
+    ],
+    "labels": [
+      "crack",
+      "cut",
+      "hole",
+      "print"
+    ],
+    "samples": 70,
+    "protocol": "Stratified out-of-fold evaluation of the active classifier architecture using active OpenVINO anomaly masks",
+    "classifier_engine": "sklearn_feature_classifier",
+    "feature_mode": "global_roi_texture",
+    "mask_source": "active OpenVINO anomaly detector",
+    "confidence_calibration": {
+      "method": "isotonic_oof_top_label",
+      "review_threshold": 0.5,
+      "target_accuracy": 0.85,
+      "target_achieved": true,
+      "coverage": 0.9286,
+      "accepted_accuracy": 0.8615,
+      "raw_ece": 0.3199,
+      "cross_fitted_calibrated_ece": 0.1061,
+      "x_thresholds": [
+        0.276667,
+        0.4,
+        0.406667,
+        0.423333,
+        0.436667,
+        0.483333,
+        0.486667,
+        0.52,
+        0.53,
+        0.803333
+      ],
+      "y_thresholds": [
+        0.545455,
+        0.545455,
+        0.6,
+        0.6,
+        0.8,
+        0.8,
+        0.833333,
+        0.833333,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "render_runtime_audit": {
+    "accuracy": 0.8286,
+    "macro_f1": 0.8245,
+    "classification_report": {
+      "crack": {
+        "precision": 0.7692307692307693,
+        "recall": 0.5555555555555556,
+        "f1-score": 0.6451612903225806,
+        "support": 18.0
+      },
+      "cut": {
+        "precision": 0.7619047619047619,
+        "recall": 0.9411764705882353,
+        "f1-score": 0.8421052631578947,
+        "support": 17.0
+      },
+      "hole": {
+        "precision": 0.7894736842105263,
+        "recall": 0.8333333333333334,
+        "f1-score": 0.8108108108108109,
+        "support": 18.0
+      },
+      "print": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 17.0
+      },
+      "accuracy": 0.8285714285714286,
+      "macro avg": {
+        "precision": 0.8301523038365144,
+        "recall": 0.8325163398692811,
+        "f1-score": 0.8245193410728215,
+        "support": 70.0
+      },
+      "weighted avg": {
+        "precision": 0.8287008730617753,
+        "recall": 0.8285714285714286,
+        "f1-score": 0.8217612470583608,
+        "support": 70.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        10,
+        5,
+        3,
+        0
+      ],
+      [
+        0,
+        16,
+        1,
+        0
+      ],
+      [
+        3,
+        0,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        17
+      ]
+    ],
+    "labels": [
+      "crack",
+      "cut",
+      "hole",
+      "print"
+    ],
+    "samples": 70,
+    "protocol": "Stratified out-of-fold evaluation of the active classifier architecture using active Render detector masks",
+    "classifier_engine": "sklearn_feature_classifier",
+    "feature_mode": "global_roi_texture",
+    "mask_source": "portable_baseline",
+    "confidence_calibration": {
+      "method": "isotonic_oof_top_label",
+      "review_threshold": 0.5,
+      "target_accuracy": 0.85,
+      "target_achieved": true,
+      "coverage": 0.7714,
+      "accepted_accuracy": 0.9259,
+      "raw_ece": 0.3358,
+      "cross_fitted_calibrated_ece": 0.0616,
+      "x_thresholds": [
+        0.29,
+        0.383333,
+        0.393333,
+        0.42,
+        0.43,
+        0.51,
+        0.513333,
+        0.74
+      ],
+      "y_thresholds": [
+        0.384615,
+        0.384615,
+        0.625,
+        0.625,
+        0.944444,
+        0.944444,
+        1.0,
+        1.0
+      ]
     }
   }
 }

@@ -31,7 +31,7 @@ def default_demo_image() -> Path:
 
 
 def build_inference_config(category: str):
-    """Use the application settings when available, otherwise build a standalone ML configuration."""
+    """Use application settings when available, otherwise build a standalone ML configuration."""
     try:
         from app.services.prediction_service import build_inference_config as build_backend_config
     except ModuleNotFoundError as exc:
@@ -54,6 +54,18 @@ def build_inference_config(category: str):
         and spec.openvino_path.exists()
         and spec.openvino_path.with_suffix(".bin").exists()
     )
+    metadata = json.loads(spec.metadata_path.read_text(encoding="utf-8"))
+    subtype_validation = (
+        metadata.get("render_runtime_audit")
+        or metadata.get("deployed_subtype_validation")
+        or {}
+    )
+    confidence_calibration = subtype_validation.get("confidence_calibration") or None
+    review_threshold = (
+        confidence_calibration.get("review_threshold")
+        if confidence_calibration
+        else spec.subtype_confidence_threshold
+    )
 
     return InferenceConfig(
         category=spec.category,
@@ -70,11 +82,16 @@ def build_inference_config(category: str):
         padim_score_threshold=spec.padim_score_threshold,
         review_severity_threshold=40.0,
         fail_severity_threshold=60.0,
+        subtype_confidence_threshold=float(review_threshold),
         use_openvino_inference=use_openvino and openvino_available,
         openvino_inference_device=os.getenv("OPENVINO_INFERENCE_DEVICE", "CPU"),
         openvino_path=spec.openvino_path if use_openvino and openvino_available else None,
         openvino_calibrator_path=spec.openvino_calibrator_path if use_openvino and openvino_available else None,
+        portable_detector_calibrator_path=spec.portable_detector_calibrator_path,
         compact_classifier_path=spec.compact_classifier_path,
+        input_size=spec.input_size,
+        subtype_model_macro_f1=subtype_validation.get("macro_f1"),
+        subtype_confidence_calibration=confidence_calibration,
     )
 
 

@@ -7,13 +7,17 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from ml.baseline_detector import load_reference_profile
-from ml.classifier import export_portable_forest, predict_portable_forest
+from ml.classifier import export_portable_forest, load_portable_forest, predict_portable_forest
 from ml.model_registry import (
+    CATEGORY_DEFECT_LABELS,
     SUPPORTED_CATEGORIES,
     CategoryModelSpec,
     category_model_spec,
     category_model_statuses,
+    classifier_runtime_status,
+    openvino_runtime_is_memory_safe,
 )
+from scripts.calibrate_category_thresholds import sync_registry_calibration
 
 
 def portable_spec(tmp_path: Path) -> CategoryModelSpec:
@@ -63,23 +67,68 @@ def test_every_supported_category_has_portable_runtime_artifacts():
         assert "classifier" in classifier
         assert classifier["defect_only"] is True
         assert "good" not in classifier["labels"]
+        assert set(classifier["labels"]) == set(CATEGORY_DEFECT_LABELS[category])
 
 
-def test_shared_onnx_feature_model_is_github_safe():
-    model_path = Path("models/inference/resnet18_features.onnx")
-    pytorch_weights_path = Path("models/inference/resnet18-f37072fd.pth")
+def test_registry_can_explicitly_disable_an_unused_cnn_classifier():
+    capsule = category_model_spec("capsule")
+
+    assert capsule.cnn_classifier_path is None
+    assert classifier_runtime_status(capsule)["engine"] == "sklearn_feature_classifier"
+
+
+def test_low_memory_profile_keeps_only_memory_safe_openvino_pairs():
+    bottle = category_model_spec("bottle")
+    cable = category_model_spec("cable")
+    pill = category_model_spec("pill")
+
+    assert openvino_runtime_is_memory_safe(bottle, "fine_tuned_resnet18_onnx") is True
+    assert openvino_runtime_is_memory_safe(cable, "portable_forest") is True
+    assert openvino_runtime_is_memory_safe(pill, "sklearn_feature_classifier") is False
+
+    statuses = {
+        item["category"]: item
+        for item in category_model_statuses(
+            advanced_enabled=True,
+            openvino_enabled=True,
+            resource_constrained=True,
+        )
+    }
+    assert statuses["bottle"]["active_engine"] == "padim_openvino"
+    assert statuses["cable"]["active_engine"] == "patchcore_openvino"
+    assert statuses["pill"]["active_engine"] == "portable_baseline"
+    assert statuses["pill"]["openvino_available"] is True
+    assert statuses["pill"]["openvino_deferred_for_memory"] is True
+
+
+def test_registered_portable_detector_calibrators_are_complete():
+    calibrated_categories = {"capsule", "grid", "hazelnut", "pill", "screw", "transistor"}
+
+    for category in calibrated_categories:
+        spec = category_model_spec(category)
+        assert spec.portable_detector_calibrator_path is not None
+        assert spec.portable_detector_calibrator_path.exists()
+
+        profile = load_reference_profile(spec.baseline_profile_path)
+        runtime = load_portable_forest(
+            str(spec.portable_detector_calibrator_path),
+            spec.portable_detector_calibrator_path.stat().st_mtime_ns,
+        )
+        assert profile["spatial_embedding_bank"].shape == (13, 128, 512)
+        assert str(runtime["feature_mode"]) == "portable_anomaly_spatial_v1"
+        assert 0.0 < float(runtime["decision_threshold"]) < 1.0
+
+
+def test_shared_openvino_feature_model_is_github_safe():
+    model_path = Path("models/shared/resnet18_features_fp16.xml")
+    weights_path = model_path.with_suffix(".bin")
+    pytorch_weights_path = Path("models/shared/resnet18-f37072fd.pth")
 
     assert model_path.exists()
-    assert 1_000_000 < model_path.stat().st_size < 100_000_000
+    assert weights_path.exists()
+    assert 1_000_000 < weights_path.stat().st_size < 50_000_000
     assert not pytorch_weights_path.exists()
 
-
-def test_weaker_cnn_classifiers_are_not_selected_over_revalidated_models():
-    for category in ("capsule", "wood"):
-        spec = category_model_spec(category)
-
-        assert spec.cnn_classifier_path is None
-        assert spec.classifier_path.exists()
 
 
 def test_portable_logistic_runtime_matches_sklearn(tmp_path):
@@ -101,3 +150,24 @@ def test_portable_logistic_runtime_matches_sklearn(tmp_path):
 
     assert np.allclose(result["probabilities"], classifier.predict_proba(features), atol=1e-6)
     assert result["decision_threshold"] == np.float32(0.4)
+
+
+def test_legacy_baseline_calibration_can_sync_without_a_calibrator(tmp_path):
+    spec = portable_spec(tmp_path)
+    registry_entry = {"portable_detector_calibrator_path": "models/stale.npz"}
+
+    sync_registry_calibration(
+        registry_entry,
+        "baseline",
+        {
+            "threshold": 0.010643,
+            "residual_threshold": 0.790813,
+            "cv_balanced_accuracy": 0.9309,
+            "cv_f1": 0.9524,
+        },
+        spec,
+    )
+
+    assert registry_entry["baseline_score_threshold"] == 0.010643
+    assert registry_entry["baseline_residual_threshold"] == 0.790813
+    assert "portable_detector_calibrator_path" not in registry_entry

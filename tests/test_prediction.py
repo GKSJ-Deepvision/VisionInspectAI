@@ -4,29 +4,28 @@ import cv2
 import numpy as np
 
 from ml import predict
-from ml.inference import InferenceConfig, build_explainability, classify_prediction, compute_defect_geometry
+from ml.inference import (
+    InferenceConfig,
+    build_explainability,
+    calibrated_subtype_confidence,
+    classify_prediction,
+    compute_defect_geometry,
+)
 from ml.model_registry import category_model_spec
 from ml.padim_detector import openvino_spatial_features
 
 
 def test_inspect_image_returns_backend_ready_output(monkeypatch):
     expected_image = Path("sample.png")
-    spec = category_model_spec("bottle")
-    config = InferenceConfig(
-        category="bottle",
-        anomaly_model_kind=spec.model_kind,
-        use_padim_inference=False,
-        padim_inference_accelerator="cpu",
-        model_checkpoint_path=spec.checkpoint_path,
-        classifier_model_path=spec.classifier_path,
-        model_metadata_path=spec.metadata_path,
-        baseline_profile_path=spec.baseline_profile_path,
-        baseline_threshold=spec.baseline_score_threshold,
-        baseline_residual_threshold=spec.baseline_residual_threshold,
-        padim_score_threshold=spec.padim_score_threshold,
-        review_severity_threshold=40,
-        fail_severity_threshold=60,
-    )
+
+    def fake_runtime_settings():
+        class RuntimeSettings:
+            baseline_threshold = 1.34
+            padim_score_threshold = 0.5
+            review_severity_threshold = 40
+            fail_severity_threshold = 60
+
+        return RuntimeSettings()
 
     def fake_inspect_image_runtime(image_path, config):
         assert image_path == expected_image
@@ -49,7 +48,7 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
             "fallback_reason": None,
         }
 
-    monkeypatch.setattr("ml.predict.build_inference_config", lambda _category: config)
+    monkeypatch.setattr("ml.predict.build_inference_config", lambda _category: type("Config", (), {"baseline_threshold": category_model_spec("bottle").baseline_score_threshold})())
     monkeypatch.setattr("ml.inference.inspect_image", fake_inspect_image_runtime)
 
     result = predict.inspect_image(expected_image)
@@ -78,6 +77,7 @@ def test_inspect_image_returns_backend_ready_output(monkeypatch):
 def test_runtime_keeps_detection_and_subtype_confidence_separate(monkeypatch, tmp_path):
     from ml.inference import inspect_image
 
+    runtime_events = []
     image_path = tmp_path / "sample.png"
     cv2.imwrite(str(image_path), np.full((32, 32, 3), 128, dtype=np.uint8))
     anomaly_map = np.zeros((32, 32), dtype=np.float32)
@@ -88,7 +88,7 @@ def test_runtime_keeps_detection_and_subtype_confidence_separate(monkeypatch, tm
     monkeypatch.setattr(
         "ml.inference.live_anomaly_prediction",
         lambda *_: {
-            "engine": "baseline",
+            "engine": "padim_openvino",
             "detector_kind": "normal-memory",
             "anomaly_score": 0.8,
             "decision_threshold": 0.5,
@@ -103,6 +103,7 @@ def test_runtime_keeps_detection_and_subtype_confidence_separate(monkeypatch, tm
     )
 
     def fake_classify_prediction(*_args, global_features=None):
+        assert runtime_events == ["detector_released"]
         assert global_features is not None
         assert np.array_equal(global_features, np.ones((1, 512), dtype=np.float32))
         return {
@@ -115,6 +116,10 @@ def test_runtime_keeps_detection_and_subtype_confidence_separate(monkeypatch, tm
     monkeypatch.setattr(
         "ml.inference.classify_prediction",
         fake_classify_prediction,
+    )
+    monkeypatch.setattr(
+        "ml.inference.release_anomaly_runtimes",
+        lambda: runtime_events.append("detector_released"),
     )
 
     missing = tmp_path / "missing"
@@ -132,16 +137,43 @@ def test_runtime_keeps_detection_and_subtype_confidence_separate(monkeypatch, tm
         padim_score_threshold=0.5,
         review_severity_threshold=40,
         fail_severity_threshold=60,
+        subtype_model_macro_f1=0.70,
+        release_detector_before_classification=True,
     )
 
     result = inspect_image(image_path, config)
 
-    assert result["confidence"] == 0.6
+    assert result["confidence"] == 0.8
     assert result["detection_confidence"] == 0.8
     assert result["classification_confidence"] == 0.6
     assert result["severity_components"]["confidence_score"] == 80.0
     assert result["explainability"]["detection_confidence"] == 0.8
     assert result["explainability"]["classification_confidence"] == 0.6
+    assert result["subtype_model_status"] == "Manual review"
+    assert result["manual_review_required"] is True
+
+
+def test_saved_isotonic_mapping_calibrates_subtype_confidence():
+    calibration = {
+        "method": "isotonic_oof_top_label",
+        "x_thresholds": [0.4, 0.6, 0.9],
+        "y_thresholds": [0.3, 0.7, 0.95],
+    }
+
+    calibrated, applied = calibrated_subtype_confidence(0.75, calibration)
+
+    assert applied is True
+    assert np.isclose(calibrated, 0.825)
+
+
+def test_unverified_calibration_keeps_raw_subtype_confidence():
+    calibrated, applied = calibrated_subtype_confidence(
+        0.72,
+        {"method": "not_applied_no_ece_gain"},
+    )
+
+    assert applied is False
+    assert calibrated == 0.72
 
 
 def test_geometry_uses_product_configured_critical_zones():
@@ -184,6 +216,7 @@ def test_missing_classifier_reports_unknown_without_inventing_a_class(tmp_path):
     )
 
     assert classification["defect_type"] == "unknown_defect"
+    assert classification["candidate_defect_type"] is None
     assert classification["classification_confidence"] is None
     assert "not found" in classification["classification_error"]
 

@@ -8,7 +8,7 @@ from ml.classifier import (
     ROI_PIXEL_TEXTURE_FEATURE_MODE,
     ROI_SHAPE_TEXTURE_FEATURE_MODE,
     ROI_TEXTURE_FEATURE_MODE,
-    build_opencv_resnet18_feature_extractor,
+    build_openvino_resnet18_feature_extractor,
     export_portable_forest,
     extract_features,
     load_classifier_bundle,
@@ -18,7 +18,7 @@ from ml.defect_classifier import classify_defect_type
 
 
 def test_defect_classifier_artifact_loads():
-    path = Path("models/defect_classifier.pkl")
+    path = Path("models/categories/bottle/defect_classifier.pkl")
 
     assert path.exists()
 
@@ -36,9 +36,12 @@ def test_defect_classifier_artifact_loads():
     assert bundle["metrics"]["macro_f1"] >= 0.8
 
 
-def test_opencv_feature_runtime_returns_resnet_embeddings():
-    image_path = Path("models/inference/normal_reference.png")
-    runtime, preprocess, device = build_opencv_resnet18_feature_extractor()
+def test_openvino_feature_runtime_returns_resnet_embeddings(tmp_path):
+    import cv2
+
+    image_path = tmp_path / "sample.png"
+    cv2.imwrite(str(image_path), np.full((128, 128, 3), 128, dtype=np.uint8))
+    runtime, preprocess, device = build_openvino_resnet18_feature_extractor()
 
     features = extract_features(
         [image_path],
@@ -51,10 +54,14 @@ def test_opencv_feature_runtime_returns_resnet_embeddings():
     assert np.isfinite(features).all()
 
 
-def test_handcrafted_bottle_classifier_uses_matching_runtime_features():
+def test_handcrafted_bottle_classifier_uses_matching_runtime_features(tmp_path):
+    import cv2
+
+    image_path = tmp_path / "sample.png"
+    cv2.imwrite(str(image_path), np.full((256, 256, 3), 128, dtype=np.uint8))
     result = classify_defect_type(
-        Path("models/inference/normal_reference.png"),
-        Path("models/defect_classifier.pkl"),
+        image_path,
+        Path("models/categories/bottle/defect_classifier.pkl"),
         defect_mask=np.ones((256, 256), dtype=bool),
     )
 
@@ -90,6 +97,7 @@ def test_classifier_prefers_portable_cnn_artifact(monkeypatch, tmp_path):
         image_path,
         classifier_path,
         defect_mask=np.ones((8, 8), dtype=bool),
+        cnn_classifier_path=cnn_path,
     )
 
     assert result["defect_type"] == "crack"
