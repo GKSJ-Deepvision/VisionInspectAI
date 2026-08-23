@@ -1,7 +1,11 @@
+import { useState } from "react";
 import Sidebar from "./Sidebar";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 
 function Layout({ title, children }) {
+
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
   const username =
     localStorage.getItem("username") || "User";
@@ -11,12 +15,10 @@ function Layout({ title, children }) {
 
   const handleLogout = () => {
 
-    // Clear current user session completely
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
     localStorage.removeItem("role");
 
-    // Reload application and go to login
     window.location.replace("/");
   };
 
@@ -24,37 +26,52 @@ function Layout({ title, children }) {
     <div className="min-h-screen bg-[#111827] text-white flex">
 
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
 
         {/* Top Navbar */}
-        <header className="border-b border-gray-700 px-8 py-5 flex items-center justify-between">
+        <header className="border-b border-gray-700 px-4 py-4 md:px-8 md:py-5 flex items-center justify-between gap-3">
 
-          <div>
+          <div className="flex items-center gap-3 min-w-0">
 
-            <h1 className="text-3xl font-bold">
-              {title}
-            </h1>
+            {/* Hamburger - Mobile only */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 rounded-lg hover:bg-[#374151] flex-shrink-0"
+            >
+              <Menu size={24} />
+            </button>
 
-            <div className="mt-2">
+            <div className="min-w-0">
 
-              <p className="text-gray-400">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">
+                {title}
+              </h1>
 
-                Welcome back,
+              <div className="mt-1 sm:mt-2">
 
-                <span className="text-emerald-400 font-semibold ml-2">
-                  {username}
-                </span>
+                <p className="text-sm sm:text-base text-gray-400 truncate">
 
-                👋
+                  Welcome back,
 
-              </p>
+                  <span className="text-emerald-400 font-semibold ml-2">
+                    {username}
+                  </span>
 
-              <p className="text-sm text-gray-500 mt-2">
-                Role: {role}
-              </p>
+                  👋
+
+                </p>
+
+                <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2">
+                  Role: {role}
+                </p>
+
+              </div>
 
             </div>
 
@@ -63,19 +80,21 @@ function Layout({ title, children }) {
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg"
+            className="flex-shrink-0 flex items-center gap-2 bg-red-500 hover:bg-red-600 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg"
           >
 
             <LogOut size={18} />
 
-            Logout
+            <span className="hidden sm:inline">
+              Logout
+            </span>
 
           </button>
 
         </header>
 
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 sm:p-6 md:p-8">
           {children}
         </main>
 
