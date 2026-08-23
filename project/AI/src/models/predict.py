@@ -4,6 +4,9 @@ import torch
 from anomalib.engine import Engine
 
 import data.config as config
+import sys
+
+
 from models.patchcore import get_model
 from models.classifier_predictor import ClassifierPredictor
 
@@ -41,9 +44,19 @@ def predict(image_path, category):
         return_predictions=True,
     )
 
+    print("Predictions:", predictions)
+    print("Prediction count:", len(predictions))
+
     results = []
 
     for prediction in predictions:
+
+        print("\n========== AI DEBUG ==========")
+        print("Image:", prediction.image_path[0])
+        print("Checkpoint:", checkpoint)
+        print("Score:", float(prediction.pred_score[0]))
+        print("Label:", bool(prediction.pred_label[0]))
+        print("==============================\n")
 
         image_name = Path(
             prediction.image_path[0]

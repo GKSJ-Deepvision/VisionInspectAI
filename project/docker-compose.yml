@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/env
+    environment:
+      - DATABASE_PATH=/app/backend/instance/backend.db
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./backend/instance:/app/backend/instance
+      - ./backend/uploads:/app/backend/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: https://shaw-equipped-population-yet.trycloudflare.com
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
